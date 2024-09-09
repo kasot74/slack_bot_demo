@@ -40,17 +40,17 @@ def handle_summary_command(message, say):
     user_input = message['text'].replace('!openai', '').strip()    
     # 調用 OpenAI API 生成摘要
     try:        
-        response = OpenAI_clice.chat.completions.create(        
+        response = OpenAI_clice.chat.completions.create(
             messages=[
                 {
                     "role": "user",
                     "content": user_input,
                 }
             ],
-            model="gpt-3.5-turbo",            
+            model="gpt-4-turbo",            
         )
-        summary = response.choices[0].message['content'].strip()
-        say(f"這是生成的摘要: {summary}")
+        summary = response.choices[0].message.content
+        say(f"{summary}")
         
     except openai.RateLimitError as e:        
         say(f"API 錯誤: 超出配額 {e}")
@@ -66,16 +66,29 @@ def new_philosophy_quotes(message, say):
     match = re.match(r"^!熬雞湯\s+(.+)$", message['text'])
     if match:
         msg_text = match.group(1).strip()                
-        # 檢查是否已有相同的 message
-        existing_message = collection.find_one({"quote": msg_text })
-        
+        # 檢查是否已有相同的語錄
+        existing_message = collection.find_one({"quote": msg_text})        
         if existing_message:
-            # 更新現有指令            
-            say("失敗! 這不是雞湯!")
+            say("失敗! 已有此雞湯!")
         else:
-            # 新增指令
-            collection.insert_one({"quote": msg_text})
-            say("雞湯熬煮成功!")           
+            # 使用 OpenAI API 分析語錄情感
+            response = OpenAI_clice.chat.completions.create(
+                model="gpt-4-turbo",
+                messages=[
+                    {"role": "system", "content": "你是一個情感分析器，判定語錄是正能量還是負能量。"},
+                    {"role": "user", "content": f"這句話：'{msg_text}' 是正能量還是負能量？"}
+                ]
+            )            
+            # 獲得AI的分析解果
+            sentiment_result = response['choices'][0]['message']['content'].strip().lower()
+
+            # 判定AI的回應是否包含正能量的詞
+            if "正能量" in sentiment_result or "positive" in sentiment_result:
+                # 新增語錄
+                collection.insert_one({"quote": msg_text})
+                say("雞湯熬煮成功!")
+            else:
+                say("這雞湯有毒!")
 
 # !喝雞湯
 @app.message(re.compile(r"^!喝雞湯$"))
@@ -131,7 +144,7 @@ def handle_app_mention_events(body, say):
     say(f"蛤?")    
  
 # 抽選人員Tag" 
-@app.message(re.compile(r"誰.*"))
+@app.message(re.compile(r"^誰.*"))
 def rand_tag_user(message, say, client):
     # 取當前用戶列表
     channel_id = message['channel']
