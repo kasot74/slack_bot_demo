@@ -5,9 +5,11 @@ import re
 import random
 import logging
 from slack_sdk.errors import SlackApiError
+import openai
+from openai import OpenAI
 import os
 
-# 從配置文件中讀取
+# 從配置文件中讀取 Slack tokens
 def read_config(file_path):
     config = {}
     with open(file_path, 'r') as file:
@@ -22,11 +24,74 @@ config = read_config('config.txt')
 #DB連線
 client = MongoClient("mongodb://localhost:27017/")
 db = client.myDatabase
-collection = db.slock_bot_commit
+
 
 # 初始化
 app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_SECRET'])
 
+OpenAI_clice = OpenAI(    
+    api_key=config['OPENAI_API_KEY']
+)
+
+
+# 使用者輸入文本並生成摘要的功能
+@app.message(re.compile(r"!openai\s+(.+)"))
+def handle_summary_command(message, say):
+    user_input = message['text'].replace('!openai', '').strip()    
+    # 調用 OpenAI API 生成摘要
+    try:        
+        response = OpenAI_clice.chat.completions.create(        
+            messages=[
+                {
+                    "role": "user",
+                    "content": user_input,
+                }
+            ],
+            model="gpt-3.5-turbo",            
+        )
+        summary = response.choices[0].message['content'].strip()
+        say(f"這是生成的摘要: {summary}")
+        
+    except openai.RateLimitError as e:        
+        say(f"API 錯誤: 超出配額 {e}")
+    except openai.OpenAIError as e:
+        say(f"API 錯誤: {e}")
+    except Exception as e:        
+        say(f"非預期性問題 {e}")
+
+# !熬雞湯
+@app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
+def new_philosophy_quotes(message, say):
+    collection = db.philosophy_quotes
+    match = re.match(r"^!熬雞湯\s+(.+)$", message['text'])
+    if match:
+        msg_text = match.group(1).strip()                
+        # 檢查是否已有相同的 message
+        existing_message = collection.find_one({"quote": msg_text })
+        
+        if existing_message:
+            # 更新現有指令            
+            say("失敗! 這不是雞湯!")
+        else:
+            # 新增指令
+            collection.insert_one({"quote": msg_text})
+            say("雞湯熬煮成功!")           
+
+# !喝雞湯
+@app.message(re.compile(r"^!喝雞湯$"))
+def get_philosophy_quotes(message, say):
+    collection = db.philosophy_quotes
+    quotes = list(collection.find())    
+    # 檢查是否有可用的語錄
+    if quotes:
+        # 隨機選擇一條語錄
+        selected_quote = random.choice(quotes)                        
+        quote_text = selected_quote.get("quote", "沒有找到雞湯語錄")
+        # 回應用戶
+        say(quote_text)
+    else:
+        say("目前沒有雞湯語錄可用，請稍後再試。")
+    
 # !add 指令
 @app.message(re.compile(r"^!add\s+(.+)\s+(.+)$"))
 def handle_add_message(message, say):
@@ -38,7 +103,7 @@ def handle_add_message(message, say):
 
 # !show 指令
 @app.message(re.compile(r"^!show$"))
-def handle_add_message(message, say):
+def handle_show(message, say):
     db = client.myDatabase
     collection = db.slock_bot_commit
     messages = collection.find({"is_sys": "N" })
@@ -69,10 +134,9 @@ def handle_app_mention_events(body, say):
 @app.message(re.compile(r"誰.*"))
 def rand_tag_user(message, say, client):
     # 取當前用戶列表
-    result = client.conversations_members(channel=channel_id)
     channel_id = message['channel']
-    members = result['members']
-
+    result = client.conversations_members(channel=channel_id)
+    members = result['members']    
     # 取在線人員
     members = get_online_members(client, channel_id)
 
@@ -94,8 +158,7 @@ def get_online_members(client, channel_id):
     for member in members:
         profile = client.users_getPresence(user=member)
         if profile['presence'] == 'active':
-            online_members.append(member)
-    print(f"online_members")
+            online_members.append(member)    
     return online_members
 
 # 發送圖片函數
@@ -121,13 +184,14 @@ def send_image(channel_id, message, file_path=None):
 # DB 新增處理
 def add_commit(message_text, response_text, say):
     try:        
+        collection = db.slock_bot_commit
         if re.search(r".*全亨.*", message_text):
             say("[全亨] 保留字不可使用!")
             return             
         if re.search(r"!.*", message_text):
             say("[!開頭] 保留字不可使用!")
             return  
-        # 检查是否已有相同的 message
+        # 檢查是否已有相同的 message
         existing_message = collection.find_one({"message": message_text, "is_sys": "N" })
         
         if existing_message:
@@ -146,6 +210,7 @@ def add_commit(message_text, response_text, say):
 # DB 刪除處理
 def remove_commit(message_text, say):
     try:
+        collection = db.slock_bot_commit
         # 刪除指令
         result = collection.delete_many({"message": message_text, "is_sys": "N"})
         if result.deleted_count > 0:
@@ -294,6 +359,7 @@ def handle_message(message, say):
     text = message['text']
     channel = message['channel']
     submitter_id = message['user']
+    collection = db.slock_bot_commit
     keyword = collection.find_one({"message": text })        
     if keyword: 
         # 根據 keyword 資料決定是否傳遞 file_path
