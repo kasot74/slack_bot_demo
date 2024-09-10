@@ -444,7 +444,7 @@ def update_home_tab(event, client):
                                 "text": "Go"                                
                             },
                             "value": "click_me_123",
-                            "url": "https://github.com/kasot74/slock_bot_demo",
+                            "url": "https://github.com/kasot74/slack_bot_demo",
                             "action_id": "button-action"
                         }
                     }
