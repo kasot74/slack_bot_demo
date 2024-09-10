@@ -79,8 +79,8 @@ def new_philosophy_quotes(message, say):
                     {"role": "user", "content": f"這句話：'{msg_text}' 是正能量還是負能量？"}
                 ]
             )            
-            # 獲得AI的分析解果
-            sentiment_result = response['choices'][0]['message']['content'].strip().lower()
+            # 獲得AI的分析結果
+            sentiment_result = response.choices[0].message.content.strip().lower()
 
             # 判定AI的回應是否包含正能量的詞
             if "正能量" in sentiment_result or "positive" in sentiment_result:
@@ -394,6 +394,66 @@ def handle_message(message, say):
                     submitted_numbers_max = number                    
                 hint = f"範圍是{submitted_numbers_min}~{submitted_numbers_max} "                
                 say(f"猜錯了!，{hint}")
+
+# 監聽 app_home_opened 事件
+@app.event("app_home_opened")
+def update_home_tab(event, client):
+    user_id = event["user"]
+
+    # 調用 views.publish API，將相同的內容發佈給每個使用者
+    try:
+        client.views_publish(
+            user_id=user_id,
+            view={
+                "type": "home",
+                "blocks": [
+                    {
+                        "type": "header",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "烏薩奇"                            
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "烏拉呀哈!"
+                        }
+                    },
+                    {
+                        "type": "divider"
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "缺愛的人製作!"
+                        }
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "GitHub"
+                        },
+                        "accessory": {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "Go"                                
+                            },
+                            "value": "click_me_123",
+                            "url": "https://github.com/kasot74/slock_bot_demo",
+                            "action_id": "button-action"
+                        }
+                    }
+                ]
+            }
+        )
+    except SlackApiError as e:
+        print(f"Error publishing home tab: {e.response['error']}")
+
 
 # 應用啟動
 if __name__ == "__main__":    
