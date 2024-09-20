@@ -42,6 +42,7 @@ def handle_summary_command(message, say):
     try:        
         response = OpenAI_clice.chat.completions.create(
             messages=[
+                {"role": "system", "content": "請用繁體中文回答"},
                 {
                     "role": "user",
                     "content": user_input,
@@ -180,7 +181,7 @@ def send_image(channel_id, message, file_path=None):
         if file_path:
             response = app.client.files_upload_v2(
                 channel=channel_id,
-                file=file_path,
+                file=os.path.join('images',file_path),
                 initial_comment=message
             )
             assert response["file"]
