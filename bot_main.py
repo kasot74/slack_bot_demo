@@ -105,7 +105,24 @@ def get_philosophy_quotes(message, say):
         say(quote_text)
     else:
         say("目前沒有雞湯語錄可用，請稍後再試。")
-    
+
+# !雞湯菜單
+@app.message(re.compile(r"^!雞湯菜單$"))
+def get_all_philosophy_quotes(message, say):
+    collection = db.philosophy_quotes
+    quotes = list(collection.find())    
+    # 檢查是否有可用的語錄
+    if quotes:
+        # 建立一個包含所有雞湯語錄的列表
+        all_quotes = [f"{idx + 1}. {quote.get('quote', '沒有找到雞湯語錄')}" for idx, quote in enumerate(quotes)]
+        # 將列表轉換為單一字串，換行分隔
+        quotes_text = "\n".join(all_quotes)
+        # 回應用戶
+        say(f"以下是所有雞湯語錄:\n{quotes_text}")
+    else:
+        say("目前沒有雞湯語錄可用，請稍後再試。")
+
+
 # !add 指令
 @app.message(re.compile(r"^!add\s+(.+)\s+(.+)$"))
 def handle_add_message(message, say):
