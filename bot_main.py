@@ -48,7 +48,7 @@ def handle_summary_command(message, say):
                     "content": user_input,
                 }
             ],
-            model="gpt-4-turbo",            
+            model="gpt-4o",            
         )
         summary = response.choices[0].message.content
         say(f"{summary}")
@@ -74,7 +74,7 @@ def new_philosophy_quotes(message, say):
         else:
             # 使用 OpenAI API 分析語錄情感
             response = OpenAI_clice.chat.completions.create(
-                model="gpt-4-turbo",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": "你是一個情感分析器，判定語錄是正能量還是負能量。"},
                     {"role": "user", "content": f"這句話：'{msg_text}' 是正能量還是負能量？"}
