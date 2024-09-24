@@ -176,7 +176,7 @@ def register_handlers(app, config, db):
 
     #關鍵字
     @app.message(re.compile("(.*)"))
-    def handle_message(message, say):
+    def handle_message(message, client):
         text = message['text']
         channel = message['channel']
         submitter_id = message['user']
@@ -185,4 +185,4 @@ def register_handlers(app, config, db):
         if keyword: 
             # 根據 keyword 資料決定是否傳遞 file_path
             file_path = keyword.get('file')
-            send_image(app.client,channel, keyword['say'], file_path)    
+            send_image(client,channel, keyword['say'], file_path)    
