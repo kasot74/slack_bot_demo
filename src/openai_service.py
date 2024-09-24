@@ -24,8 +24,8 @@ def validate_with_openai(text):
     # 使用 OpenAI 的 API 進行檢查
     response = OpenAI_clice.chat.completions.create(
         messages=[
-            {"role": "system", "content": "你繁體中文錯別字檢查器，只會回答正確或是修正錯字"},
-            {"role": "system", "content": "請用檢查文中 '在' 與 '再' 是否使用正確 如果正確或是句子小於兩個中文字請回答'正確'，錯誤請回答修正後的句子 "},
+            {"role": "system", "content": "你是繁體中文錯別字檢查器，只會回答正確或是修正錯別字"},
+            {"role": "system", "content": "請用檢查文中是否有錯字 如果沒有請回答'正確'，有錯請回答修正錯字後的句子 "},
             {
                 "role": "user",
                 "content": text,

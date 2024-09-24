@@ -177,23 +177,10 @@ def register_handlers(app, config, db):
                 assert response["ok"]
         except Exception as e:
             print(f"Error uploading file: {e.response['error']}")     
-
-    #檢查 再在
-    @app.message(re.compile(r"(在|再)"))
-    def check_message(message,say):
-        text = message['text']        
-
-        # 使用 OpenAI 檢查文本
-        validation_response = validate_with_openai(text)
-        
-        # 檢查 OpenAI 回覆是否有錯誤
-        if validation_response != "正確":
-            # 這裡可以進行錯誤處理，例如發送回應或記錄錯誤            
-            say(f"再在不分?! :rage: {validation_response}")
         
     #關鍵字
     @app.message(re.compile("(.*)"))
-    def handle_message(message):
+    def handle_message(message,say):
         text = message['text']
         channel = message['channel']        
         collection = db.slock_bot_commit
@@ -202,3 +189,11 @@ def register_handlers(app, config, db):
             # 根據 keyword 資料決定是否傳遞 file_path
             file_path = keyword.get('file')
             send_image(channel, keyword['say'], file_path)    
+            return
+        if text.length >= 3:
+            # 使用 OpenAI 檢查文本
+            validation_response = validate_with_openai(text)            
+            # 檢查 OpenAI 回覆是否有錯誤
+            if validate_with_openai(text) != "正確":
+                # 這裡可以進行錯誤處理，例如發送回應或記錄錯誤            
+                say(f"發現錯字 :melting_face: {validation_response}")
