@@ -2,6 +2,7 @@ import re
 import random
 from .openai_service import generate_summary, analyze_sentiment
 from .utilities import send_image
+import os
 
 def register_handlers(app, config, db):
     
@@ -174,15 +175,34 @@ def register_handlers(app, config, db):
             print(f"Error deleting document: {e}")
             say("發生例外錯誤!")
 
+    # 發送圖片函數
+    def send_image(channel_id, message, file_path=None):
+        try:
+            if file_path:
+                response = app.client.files_upload_v2(
+                    channel=channel_id,
+                    file=os.path.join('images',file_path),
+                    initial_comment=message
+                )
+                assert response["file"]
+            else:
+                # 如果沒有提供 file_path，則只發送訊息
+                response = app.client.chat_postMessage(
+                    channel=channel_id,
+                    text=message
+                )
+                assert response["ok"]
+        except Exception as e:
+            print(f"Error uploading file: {e.response['error']}")     
+
     #關鍵字
     @app.message(re.compile("(.*)"))
-    def handle_message(message, client):
+    def handle_message(message):
         text = message['text']
-        channel = message['channel']
-        submitter_id = message['user']
+        channel = message['channel']        
         collection = db.slock_bot_commit
         keyword = collection.find_one({"message": text })        
         if keyword: 
             # 根據 keyword 資料決定是否傳遞 file_path
             file_path = keyword.get('file')
-            send_image(client,channel, keyword['say'], file_path)    
+            send_image(channel, keyword['say'], file_path)    
