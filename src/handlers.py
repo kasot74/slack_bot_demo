@@ -1,7 +1,6 @@
 import re
 import random
-from .openai_service import generate_summary, analyze_sentiment
-from .utilities import send_image
+from .openai_service import generate_summary, analyze_sentiment, validate_with_openai
 import os
 
 def register_handlers(app, config, db):
@@ -110,8 +109,6 @@ def register_handlers(app, config, db):
         channel_id = message['channel']
         result = client.conversations_members(channel=channel_id)
         members = result['members']    
-        # 取在線人員
-        members = get_online_members(client, channel_id)
 
         # 隨機抽選用户
         if members:
@@ -119,21 +116,7 @@ def register_handlers(app, config, db):
             say(f"<@{random_user}>")
         else:
             say(f"<@{random_user}>")
-
-    # 回傳目前在線用户
-    def get_online_members(client, channel_id):
-        result = client.conversations_members(channel=channel_id)
-        members = result['members']    
-        members = [member for member in members ]
-
-        # 篩選出上限member
-        online_members = []
-        for member in members:
-            profile = client.users_getPresence(user=member)
-            if profile['presence'] == 'active':
-                online_members.append(member)    
-        return online_members           
-
+   
     # DB 新增處理
     def add_commit(message_text, response_text, say):
         try:        
@@ -195,6 +178,19 @@ def register_handlers(app, config, db):
         except Exception as e:
             print(f"Error uploading file: {e.response['error']}")     
 
+    #檢查 再在
+    @app.message(re.compile(r"(在|再)"))
+    def check_message(message,say):
+        text = message['text']        
+
+        # 使用 OpenAI 檢查文本
+        validation_response = validate_with_openai(text)
+        
+        # 檢查 OpenAI 回覆是否有錯誤
+        if validation_response != "正確":
+            # 這裡可以進行錯誤處理，例如發送回應或記錄錯誤            
+            say(f"再在不分?! :rage: {validation_response}")
+        
     #關鍵字
     @app.message(re.compile("(.*)"))
     def handle_message(message):
