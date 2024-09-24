@@ -186,20 +186,3 @@ def register_handlers(app, config, db):
             # 根據 keyword 資料決定是否傳遞 file_path
             file_path = keyword.get('file')
             send_image(channel, keyword['say'], file_path)    
-        global submitted_numbers, submitted_numbers_min , submitted_numbers_max    
-        if submitted_numbers:                
-            if text.isdigit() :
-                number = int(text)            
-                if number == submitted_numbers:            
-                    say(f"恭喜<@{submitter_id}>猜對 正解:{number}!")                            
-                    submitted_numbers = int()
-                    submitted_numbers_max = 100
-                    submitted_numbers_min = 1
-                else:
-                    if number < submitted_numbers:
-                        submitted_numbers_min = number
-                    else:
-                        submitted_numbers_max = number                    
-                    hint = f"範圍是{submitted_numbers_min}~{submitted_numbers_max} "                
-                    say(f"猜錯了!，{hint}")
-
