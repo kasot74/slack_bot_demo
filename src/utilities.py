@@ -9,17 +9,17 @@ def read_config(file_path):
             config[key] = value
     return config
 
-def send_image(app, channel_id, message, file_path=None):
+def send_image(app_client, channel_id, message, file_path=None):
     try:
         if file_path:
-            response = app.client.files_upload_v2(
+            response = app_client.files_upload_v2(
                 channel=channel_id,
                 file=os.path.join('images', file_path),
                 initial_comment=message
             )
             assert response["file"]
         else:
-            response = app.client.chat_postMessage(
+            response = app_client.chat_postMessage(
                 channel=channel_id,
                 text=message
             )
