@@ -34,7 +34,7 @@ OpenAI_clice = OpenAI(
 )
 
 
-# 使用者輸入文本並生成摘要的功能
+# Call OpenAI
 @app.message(re.compile(r"!openai\s+(.+)"))
 def handle_summary_command(message, say):
     user_input = message['text'].replace('!openai', '').strip()    
