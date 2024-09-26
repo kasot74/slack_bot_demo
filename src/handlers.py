@@ -199,10 +199,3 @@ def register_handlers(app, config, db):
             file_path = keyword.get('file')
             send_image(channel, keyword['say'], file_path)    
             return
-        if len(text) >= 10:
-            # 使用 OpenAI 檢查文本
-            validation_response = validate_with_openai(text)            
-            # 檢查 OpenAI 回覆是否有錯誤
-            if validate_with_openai(text) != "正確":
-                # 這裡可以進行錯誤處理，例如發送回應或記錄錯誤            
-                say(f"發現錯字 :melting_face: {validation_response}")
