@@ -1,6 +1,7 @@
 import re
 import random
 from .openai_service import generate_summary, analyze_sentiment, validate_with_openai
+from .stability_model import get_image
 import os
 
 def register_handlers(app, config, db):
@@ -116,8 +117,15 @@ def register_handlers(app, config, db):
             say(f"<@{random_user}>")
         else:
             say(f"<@{random_user}>")
-   
+    
+    #!畫
+    @app.message(re.compile(r"^!畫\s+(.+)$"))
+    def c_image(message, say, channel):
+        msg_text = re.match(r"^!畫\s+(.+)$", message['text']).group(1).strip()
+        file_name, say_text = get_image(msg_text)
+        send_image(channel, say_text, file_name)
     # DB 新增處理
+    
     def add_commit(message_text, response_text, say):
         try:        
             collection = db.slock_bot_commit
