@@ -120,7 +120,8 @@ def register_handlers(app, config, db):
     
     #!畫
     @app.message(re.compile(r"^!畫\s+(.+)$"))
-    def c_image(message, say, channel):
+    def c_image(message, say):
+        channel = message['channel']
         msg_text = re.match(r"^!畫\s+(.+)$", message['text']).group(1).strip()
         file_name, say_text = get_image(msg_text)
         send_image(channel, say_text, file_name)
