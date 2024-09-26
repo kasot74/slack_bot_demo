@@ -31,4 +31,4 @@ def get_image(text):
         return file_name, f"我畫完{text}"
     else:
         # 處理 API 回傳錯誤
-        raise None,Exception(f"{response.status_code} {str(response.json())}")
+        return None,f"錯誤!! 太難了! {response.status_code} "
