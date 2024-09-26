@@ -125,7 +125,7 @@ def register_handlers(app, config, db):
         channel = message['channel']
         msg_text = re.match(r"^!畫\s+(.+)$", message['text']).group(1).strip()
         file_name, say_text = get_image(msg_text)
-        say(f"我正在畫!{msg_text}")
+        say(f"我正在畫 :art: {msg_text}")
         send_image(channel, say_text, file_name)
     # DB 新增處理
     
