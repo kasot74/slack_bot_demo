@@ -121,9 +121,11 @@ def register_handlers(app, config, db):
     #!畫
     @app.message(re.compile(r"^!畫\s+(.+)$"))
     def c_image(message, say):
+        
         channel = message['channel']
         msg_text = re.match(r"^!畫\s+(.+)$", message['text']).group(1).strip()
         file_name, say_text = get_image(msg_text)
+        say(f"我正在畫!{msg_text}")
         send_image(channel, say_text, file_name)
     # DB 新增處理
     
@@ -199,7 +201,7 @@ def register_handlers(app, config, db):
             file_path = keyword.get('file')
             send_image(channel, keyword['say'], file_path)    
             return
-        if text.length >= 3:
+        if len(text) >= 10:
             # 使用 OpenAI 檢查文本
             validation_response = validate_with_openai(text)            
             # 檢查 OpenAI 回覆是否有錯誤
