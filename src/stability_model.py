@@ -13,18 +13,18 @@ async def get_image(text):
     data =  { "prompt": text, "output_format": "jpeg" } # 使用傳入的文字作為提示詞
     files={"none": ''}
 
-
+    flag = True
     async with aiohttp.ClientSession() as session:
         async with session.post(url, headers=headers , data=data) as response:
-            if response.status_code == 200:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                file_name = f"images/stability_image/{timestamp}.jpeg"
-
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_name = f"images/stability_image/{timestamp}.jpeg"
+            if response.status_code == 200:                
                 with open(file_name, 'wb') as file:
-                    file.write(await response.read())
-
-                # 傳回圖片檔案路徑與成功訊息
-                return file_name, f"我畫完 {text}"
+                    file.write(await response.read())                                
             else:
-                # 處理 API 回傳錯誤
-                return None, f"錯誤!! 太難了! {response.status_code}"
+                flag = False
+                # 處理 API 回傳錯誤                
+    if flag:
+        return file_name, f"我畫完 {text}"
+    else:
+        return None, f"錯誤!! 太難了! {response.status_code}"
