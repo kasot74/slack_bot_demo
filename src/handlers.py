@@ -123,8 +123,7 @@ def register_handlers(app, config, db):
     async def c_image(message, say):        
         channel = message['channel']
         msg_text = re.match(r"^!畫\s+(.+)$", message['text']).group(1).strip()
-        say(f"我正在畫 :art: {msg_text}")
-        file_name, say_text = await get_image(msg_text)        
+        file_name, say_text = await get_image(msg_text)                
         send_image(channel, say_text, file_name)
     # DB 新增處理
     
