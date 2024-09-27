@@ -8,6 +8,7 @@ from .utilities import read_config
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
 api_key=config['STABILITY_API_KEY']
+stability_image_path=config['stability_image_path']
 stability_api = client.StabilityInference(key=api_key)
 def get_image(text):    
     # Create directory if not exists    
@@ -25,11 +26,20 @@ def get_image(text):
                     print("Your request activated the API's safety filters and could not be processed."
                         "Please modify the prompt and try again.")                        
                 if artifact.type == generation.ARTIFACT_IMAGE:
-                    img = Image.open(io.BytesIO(artifact.binary))
-                    image_dir = os.path.join(image_dir,str(artifact.seed)+ ".png")
-                    img.save(image_dir,"png") # Save our generated images with their seed number as the filename.                    
                     timestamp = int(time.time())
-                    file_path = os.path.join("stability_image", str(timestamp)+ ".png")
+                    img_filename = str(timestamp)+ ".png"
+                    img = Image.open(io.BytesIO(artifact.binary))
+                    image_dir = os.path.join(image_dir,img_filename)
+                    img.save(image_dir,"png") # Save our generated images with their seed number as the filename.                    
+                    
+                    # 打開源文件並將其內容寫入新路徑的文件
+                    new_dir = os.path.join(stability_image_path,img_filename)
+                    with open(image_dir, 'rb') as src_file:
+                        with open(new_dir, 'wb') as dest_file:
+                            dest_file.write(src_file.read())
+
+                    #回傳路徑
+                    file_path = os.path.join("stability_image",img_filename)
         return "小畫家繪圖成功! :art: ", file_path
     except Exception as e:
         # Handle potential errors during image generation                
