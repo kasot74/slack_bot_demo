@@ -1,4 +1,5 @@
 import os
+import time
 from PIL import Image
 import io
 from stability_sdk import client
@@ -27,7 +28,8 @@ def get_image(text):
                     img = Image.open(io.BytesIO(artifact.binary))
                     image_dir = os.path.join(image_dir,str(artifact.seed)+ ".png")
                     img.save(image_dir,"png") # Save our generated images with their seed number as the filename.                    
-                    file_path = os.path.join("stability_image", str(artifact.seed)+ ".png")
+                    timestamp = int(time.time())
+                    file_path = os.path.join("stability_image", str(timestamp)+ ".png")
         return "小畫家繪圖成功! :art: ", file_path
     except Exception as e:
         # Handle potential errors during image generation                
