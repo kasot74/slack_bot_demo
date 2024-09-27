@@ -27,7 +27,8 @@ def get_image(text):
                     img = Image.open(io.BytesIO(artifact.binary))
                     image_dir = os.path.join(image_dir,str(artifact.seed)+ ".png")
                     img.save(image_dir,"png") # Save our generated images with their seed number as the filename.                    
-        return "成功", image_dir
+                    file_path = os.path.join("stability_image", str(artifact.seed)+ ".png")
+        return "小畫家繪圖成功! :art: ", file_path
     except Exception as e:
         # Handle potential errors during image generation                
-        return f"Error generating image: {e}", None
+        return f"出錯了畫不出來! {e}", None
