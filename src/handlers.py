@@ -120,13 +120,13 @@ def register_handlers(app, config, db):
     
     #!畫
     @app.message(re.compile(r"^!畫\s+(.+)$"))
-    async def c_image(message, say):        
+    def create_image(message, say):        
         channel = message['channel']
         msg_text = re.match(r"^!畫\s+(.+)$", message['text']).group(1).strip()
-        file_name, say_text = await get_image(msg_text)                
+        say_text, file_name = get_image(msg_text)                
         send_image(channel, say_text, file_name)
-    # DB 新增處理
-    
+
+    # DB 新增處理    
     def add_commit(message_text, response_text, say):
         try:        
             collection = db.slock_bot_commit
