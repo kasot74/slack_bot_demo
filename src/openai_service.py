@@ -45,3 +45,13 @@ def analyze_sentiment(text):
         ]
     )       
     return response.choices[0].message.content.strip().lower()
+
+def  painting(text):
+    response = OpenAI_clice.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "你是翻譯官，幫我將文字描述翻譯為英文用來提供給StabilityAI繪圖用"},
+            {"role": "user", "content": f"幫我轉化：'{text}' "}
+        ]
+    )       
+    return response.choices[0].message.content.strip().lower()

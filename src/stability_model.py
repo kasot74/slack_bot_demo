@@ -4,6 +4,7 @@ from PIL import Image
 import io
 from stability_sdk import client
 import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
+from .openai_service import painting
 from .utilities import read_config
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
@@ -19,7 +20,8 @@ def get_image(text):
         os.makedirs(image_dir)
     # Generate image using Stability AI    
     try:
-        answers = stability_api.generate(prompt=text)
+        prompt_str = painting(text)
+        answers = stability_api.generate(prompt=prompt_str)
         for resp in answers:
             for artifact in resp.artifacts:
                 if artifact.finish_reason == generation.FILTER:
