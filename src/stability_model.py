@@ -28,11 +28,10 @@ def get_image(text):
     # Generate image using Stability AI    
     try:
         prompt_str = painting(text)                
-        answers = stability_api.generate(prompt=prompt_str, guidance_strength=0.8, steps=25,cfg_scale=7.5,sampler="K_dpm_2_ancestral", style_preset="fantasy-art")
+        answers = stability_api.generate(prompt=prompt_str, guidance_strength=0.8, steps=25,cfg_scale=7.5)
         for resp in answers:
             for artifact in resp.artifacts:
-                if artifact.finish_reason == generation.FILTER:
-                    return f"繪圖失敗! {artifact.description}", None
+                
                 if artifact.type == generation.ARTIFACT_IMAGE:
                     timestamp = int(time.time())
                     img_filename = str(timestamp)+ ".png"
@@ -51,4 +50,4 @@ def get_image(text):
         return "繪圖成功! :art: ", file_path
     except Exception as e:
         # Handle potential errors during image generation                
-        return f"BUG {e}", None
+        return f"繪圖失敗!\n {artifact}", None
