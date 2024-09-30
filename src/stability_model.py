@@ -21,7 +21,7 @@ def get_image(text):
     # Generate image using Stability AI    
     try:
         prompt_str = painting(text)        
-        answers = stability_api.generate(prompt=prompt_str,steps=20,cfg_scale=8.5,adapter_type="sketch",safety=False)
+        answers = stability_api.generate(prompt=prompt_str,steps=30,cfg_scale=8.5)
         for resp in answers:
             for artifact in resp.artifacts:
                 if artifact.finish_reason == generation.FILTER:
