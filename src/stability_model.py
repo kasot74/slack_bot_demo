@@ -10,9 +10,16 @@ from .utilities import read_config
 config = read_config('config/config.txt')
 api_key=config['STABILITY_API_KEY']
 
-stability_api = client.StabilityInference(key=api_key)
+#sampler_list ["DDIM", "PLMS", "K_euler", "K_euler_ancestral", "K_heun", "K_dpm_2", "K_dpm_2_ancestral", "K_lms", "K_dpmpp_2m", "K_dpmpp_2s_ancestral"]
+#engine_list ["stable-diffusion-512-v2-1","stable-diffusion-xl-beta-v2-2-2"]
+#style_preset 
+# [3d-model ,analog-film ,anime ,cinematic ,comic-book ,digital-art ,enhance ,fantasy-art 
+#  ,isometric ,line-art ,low-poly ,modeling-compound ,neon-punk ,origami ,photographic 
+#  ,pixel-art ,tile-texture]
+stability_api = client.StabilityInference(key=api_key,engine="stable-diffusion-512-v2-1")
 def get_image(text):    
     # Create directory if not exists    
+    
     # 構建新的目錄路徑
     image_dir = os.path.join("images", "stability_image")
     # 如果目錄不存在，則創建它    
@@ -20,13 +27,12 @@ def get_image(text):
         os.makedirs(image_dir)
     # Generate image using Stability AI    
     try:
-        prompt_str = painting(text)        
-        answers = stability_api.generate(prompt=prompt_str,steps=30,cfg_scale=8.5)
+        prompt_str = painting(text)                
+        answers = stability_api.generate(prompt=prompt_str, guidance_strength=0.8, steps=25,cfg_scale=7.5,sampler="K_dpm_2_ancestral", style_preset="fantasy-art")
         for resp in answers:
             for artifact in resp.artifacts:
                 if artifact.finish_reason == generation.FILTER:
-                    print("Your request activated the API's safety filters and could not be processed."
-                        "Please modify the prompt and try again.")                        
+                    return f"繪圖失敗! {artifact.description}", None
                 if artifact.type == generation.ARTIFACT_IMAGE:
                     timestamp = int(time.time())
                     img_filename = str(timestamp)+ ".png"
@@ -42,7 +48,7 @@ def get_image(text):
 
                     #回傳路徑
                     file_path = os.path.join("stability_image",img_filename)
-        return "小畫家繪圖成功! :art: ", file_path
+        return "繪圖成功! :art: ", file_path
     except Exception as e:
         # Handle potential errors during image generation                
-        return f"出錯了畫不出來! {e}", None
+        return f"BUG {e}", None
