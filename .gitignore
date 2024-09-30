@@ -2,3 +2,4 @@
 /config/config.txt
 src/__pycache__/
 /images/stability_image
+/bot_main.log
