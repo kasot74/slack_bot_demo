@@ -20,9 +20,8 @@ def get_image(text):
         os.makedirs(image_dir)
     # Generate image using Stability AI    
     try:
-        #prompt_str = painting(text)
-        prompt_str = text 
-        answers = stability_api.generate(prompt=prompt_str,use_safe_mode=False)
+        prompt_str = painting(text)        
+        answers = stability_api.generate(prompt=prompt_str,step=20,sampler="ddim",cfg_scale=8,adapter_type="sketch",safety=False)
         for resp in answers:
             for artifact in resp.artifacts:
                 if artifact.finish_reason == generation.FILTER:
