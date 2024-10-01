@@ -29,7 +29,7 @@ def get_image(text):
     msg = ""
     try:
         prompt_str = painting(text)                
-        answers = stability_api.generate(prompt=prompt_str, guidance_strength=0.6, step=50)        
+        answers = stability_api.generate(prompt=prompt_str, guidance_strength=0.6, steps=50)        
         for resp in answers:
             for artifact in resp.artifacts:
                 msg = artifact
