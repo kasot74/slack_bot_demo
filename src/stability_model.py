@@ -25,14 +25,12 @@ def get_image(text):
     # 如果目錄不存在，則創建它    
     if not os.path.exists(image_dir):
         os.makedirs(image_dir)
-    # Generate image using Stability AI    
-    msg = ""
+    # Generate image using Stability AI            
     try:
         prompt_str = painting(text)                
         answers = stability_api.generate(prompt=prompt_str, guidance_strength=0.6, steps=50)        
         for resp in answers:
-            for artifact in resp.artifacts:
-                msg = artifact
+            for artifact in resp.artifacts:                                
                 if artifact.type == generation.ARTIFACT_IMAGE:
                     timestamp = int(time.time())
                     img_filename = str(timestamp)+ ".png"
@@ -51,4 +49,4 @@ def get_image(text):
         return "繪圖成功! :art: ", file_path
     except Exception as e:
         # Handle potential errors during image generation                
-        return f"繪圖失敗!\n{msg}\n{e}", None
+        return f"繪圖失敗!\n{e}", None
