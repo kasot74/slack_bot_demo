@@ -17,7 +17,7 @@ collection = ai_db.ai_his
 # 定義一個函數來轉換每條記錄為 OpenAI API 格式
 def convert_to_openai_format():
     # 根據你的 MongoDB 資料結構來調整這部分
-    history = collection.find()
+    history = list(collection.find())
     return [{"role": h["role"], "content": h["content"]} for h in history]
 
 def generate_summary(user_input):
