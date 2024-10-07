@@ -146,10 +146,7 @@ def register_handlers(app, config, db):
     # DB 新增處理    
     def add_commit(message_text, response_text, say):
         try:        
-            collection = db.slock_bot_commit
-            if re.search(r".*全亨.*", message_text):
-                say("[全亨] 保留字不可使用!")
-                return             
+            collection = db.slock_bot_commit   
             if re.search(r"!.*", message_text):
                 say("[!開頭] 保留字不可使用!")
                 return  

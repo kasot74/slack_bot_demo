@@ -1,35 +1,41 @@
 import openai
 from openai import OpenAI
 from .utilities import read_config
+from .database import con_db
+
+
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
+ai_db = con_db(config)
 OpenAI_clice = OpenAI(    
     api_key=config['OPENAI_API_KEY']
 )
 model_target = "gpt-4o"
-# 初始化對話歷史
-conversation_history = [ {"role": "system", "content": "請用繁體中文回答"} ]
+collection = ai_db.ai_his
+
+
 def generate_summary(user_input):
-
+        
     user_message = {"role": "user", "content": user_input}
-    conversation_history.append(user_message) 
-
+    collection.insert_one(user_message)    
+    conversation_history = collection.find
     response = OpenAI_clice.chat.completions.create(
         messages=conversation_history,
-        model=model_target,            
-        temperature=0.6,
-        max_tokens=50
+        model=model_target        
     )
 
     assistant_message = response.choices[0].message
-    conversation_history.append(assistant_message) 
+    collection.insert_one(assistant_message)
 
     return assistant_message.content
 
 def clear_conversation_history():
-    conversation_history = [ {"role": "system", "content": "請用繁體中文回答"} ]
+    collection.delete_many
+    collection.insert_one({"role": "system", "content": "請用繁體中文回答"})    
+
 def look_conversation_history():
-    return '\n'.join([message['content'] for message in conversation_history])
+    conversation_history = collection.find
+    return '\n'.join([message for message in conversation_history])
 
 def validate_with_openai(text):
     # 使用 OpenAI 的 API 進行檢查
@@ -62,16 +68,6 @@ def  painting(text):
         model="gpt-4o",
         messages=[
             {"role": "system", "content": "你是翻譯官，幫我將文字描述翻譯為英文用來提供給StabilityAI繪圖用"},
-            {"role": "user", "content": f"幫我轉化：'{text}' "}
-        ]
-    )       
-    return response.choices[0].message.content.strip().lower()
-
-def  painting(text):
-    response = OpenAI_clice.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": "你是看透一切的"},
             {"role": "user", "content": f"幫我轉化：'{text}' "}
         ]
     )       
