@@ -15,10 +15,14 @@ collection = ai_db.ai_his
 
 
 # 定義一個函數來轉換每條記錄為 OpenAI API 格式
-def convert_to_openai_format():
-    # 根據你的 MongoDB 資料結構來調整這部分
-    history = list(collection.find())
-    return [{"role": h["role"], "content": h["content"]} for h in history]
+def convert_to_openai_format(history):
+    formatted_messages = []
+    for h in history:
+        # 確保 'role' 和 'content' 存在且都是字串
+        role = str(h.get("role", "user"))  # 預設為 "user" 角色
+        content = str(h.get("content", ""))  # 預設為空內容
+        formatted_messages.append({"role": role, "content": content})
+    return formatted_messages
 
 def generate_summary(user_input):
         
@@ -40,7 +44,7 @@ def clear_conversation_history():
     collection.insert_one({"role": "system", "content": "請用繁體中文回答"})    
 
 def look_conversation_history():
-    conversation_history = collection.find()
+    conversation_history = list(collection.find())
     return '\n'.join([message for message in conversation_history])
 
 def validate_with_openai(text):
