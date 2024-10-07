@@ -7,19 +7,27 @@ OpenAI_clice = OpenAI(
     api_key=config['OPENAI_API_KEY']
 )
 model_target = "gpt-4o"
+# 初始化對話歷史
+conversation_history = [ {"role": "system", "content": "請用繁體中文回答"} ]
 def generate_summary(user_input):
-    response = OpenAI_clice.chat.completions.create(
-        messages=[
-            {"role": "system", "content": "請用繁體中文回答"},
-            {
-                "role": "user",
-                "content": user_input,
-            }
-        ],
-        model=model_target,            
-    )
-    return response.choices[0].message.content
 
+    user_message = {"role": "user", "content": user_input}
+    conversation_history.append(user_message) 
+
+    response = OpenAI_clice.chat.completions.create(
+        messages=conversation_history,
+        model=model_target,            
+        temperature=0.6,
+        max_tokens=50
+    )
+
+    assistant_message = response.choices[0].message
+    conversation_history.append(assistant_message) 
+
+    return assistant_message.content
+
+def clear_conversation_history():
+    conversation_history = [ {"role": "system", "content": "請用繁體中文回答"} ]
 def validate_with_openai(text):
     # 使用 OpenAI 的 API 進行檢查
     response = OpenAI_clice.chat.completions.create(
@@ -51,6 +59,16 @@ def  painting(text):
         model="gpt-4o",
         messages=[
             {"role": "system", "content": "你是翻譯官，幫我將文字描述翻譯為英文用來提供給StabilityAI繪圖用"},
+            {"role": "user", "content": f"幫我轉化：'{text}' "}
+        ]
+    )       
+    return response.choices[0].message.content.strip().lower()
+
+def  painting(text):
+    response = OpenAI_clice.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "你是看透一切的"},
             {"role": "user", "content": f"幫我轉化：'{text}' "}
         ]
     )       

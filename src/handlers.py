@@ -1,6 +1,6 @@
 import re
 import random
-from .openai_service import generate_summary, analyze_sentiment, validate_with_openai
+from .openai_service import generate_summary, analyze_sentiment, validate_with_openai, clear_conversation_history
 from .stability_model import get_image
 import os
 
@@ -125,6 +125,16 @@ def register_handlers(app, config, db):
         msg_text = re.match(r"^!畫\s+(.+)$", message['text']).group(1).strip()
         say_text, file_name = get_image(msg_text)                
         send_image(channel, say_text, file_name)
+
+    #!clearai
+    @app.message(re.compile(r"^!clearai$"))
+    def clearai(message, say):        
+        try:
+            clear_conversation_history()
+            say("AI聊天紀錄清除成功!")
+        except Exception as e:
+            say("AI聊天紀錄清除錯誤!")
+                    
 
     # DB 新增處理    
     def add_commit(message_text, response_text, say):
