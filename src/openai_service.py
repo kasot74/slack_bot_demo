@@ -28,6 +28,9 @@ def generate_summary(user_input):
 
 def clear_conversation_history():
     conversation_history = [ {"role": "system", "content": "請用繁體中文回答"} ]
+def look_conversation_history():
+    return '\n'.join([message['content'] for message in conversation_history])
+
 def validate_with_openai(text):
     # 使用 OpenAI 的 API 進行檢查
     response = OpenAI_clice.chat.completions.create(

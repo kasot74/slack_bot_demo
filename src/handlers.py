@@ -1,6 +1,6 @@
 import re
 import random
-from .openai_service import generate_summary, analyze_sentiment, validate_with_openai, clear_conversation_history
+from .openai_service import generate_summary, analyze_sentiment, validate_with_openai, clear_conversation_history, look_conversation_history
 from .stability_model import get_image
 import os
 
@@ -134,7 +134,14 @@ def register_handlers(app, config, db):
             say("AI聊天紀錄清除成功!")
         except Exception as e:
             say("AI聊天紀錄清除錯誤!")
-                    
+    #!lookai        
+    @app.message(re.compile(r"^!lookai$"))
+    def lookai(message, say):        
+        try:
+            his = look_conversation_history()
+            say(his)
+        except Exception as e:
+            say("AI聊天紀錄清除錯誤!")
 
     # DB 新增處理    
     def add_commit(message_text, response_text, say):
