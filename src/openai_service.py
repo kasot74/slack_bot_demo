@@ -14,11 +14,17 @@ model_target = "gpt-4o"
 collection = ai_db.ai_his
 
 
+# 定義一個函數來轉換每條記錄為 OpenAI API 格式
+def convert_to_openai_format():
+    # 根據你的 MongoDB 資料結構來調整這部分
+    history = collection.find()
+    return [{"role": h["role"], "content": h["content"]} for h in history]
+
 def generate_summary(user_input):
         
     user_message = {"role": "user", "content": user_input}
-    collection.insert_one(user_message)    
-    conversation_history = collection.find()
+    collection.insert_one(user_message)        
+    conversation_history = convert_to_openai_format()
     response = OpenAI_clice.chat.completions.create(
         messages=conversation_history,
         model=model_target        
