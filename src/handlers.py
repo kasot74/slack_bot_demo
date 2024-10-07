@@ -133,7 +133,7 @@ def register_handlers(app, config, db):
             clear_conversation_history()
             say("AI聊天紀錄清除成功!")
         except Exception as e:
-            say("AI聊天紀錄清除錯誤!")
+            say(f"AI聊天紀錄清除錯誤!{e}")
     #!lookai        
     @app.message(re.compile(r"^!lookai$"))
     def lookai(message, say):        
@@ -141,7 +141,7 @@ def register_handlers(app, config, db):
             his = look_conversation_history()
             say(his)
         except Exception as e:
-            say("AI聊天紀錄清除錯誤!")
+            say(f"AI聊天紀錄查看錯誤!{e}")
 
     # DB 新增處理    
     def add_commit(message_text, response_text, say):

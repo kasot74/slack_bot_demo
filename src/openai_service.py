@@ -18,7 +18,7 @@ def generate_summary(user_input):
         
     user_message = {"role": "user", "content": user_input}
     collection.insert_one(user_message)    
-    conversation_history = collection.find
+    conversation_history = collection.find()
     response = OpenAI_clice.chat.completions.create(
         messages=conversation_history,
         model=model_target        
@@ -34,7 +34,7 @@ def clear_conversation_history():
     collection.insert_one({"role": "system", "content": "請用繁體中文回答"})    
 
 def look_conversation_history():
-    conversation_history = collection.find
+    conversation_history = collection.find()
     return '\n'.join([message for message in conversation_history])
 
 def validate_with_openai(text):
