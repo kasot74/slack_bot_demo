@@ -30,7 +30,7 @@ def generate_summary(user_input):
     return assistant_message.content
 
 def clear_conversation_history():
-    collection.delete_many
+    collection.delete_many({})
     collection.insert_one({"role": "system", "content": "請用繁體中文回答"})    
 
 def look_conversation_history():
