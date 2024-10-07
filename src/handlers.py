@@ -10,7 +10,7 @@ def register_handlers(app, config, db):
     @app.message(re.compile(r"!openai\s+(.+)"))
     def handle_summary_command(message, say):
         user_input = message['text'].replace('!openai', '').strip()    
-        # 調用 OpenAI API 生成摘要
+        # 調用 OpenAI API
         try:        
             summary = generate_summary(user_input)
             say(f"{summary}")            

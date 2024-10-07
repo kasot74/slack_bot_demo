@@ -15,37 +15,43 @@ collection = ai_db.ai_his
 
 
 # 定義一個函數來轉換每條記錄為 OpenAI API 格式
-def convert_to_openai_format(history):
-    formatted_messages = []
-    for h in history:
-        # 確保 'role' 和 'content' 存在且都是字串
-        role = str(h.get("role", "user"))  # 預設為 "user" 角色
-        content = str(h.get("content", ""))  # 預設為空內容
-        formatted_messages.append({"role": role, "content": content})
+def convert_to_openai_format():
+    history = list(collection.find())    
+    # 使用列表解析進行轉換
+    formatted_messages = [
+        {
+            "role": str(h.get("role", "user")),
+            "content": str(h.get("content", ""))
+        }
+        for h in history
+    ]
     return formatted_messages
 
 def generate_summary(user_input):
         
     user_message = {"role": "user", "content": user_input}
     collection.insert_one(user_message)        
-    conversation_history = convert_to_openai_format()
+    conversation_history = convert_to_openai_format()        
     response = OpenAI_clice.chat.completions.create(
         messages=conversation_history,
         model=model_target        
     )
+    assistant_message = response.choices[0].message.content
+    collection.insert_one({"role": "assistant", "content": assistant_message})
 
-    assistant_message = response.choices[0].message
-    collection.insert_one(assistant_message)
-
-    return assistant_message.content
+    return assistant_message
 
 def clear_conversation_history():
     collection.delete_many({})
     collection.insert_one({"role": "system", "content": "請用繁體中文回答"})    
 
 def look_conversation_history():
-    conversation_history = list(collection.find())
-    return '\n'.join([message for message in conversation_history])
+    history = list(collection.find())
+    # 建立一個包含所有雞湯語錄的列表
+    all_his = [f"{idx + 1}. {h.get('content', '')}" for idx, h in enumerate(history)]
+    # 將列表轉換為單一字串，換行分隔
+    his_text = "\n".join(all_his)
+    return his_text
 
 def validate_with_openai(text):
     # 使用 OpenAI 的 API 進行檢查
