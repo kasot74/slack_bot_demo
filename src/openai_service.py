@@ -47,8 +47,8 @@ def clear_conversation_history():
 
 def look_conversation_history():
     history = list(collection.find())
-    # 建立一個包含所有雞湯語錄的列表
-    all_his = [f"{idx + 1}. {h.get('content', '')}" for idx, h in enumerate(history)]
+    # 建立一個包含所有雞湯語錄的列表    
+    all_his = [f"{idx + 1}. {'User:' if h.get('role', '') == 'user' else 'AI:'} {h.get('content', '')}" for idx, h in enumerate(history)]
     # 將列表轉換為單一字串，換行分隔
     his_text = "\n".join(all_his)
     return his_text
