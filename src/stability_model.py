@@ -16,7 +16,7 @@ api_key=config['STABILITY_API_KEY']
 # [3d-model ,analog-film ,anime ,cinematic ,comic-book ,digital-art ,enhance ,fantasy-art 
 #  ,isometric ,line-art ,low-poly ,modeling-compound ,neon-punk ,origami ,photographic 
 #  ,pixel-art ,tile-texture]
-stability_api = client.StabilityInference(key=api_key,engine="stable-diffusion-512-v2-1")
+stability_api = client.StabilityInference(key=api_key)
 def get_image(text):    
     # Create directory if not exists    
     
@@ -28,7 +28,7 @@ def get_image(text):
     # Generate image using Stability AI            
     try:
         prompt_str = painting(text)                
-        answers = stability_api.generate(prompt=prompt_str, guidance_strength=0.6, steps=50)        
+        answers = stability_api.generate(prompt=prompt_str)        
         for resp in answers:
             for artifact in resp.artifacts:                                
                 if artifact.type == generation.ARTIFACT_IMAGE:
