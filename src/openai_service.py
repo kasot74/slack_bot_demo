@@ -10,14 +10,14 @@ ai_db = con_db(config)
 OpenAI_clice = OpenAI(    
     api_key=config['OPENAI_API_KEY']
 )
-#model_target = "gpt-4o"
-model_target ="ft:gpt-4o-2024-08-06:personal:usagi:ALlo9YVZ"
+model_target = "gpt-4o"
 collection = ai_db.ai_his
 
 
 # 定義一個函數來轉換每條記錄為 OpenAI API 格式
-def convert_to_openai_format():
-    history = list(collection.find())    
+def convert_to_openai_format(collection_name):
+    c_collection = ai_db[collection_name]
+    history = list(c_collection.find())    
     # 使用列表解析進行轉換
     formatted_messages = [
         {
@@ -31,8 +31,8 @@ def convert_to_openai_format():
 def generate_summary(user_input):
         
     user_message = {"role": "user", "content": user_input}
-    collection.insert_one(user_message)        
-    conversation_history = convert_to_openai_format()        
+    collection.insert_one(user_message)
+    conversation_history =convert_to_openai_format("usagi_model") + convert_to_openai_format("ai_his")        
     response = OpenAI_clice.chat.completions.create(
         messages=conversation_history,
         model=model_target        
