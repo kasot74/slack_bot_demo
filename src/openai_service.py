@@ -10,7 +10,8 @@ ai_db = con_db(config)
 OpenAI_clice = OpenAI(    
     api_key=config['OPENAI_API_KEY']
 )
-model_target = "gpt-4o"
+#model_target = "gpt-4o"
+model_target ="ft:gpt-4o-2024-08-06:personal::ALiKqbN1"
 collection = ai_db.ai_his
 
 
