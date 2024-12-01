@@ -184,7 +184,8 @@ def register_handlers(app, config, db):
     # 發送圖片函數
     def send_image(channel_id, message, file_path=None):
         try:
-            if file_path:
+            imagefile = os.path.join('images',file_path)
+            if os.path.isfile(imagefile):                
                 response = app.client.files_upload_v2(
                     channel=channel_id,
                     file=os.path.join('images',file_path),
@@ -207,7 +208,7 @@ def register_handlers(app, config, db):
         text = message['text']
         channel = message['channel']        
         collection = db.slock_bot_commit
-        keyword = collection.find_one({"message": text })        
+        keyword = collection.find_one({"message": {"$regex": text, "$options": "i"} })        
         if keyword: 
             # 根據 keyword 資料決定是否傳遞 file_path
             file_path = keyword.get('file')
