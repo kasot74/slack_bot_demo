@@ -208,9 +208,12 @@ def register_handlers(app, config, db):
         text = message['text']
         channel = message['channel']        
         collection = db.slock_bot_commit
-        keyword = collection.find_one({"message": {"$regex": text, "$options": "i"} })        
-        if keyword: 
-            # 根據 keyword 資料決定是否傳遞 file_path
-            file_path = keyword.get('file')
-            send_image(channel, keyword['say'], file_path)    
+        keyword_all = collection.find()
+        # 遍歷每條資料
+        for doc in keyword_all:
+            message = doc.get('message')
+            if message in text:  # 使用字串包含檢查
+                print("找到的資料:", doc)
+                file_path = doc.get('file')
+                send_image(channel, doc['say'], file_path)            
             return
