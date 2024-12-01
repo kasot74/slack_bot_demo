@@ -212,8 +212,7 @@ def register_handlers(app, config, db):
         # 遍歷每條資料
         for doc in keyword_all:
             message = doc.get('message')
-            if message in text:  # 使用字串包含檢查
-                print("找到的資料:", doc)
+            if re.search(re.escape(message), text):                            
                 file_path = doc.get('file')
                 send_image(channel, doc['say'], file_path)            
             return
