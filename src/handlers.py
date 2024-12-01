@@ -182,7 +182,7 @@ def register_handlers(app, config, db):
             say("發生例外錯誤!")
 
     # 發送圖片函數
-    def send_image(channel_id, message, file_path=None):
+    def send_image(channel_id, message, file_path=None):        
         try:
             imagefile = os.path.join('images',file_path)
             if os.path.isfile(imagefile):                
@@ -204,15 +204,15 @@ def register_handlers(app, config, db):
         
     #關鍵字
     @app.message(re.compile("(.*)"))
-    def handle_message(message,say):
+    def handle_message(message,say):        
         text = message['text']
         channel = message['channel']        
         collection = db.slock_bot_commit
-        keyword_all = collection.find()
+        keyword_all = collection.find()        
         # 遍歷每條資料
-        for doc in keyword_all:
+        for doc in keyword_all:            
             message = doc.get('message')
             if re.search(re.escape(message), text):                            
                 file_path = doc.get('file')
                 send_image(channel, doc['say'], file_path)            
-            return
+                return
