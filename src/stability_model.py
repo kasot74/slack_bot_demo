@@ -46,7 +46,7 @@ def get_image(text):
 
                     #回傳路徑
                     file_path = os.path.join("stability_image",img_filename)
-        return "繪圖成功! :art: ", file_path
+        return f"{text}繪圖成功! :art: ", file_path
     except Exception as e:
         # Handle potential errors during image generation                
         return f"繪圖失敗!\n{e}", None
