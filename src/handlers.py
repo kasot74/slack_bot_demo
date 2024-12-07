@@ -182,7 +182,7 @@ def register_handlers(app, config, db):
             say("發生例外錯誤!")
 
     # 發送圖片函數
-    def send_image(channel_id, message, file_path=None):        
+    def send_image(channel_id, message, say, file_path=None):        
         try:
             imagefile = os.path.join('images',file_path)
             if os.path.isfile(imagefile):                
@@ -190,17 +190,11 @@ def register_handlers(app, config, db):
                     channel=channel_id,
                     file=os.path.join('images',file_path),
                     initial_comment=message
-                )
-                assert response["file"]
+                )                
             else:
-                # 如果沒有提供 file_path，則只發送訊息
-                response = app.client.chat_postMessage(
-                    channel=channel_id,
-                    text=message
-                )
-                assert response["ok"]
+                say(message)                
         except Exception as e:
-            print(f"Error uploading file: {e.response['error']}")     
+            print(f"Error send_image uploading file ")     
         
     #關鍵字
     @app.message(re.compile("(.*)"))
@@ -214,5 +208,5 @@ def register_handlers(app, config, db):
             message = doc.get('message')
             if re.search(re.escape(message), text):                            
                 file_path = doc.get('file')
-                send_image(channel, doc['say'], file_path)            
+                send_image(channel, doc['say'],say, file_path)            
                 return
