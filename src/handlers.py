@@ -114,9 +114,7 @@ def register_handlers(app, config, db):
         # 隨機抽選用户
         if members:
             random_user = random.choice(members)
-            say(f"<@{random_user}>")
-        else:
-            say(f"<@{random_user}>")
+            say(f"{random_user}")        
     
     #!畫
     @app.message(re.compile(r"^!畫\s+(.+)$"))
