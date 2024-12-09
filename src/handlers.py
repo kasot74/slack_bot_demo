@@ -120,7 +120,7 @@ def register_handlers(app, config, db):
             text = message['text']
             additional_text = text[text.index("誰") + 1:].strip() 
             # 顯示用戶名稱和附加字串 
-            say(f" {user_name} {additional_text} ")                        
+            say(f" {user_name} {additional_text} !")                        
     
     #!畫
     @app.message(re.compile(r"^!畫\s+(.+)$"))

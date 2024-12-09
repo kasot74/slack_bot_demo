@@ -22,20 +22,7 @@ jobs:
     
       run: |
         ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << EOF
-          cd /home/ubuntu/my_project/slack_bot_demo  # EC2 上程式的路徑
-          git pull origin main       
           
-          source ~/venv/bin/activate # 激活虛擬環境         
-          PID=$(pgrep -f 'python -m src.bot_main') # 檢查是否有正在運行的 bot_main.py 進程            
+          bash /home/ubuntu/update_and_run.sh
           
-          if [ -n "$PID" ]; then
-              echo "Found running process with PID $PID. Killing it..."
-              kill "$PID"
-          else
-              echo "No running process found."
-          fi
-          
-          nohup python -m src.bot_main > bot_main.log 2>&1 &
-          
-          deactivate
         EOF
