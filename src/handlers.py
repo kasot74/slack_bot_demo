@@ -114,7 +114,9 @@ def register_handlers(app, config, db):
         # 隨機抽選用户
         if members:
             random_user = random.choice(members)
-            say(f"{random_user}")        
+            user_info = client.users_info(user=random_user)
+            user_name = user_info['user']['name'] 
+            say(f"{user_name}")            
     
     #!畫
     @app.message(re.compile(r"^!畫\s+(.+)$"))
