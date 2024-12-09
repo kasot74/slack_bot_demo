@@ -116,7 +116,11 @@ def register_handlers(app, config, db):
             random_user = random.choice(members)
             user_info = client.users_info(user=random_user)
             user_name = user_info['user']['real_name'] 
-            say(f" {user_name} ")            
+            # 解析 "誰" 後面的所有字串 
+            text = message['text']
+            additional_text = text[text.index("誰") + 1:].strip() 
+            # 顯示用戶名稱和附加字串 
+            say(f" {user_name} {additional_text} ")                        
     
     #!畫
     @app.message(re.compile(r"^!畫\s+(.+)$"))
