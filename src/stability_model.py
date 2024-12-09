@@ -28,7 +28,7 @@ def get_image(text):
     # Generate image using Stability AI            
     try:
         prompt_str = painting(text)                
-        answers = stability_api.generate(prompt=prompt_str)        
+        answers = stability_api.generate(prompt=prompt_str,steps=5)        
         for resp in answers:
             for artifact in resp.artifacts:                                
                 if artifact.type == generation.ARTIFACT_IMAGE:
@@ -49,4 +49,4 @@ def get_image(text):
         return f"{text}繪圖成功! :art: ", file_path
     except Exception as e:
         # Handle potential errors during image generation                
-        return f"繪圖失敗!\n{e}", None
+        return f"繪圖失敗!", None
