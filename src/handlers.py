@@ -116,7 +116,7 @@ def register_handlers(app, config, db):
             random_user = random.choice(members)
             user_info = client.users_info(user=random_user)
             user_name = user_info['user']['name'] 
-            say(f"{user_name}")            
+            say(f" {user_info} ")            
     
     #!畫
     @app.message(re.compile(r"^!畫\s+(.+)$"))
