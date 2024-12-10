@@ -187,6 +187,9 @@ def register_handlers(app, config, db):
 
     # 發送圖片函數
     def send_image(channel_id, message, say, file_path=None):        
+        if not file_path:  # 检查 file_path 是否为空或 None
+            say(message)
+            return
         try:
             imagefile = os.path.join('images',file_path)
             if os.path.isfile(imagefile):                
@@ -196,7 +199,7 @@ def register_handlers(app, config, db):
                     initial_comment=message
                 )                
             else:
-                say(message)                
+                say(f"{message} \n找不到{file_path}" )                
         except Exception as e:
             print(f"Error send_image uploading file ")     
         
