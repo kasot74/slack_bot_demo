@@ -67,9 +67,9 @@ def register_handlers(app, config, db):
 
 
     # !add 指令
-    @app.message(re.compile(r"^!add\s+(\S+)\s\s+(.+)", re.DOTALL))
+    @app.message(re.compile(r"^!add\s+(.+)\s+(.+)", re.DOTALL))
     def handle_add_message(message, say):
-        match = re.match(r"^!add\s+(\S+)\s\s+(.+)", message['text'], re.DOTALL)
+        match = re.match(r"^!add\s+(.+)\s+(.+)", message['text'], re.DOTALL)
         if match:
             msg_text = match.group(1).strip()        # 第一個空白後的關鍵字
             response_text = match.group(2).strip()    # 第二個空白後的回應內容
