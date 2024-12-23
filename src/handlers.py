@@ -72,7 +72,7 @@ def register_handlers(app, config, db):
         match = re.match(r"^!add\s+(.+)\s+(.+)", message['text'], re.DOTALL)
         if match:
             msg_text = match.group(1).strip()        # 第一個空白後的關鍵字
-            response_text = match.group(2).strip()    # 第二個空白後的回應內容
+            response_text = match.group(2).strip('\r\n \t')    # 第二個空白後的回應內容
             add_commit(msg_text, response_text, say)
 
     # !show 指令
