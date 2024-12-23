@@ -67,12 +67,13 @@ def register_handlers(app, config, db):
 
 
     # !add 指令
-    @app.message(re.compile(r"^!add\s+(.+)\s+(.+)", re.DOTALL))
+    @app.message(re.compile(r"^!add\s+(.+)\s+([\s\S]+)", re.DOTALL))
     def handle_add_message(message, say):
-        match = re.match(r"^!add\s+(.+)\s+(.+)", message['text'], re.DOTALL)
+        match = re.match(r"^!add\s+(.+)\s+([\s\S]+)", message['text'], re.DOTALL)
         if match:
-            msg_text = match.group(1).strip()        # 第一個空白後的關鍵字
-            response_text = match.group(2).strip('\r\n \t')    # 第二個空白後的回應內容
+            msg_text = match.group(1).strip()  
+            # 保留response_text中的原始格式，包括換行符
+            response_text = match.group(2)  
             add_commit(msg_text, response_text, say)
 
     # !show 指令
