@@ -67,12 +67,12 @@ def register_handlers(app, config, db):
 
 
     # !add 指令
-    @app.message(re.compile(r"^!add\s+(.+)\s+(.+)$"))
+    @app.message(re.compile(r"^!add\s+(.+)\s+(.+)", re.DOTALL))
     def handle_add_message(message, say):
-        match = re.match(r"^!add\s+(.+)\s+(.+)$", message['text'])
+        match = re.match(r"^!add\s+(.+)\s+(.+)", message['text'], re.DOTALL)
         if match:
             msg_text = match.group(1).strip()
-            response_text = match.group(2).strip()
+            response_text = match.group(2).strip().replace('\\n', '\n')
             add_commit(msg_text, response_text, say)
 
     # !show 指令
