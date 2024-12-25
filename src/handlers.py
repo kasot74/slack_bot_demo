@@ -85,10 +85,10 @@ def register_handlers(app, config, db):
         for msg in messages:        
             commit += f"{msg['message']} => {msg['say']}\n"
 
-        messages = collection.find({"is_sys": "Y" })
-        commit += "管理員指令:\n"
-        for msg in messages:        
-            commit += f"{msg['message']} => {msg['say']}\n"
+        #messages = collection.find({"is_sys": "Y" })
+        #commit += "管理員指令:\n"
+        #for msg in messages:        
+            #commit += f"{msg['message']} => {msg['say']}\n"
         say(commit)         
 
     # !remove 指令
