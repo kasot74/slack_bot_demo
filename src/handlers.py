@@ -218,3 +218,8 @@ def register_handlers(app, config, db):
                 file_path = doc.get('file')
                 send_image(channel, doc['say'],say, file_path)            
                 return
+
+    #!開頭無此指令
+    @app.message(re.compile(r"^!.*"))
+    def nonef(message, say):        
+        say("目前無此指令功能!")        
