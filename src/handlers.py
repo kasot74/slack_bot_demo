@@ -208,7 +208,7 @@ def register_handlers(app, config, db):
     @app.message(re.compile("(.*)"))
     def handle_message(message,say):        
         text = message['text']
-        if( re.search(re.compile(r"^!.*"), text) )
+        if re.search(r"^!.*", text):
             say("目前無此指令功能!")            
             return        
         channel = message['channel']        
@@ -222,4 +222,3 @@ def register_handlers(app, config, db):
                 send_image(channel, doc['say'],say, file_path)            
                 return
 
-    
