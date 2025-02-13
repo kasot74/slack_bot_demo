@@ -23,7 +23,7 @@ def convert_to_claude_format(collection_name):
 def generate_summary(user_input):
     user_message = {"role": "user", "content": user_input}
     collection.insert_one(user_message)
-    conversation_history = convert_to_claude_format("usagi_model") + convert_to_claude_format("ai_his")
+    conversation_history = convert_to_claude_format("ai_his")
     
     response = claude.messages.create(
         model="claude-3-5-sonnet-20241022",
