@@ -50,4 +50,4 @@ def get_image(text):
         return f"{text}繪圖成功! :art: ", file_path
     except Exception as e:
         # Handle potential errors during image generation                
-        return f"繪圖失敗!", None
+        return f"繪圖失敗! {e}", None
