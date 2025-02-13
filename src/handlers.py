@@ -1,6 +1,7 @@
 import re
 import random
-from .openai_service import generate_summary, analyze_sentiment, validate_with_openai, clear_conversation_history, look_conversation_history
+#from .openai_service import generate_summary, analyze_sentiment, validate_with_openai, clear_conversation_history, look_conversation_history
+from .claude_service import generate_summary, analyze_sentiment, clear_conversation_history, look_conversation_history
 from .stability_model import get_image
 import os
 
@@ -16,6 +17,17 @@ def register_handlers(app, config, db):
             say(f"{summary}")            
         except Exception as e:        
             say(f"非預期性問題 {e}")
+
+    # Call Claude
+    @app.message(re.compile(r"!claude\s+(.+)"))
+    def handle_summary_command(message, say):
+        user_input = message['text'].replace('!claude', '').strip()    
+        # 調用 Claude API
+        try:        
+            summary = generate_summary(user_input)
+            say(f"{summary}")            
+        except Exception as e:        
+            say(f"非預期性問題 {e}")        
 
     # !熬雞湯    
     @app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
