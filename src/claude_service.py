@@ -26,7 +26,7 @@ def generate_summary(user_input):
     conversation_history = convert_to_claude_format("usagi_model") + convert_to_claude_format("ai_his")
     
     response = claude.messages.create(
-        model="claude-3-opus-20240229",
+        model="claude-3-5-sonnet-20241022",
         max_tokens=1000,
         system="請用繁體中文回答",
         messages=conversation_history
@@ -49,7 +49,7 @@ def look_conversation_history():
 
 def validate_with_claude(text):
     response = claude.messages.create(
-        model="claude-3-opus-20240229",
+        model="claude-3-5-sonnet-20241022",
         max_tokens=1000,
         system="你是繁體中文錯別字檢查器，只會回答正確或是修正錯別字。請檢查文中是否有錯字，如果沒有請回答'正確'，有錯請回答修正錯字後的句子。",
         messages=[
@@ -61,7 +61,7 @@ def validate_with_claude(text):
 
 def analyze_sentiment(text):
     response = claude.messages.create(
-        model="claude-3-opus-20240229",
+        model="claude-3-5-sonnet-20241022",
         max_tokens=1000,
         system="你是一個情感分析器，判定語錄是正能量還是負能量。",
         messages=[
@@ -72,7 +72,7 @@ def analyze_sentiment(text):
 
 def painting(text):
     response = claude.messages.create(
-        model="claude-3-opus-20240229",
+        model="claude-3-5-sonnet-20241022",
         max_tokens=1000,
         system="你是翻譯官，幫我將文字描述翻譯為英文用來提供給StabilityAI繪圖用",
         messages=[
