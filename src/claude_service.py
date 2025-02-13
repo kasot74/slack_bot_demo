@@ -13,31 +13,23 @@ def convert_to_claude_format(collection_name):
     history = list(c_collection.find())
     formatted_messages = [
         {
-            "role": str(h.get("role", "user")),
+            "role": "user" if h.get("role") == "user" else "assistant",
             "content": str(h.get("content", ""))
         }
-        for h in history
+        for h in history if h.get("role") != "system"
     ]
     return formatted_messages
 
 def generate_summary(user_input):
     user_message = {"role": "user", "content": user_input}
     collection.insert_one(user_message)
-    conversation_history = convert_to_claude_format("ai_his")
-    
-    messages = []
-    for msg in conversation_history:
-        if msg["role"] == "user":
-            messages.append({"role": "user", "content": msg["content"]})
-        elif msg["role"] == "assistant":
-            messages.append({"role": "assistant", "content": msg["content"]})
-        elif msg["role"] == "system":
-            messages.append({"role": "system", "content": msg["content"]})
+    conversation_history = convert_to_claude_format("usagi_model") + convert_to_claude_format("ai_his")
     
     response = claude.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-3-opus-20240229",
         max_tokens=1000,
-        messages=messages
+        system="請用繁體中文回答",
+        messages=conversation_history
     )
     
     assistant_message = response.content[0].text
@@ -57,11 +49,10 @@ def look_conversation_history():
 
 def validate_with_claude(text):
     response = claude.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-3-opus-20240229",
         max_tokens=1000,
+        system="你是繁體中文錯別字檢查器，只會回答正確或是修正錯別字。請檢查文中是否有錯字，如果沒有請回答'正確'，有錯請回答修正錯字後的句子。",
         messages=[
-            {"role": "system", "content": "你是繁體中文錯別字檢查器，只會回答正確或是修正錯別字"},
-            {"role": "system", "content": "請用檢查文中是否有錯字 如果沒有請回答'正確'，有錯請回答修正錯字後的句子 "},
             {"role": "user", "content": text}
         ]
     )
@@ -70,10 +61,10 @@ def validate_with_claude(text):
 
 def analyze_sentiment(text):
     response = claude.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-3-opus-20240229",
         max_tokens=1000,
+        system="你是一個情感分析器，判定語錄是正能量還是負能量。",
         messages=[
-            {"role": "system", "content": "你是一個情感分析器，判定語錄是正能量還是負能量。"},
             {"role": "user", "content": f"這句話：'{text}' 是正能量還是負能量？"}
         ]
     )
@@ -81,11 +72,11 @@ def analyze_sentiment(text):
 
 def painting(text):
     response = claude.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-3-opus-20240229",
         max_tokens=1000,
+        system="你是翻譯官，幫我將文字描述翻譯為英文用來提供給StabilityAI繪圖用",
         messages=[
-            {"role": "system", "content": "你是翻譯官，幫我將文字描述翻譯為英文用來提供給StabilityAI繪圖用"},
-            {"role": "user", "content": f"幫我轉化：'{text}' "}
+            {"role": "user", "content": f"幫我轉化：'{text}'"}
         ]
     )
-    return response.content[0].text.strip().lower()
+    return response
