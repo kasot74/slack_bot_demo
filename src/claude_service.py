@@ -74,7 +74,7 @@ def painting(text):
     response = claude.messages.create(
         model="claude-3-5-sonnet-20241022",
         max_tokens=1000,
-        system="你是翻譯官，幫我將文字描述翻譯為英文用來提供給StabilityAI繪圖用",
+        system="你是翻譯官，幫我將文字描述翻譯為英文用來直接提供給StabilityAI繪圖用，不需要其他說明",
         messages=[
             {"role": "user", "content": f"幫我轉化：'{text}'"}
         ]
