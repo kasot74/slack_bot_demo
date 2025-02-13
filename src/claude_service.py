@@ -79,4 +79,4 @@ def painting(text):
             {"role": "user", "content": f"幫我轉化：'{text}'"}
         ]
     )
-    return response
+    return response.content[0].text
