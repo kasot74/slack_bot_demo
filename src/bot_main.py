@@ -18,4 +18,5 @@ register_handlers(app, config, db)
 
 # 啟動 SocketModeHandler
 if __name__ == "__main__":
+    print(f"Slack Bot 啟動成功!")    
     SocketModeHandler(app, config['SLACK_APP_TOKEN']).start()
