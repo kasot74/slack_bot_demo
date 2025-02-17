@@ -1,5 +1,6 @@
 /config.txt
 /config/config.txt
+/docker/log
 src/__pycache__/
 /images/stability_image
 /bot_main.log
