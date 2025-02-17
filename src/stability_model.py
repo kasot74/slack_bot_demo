@@ -1,9 +1,9 @@
 import os
 import time
-from PIL import Image
 import io
-from stability_sdk import client
 import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
+from PIL import Image
+from stability_sdk import client
 #from .openai_service import painting
 from .claude_service import painting
 from .utilities import read_config
