@@ -6,6 +6,5 @@ services:
     container_name: slack-bot
     volumes:
       - ./logs:/app/logs
-    command: >
-      sh -c "nohup python -m src.bot_main > /app/logs/bot_main.log 2>&1 &"
-    restart: always
+    command: python -m src.bot_main > bot_main.log 2>&1
+    #restart: always
