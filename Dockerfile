@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # 指定運行應用程式的命令
-CMD ["python", "-m", "src.bot_main"]
+#CMD ["python", "-m", "src.bot_main"]
