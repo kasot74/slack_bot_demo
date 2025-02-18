@@ -39,13 +39,6 @@ def get_image(text):
                     image_dir = os.path.join(image_dir,img_filename)
                     img.save(image_dir,"png") # Save our generated images with their seed number as the filename.                    
                     
-                    # 打開源文件並將其內容寫入新路徑的文件
-                    #new_dir = os.path.join("/home/ubuntu/web/uploads/stability_image",img_filename)
-                    new_dir = os.path.join("/app/stability_image", img_filename)
-                    with open(image_dir, 'rb') as src_file:
-                        with open(new_dir, 'wb') as dest_file:
-                            dest_file.write(src_file.read())
-
                     #回傳路徑
                     file_path = os.path.join("stability_image",img_filename)
         return f"{text}繪圖成功! :art: ", file_path
