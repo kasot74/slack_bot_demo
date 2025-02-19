@@ -8,8 +8,8 @@ from .database import con_db
 config = read_config('config/config.txt')
 ai_db = con_db(config)
 XAI_clice = OpenAI(    
-    api_key=config['XAI_API_KEY']
-    base_url="https://api.x.ai/v1",
+    api_key=config['XAI_API_KEY'],
+    base_url="https://api.x.ai"
 )
 model_target = "grok-2-latest"
 collection = ai_db.ai_his
