@@ -31,10 +31,10 @@ def register_handlers(app, config, db):
             say(f"非預期性問題 {e}")        
 
     # Call XAI
-    @app.message(re.compile(r"!claude\s+(.+)"))
+    @app.message(re.compile(r"!xai\s+(.+)"))
     def handle_summary_command(message, say):
-        user_input = message['text'].replace('!claude', '').strip()    
-        # 調用 Claude API
+        user_input = message['text'].replace('!xai', '').strip()    
+        # 調用 xai API
         try:        
             summary = xai_generate_summary(user_input)
             say(f"{summary}")            
