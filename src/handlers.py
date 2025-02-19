@@ -1,7 +1,8 @@
 import re
 import random
-#from .openai_service import generate_summary, analyze_sentiment, validate_with_openai, clear_conversation_history, look_conversation_history
-from .claude_service import generate_summary, analyze_sentiment, clear_conversation_history, look_conversation_history
+from .openai_service import generate_summary as openai_generate_summary, analyze_sentiment as openai_analyze_sentiment, clear_conversation_history as openai_clear_conversation_history, look_conversation_history as openai_look_conversation_history
+from .claude_service import generate_summary as claude_generate_summary, analyze_sentiment as claude_analyze_sentiment, clear_conversation_history as claude_clear_conversation_history, look_conversation_history as claude_look_conversation_history
+from .xai_service import generate_summary as xai_generate_summary, analyze_sentiment as xai_analyze_sentiment, clear_conversation_history as xai_clear_conversation_history, look_conversation_history as xai_look_conversation_history
 from .stability_model import get_image
 import os
 
@@ -13,7 +14,7 @@ def register_handlers(app, config, db):
         user_input = message['text'].replace('!openai', '').strip()    
         # 調用 OpenAI API
         try:        
-            summary = generate_summary(user_input)
+            summary = openai_generate_summary(user_input)
             say(f"{summary}")            
         except Exception as e:        
             say(f"非預期性問題 {e}")
@@ -24,10 +25,21 @@ def register_handlers(app, config, db):
         user_input = message['text'].replace('!claude', '').strip()    
         # 調用 Claude API
         try:        
-            summary = generate_summary(user_input)
+            summary = claude_generate_summary(user_input)
             say(f"{summary}")            
         except Exception as e:        
             say(f"非預期性問題 {e}")        
+
+    # Call XAI
+    @app.message(re.compile(r"!claude\s+(.+)"))
+    def handle_summary_command(message, say):
+        user_input = message['text'].replace('!claude', '').strip()    
+        # 調用 Claude API
+        try:        
+            summary = xai_generate_summary(user_input)
+            say(f"{summary}")            
+        except Exception as e:        
+            say(f"非預期性問題 {e}")                
 
     # !熬雞湯    
     @app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
@@ -39,7 +51,7 @@ def register_handlers(app, config, db):
         if existing_message:
             say("失敗! 已有此雞湯!")
         else:
-            sentiment_result = analyze_sentiment(msg_text)
+            sentiment_result = openai_analyze_sentiment(msg_text)
             if "正能量" in sentiment_result:
                 collection.insert_one({"quote": msg_text})
                 say("雞湯熬煮成功!")
@@ -147,7 +159,7 @@ def register_handlers(app, config, db):
     @app.message(re.compile(r"^!clearai$"))
     def clearai(message, say):        
         try:
-            clear_conversation_history()
+            openai_clear_conversation_history()
             say("AI聊天紀錄清除成功!")
         except Exception as e:
             say(f"AI聊天紀錄清除錯誤!{e}")
@@ -155,7 +167,7 @@ def register_handlers(app, config, db):
     @app.message(re.compile(r"^!lookai$"))
     def lookai(message, say):        
         try:
-            his = look_conversation_history()
+            his = openai_look_conversation_history()
             say(his)
         except Exception as e:
             say(f"AI聊天紀錄查看錯誤!{e}")
