@@ -47,17 +47,7 @@ def register_handlers(app, config, db):
         channel_id = message['channel']
         thread_ts = message['ts']
         user_message = message['text']
-
-        try:
-            response_text = "這是對訊息的回覆"  # 可以根據需要生成回覆訊息
-            response = client.chat_postMessage(
-                channel=channel_id,
-                text=response_text,
-                thread_ts=thread_ts
-            )
-            return response
-        except SlackApiError as e:
-            print(f"Error sending message: {e.response['error']}")
+        say(text="Hello there!", thread_ts=message['ts'])
 
     # !熬雞湯    
     @app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
