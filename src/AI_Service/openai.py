@@ -1,7 +1,7 @@
 import openai
 from openai import OpenAI
-from .utilities import read_config
-from .database import con_db
+from ..utilities import read_config
+from ..database import con_db
 
 
 # 從配置文件中讀取 tokens
@@ -54,21 +54,6 @@ def look_conversation_history():
     his_text = "\n".join(all_his)
     return his_text
 
-def validate_with_openai(text):
-    # 使用 OpenAI 的 API 進行檢查
-    response = OpenAI_clice.chat.completions.create(
-        messages=[
-            {"role": "system", "content": "你是繁體中文錯別字檢查器，只會回答正確或是修正錯別字"},
-            {"role": "system", "content": "請用檢查文中是否有錯字 如果沒有請回答'正確'，有錯請回答修正錯字後的句子 "},
-            {
-                "role": "user",
-                "content": text,
-            }
-        ],
-        model=model_target,         
-    )    
-    print(response.choices[0].message.content)
-    return response.choices[0].message.content
 
 def analyze_sentiment(text):
     response = OpenAI_clice.chat.completions.create(

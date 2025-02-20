@@ -1,7 +1,7 @@
 import openai
 from openai import OpenAI
-from .utilities import read_config
-from .database import con_db
+from ..utilities import read_config
+from ..database import con_db
 
 
 # 從配置文件中讀取 tokens
