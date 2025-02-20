@@ -41,6 +41,24 @@ def register_handlers(app, config, db):
         except Exception as e:        
             say(f"非預期性問題 {e}")                
 
+    #!aipk
+    @app.message(re.compile(r"!aipk\s+(.+)"))
+    def handle_aipk_messages(message, say):
+        channel_id = message['channel']
+        thread_ts = message['ts']
+        user_message = message['text']
+
+        try:
+            response_text = "這是對訊息的回覆"  # 可以根據需要生成回覆訊息
+            response = client.chat_postMessage(
+                channel=channel_id,
+                text=response_text,
+                thread_ts=thread_ts
+            )
+            return response
+        except SlackApiError as e:
+            print(f"Error sending message: {e.response['error']}")
+
     # !熬雞湯    
     @app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
     def new_philosophy_quotes(message, say):
