@@ -32,7 +32,7 @@ def generate_summary(user_input):
         
     user_message = {"role": "user", "content": user_input}
     collection.insert_one(user_message)
-    conversation_history =convert_to_openai_format("usagi_model") + convert_to_openai_format("ai_his")        
+    conversation_history = convert_to_openai_format("ai_his")        
     response = OpenAI_clice.chat.completions.create(
         messages=conversation_history,
         model=model_target        
