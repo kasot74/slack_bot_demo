@@ -8,7 +8,7 @@ ai_db = con_db(config)
 claude = Anthropic(api_key=config['CLAUDE_API_KEY'])
 collection = ai_db.ai_his
 try:        
-    role_collection = db.create_collection("ai_role_claude_his")            
+    role_collection = ai_db.create_collection("ai_role_claude_his")            
 finally:   
     role_collection = ai_db.ai_role_his
 

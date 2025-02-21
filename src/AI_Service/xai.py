@@ -14,7 +14,7 @@ XAI_clice = OpenAI(
 model_target = "grok-2-latest"
 collection = ai_db.ai_his
 try:        
-    role_collection = db.create_collection("ai_role_xai_his")            
+    role_collection = ai_db.create_collection("ai_role_xai_his")            
 finally:   
     role_collection = ai_db.ai_role_his
 
