@@ -80,7 +80,7 @@ def role_generate_response(role1, role2,user_input,ts):
 
 def analyze_sentiment(text):
     response = XAI_clice.chat.completions.create(
-        model="gpt-4o",
+        model=model_target,
         messages=[
             {"role": "system", "content": "你是一個情感分析器，判定語錄是正能量還是負能量。"},
             {"role": "user", "content": f"這句話：'{text}' 是正能量還是負能量？"}
@@ -90,7 +90,7 @@ def analyze_sentiment(text):
 
 def  painting(text):
     response = XAI_clice.chat.completions.create(
-        model="gpt-4o",
+        model=model_target,
         messages=[
             {"role": "system", "content": "你是翻譯官，幫我將文字描述翻譯為英文用來提供給StabilityAI繪圖用"},
             {"role": "user", "content": f"幫我轉化：'{text}' "}
