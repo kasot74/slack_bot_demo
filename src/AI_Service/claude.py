@@ -30,7 +30,7 @@ def generate_summary(user_input):
     response = claude.messages.create(
         model="claude-3-5-sonnet-20241022",
         max_tokens=1000,
-        system="請用繁體中文回答",
+        system="用繁體中文回答",
         messages=conversation_history
     )
     
@@ -40,7 +40,7 @@ def generate_summary(user_input):
 
 def clear_conversation_history():
     collection.delete_many({})
-    collection.insert_one({"role": "system", "content": "請用繁體中文回答"})
+    collection.insert_one({"role": "system", "content": "用繁體中文回答"})
 
 #角色扮演用回應
 def role_generate_response(role1, role2,user_input,ts):
@@ -63,7 +63,7 @@ def role_generate_response(role1, role2,user_input,ts):
     response = claude.messages.create(
         model="claude-3-5-sonnet-20241022",
         max_tokens=1000,
-        system=f"請用繁體中文回覆 模擬情境你當{role1}我是{role2}",
+        system=f"用繁體中文回覆 模擬情境你當{role1}我是{role2}",
         messages=formatted_messages
     )
     assistant_message = response.content[0].text

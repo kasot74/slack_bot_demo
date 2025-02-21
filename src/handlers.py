@@ -52,17 +52,17 @@ def register_handlers(app, config, db):
         except Exception as e:        
             say(f"非預期性問題 {e}")                
 
-    # !aipk role1 role2
-    @app.message(re.compile(r"^!aipk\s+(\S+)\s+(\S+)", re.DOTALL))
+    # !pk role1 role2
+    @app.message(re.compile(r"^!pk\s+(\S+)\s+(\S+)", re.DOTALL))
     def handle_aipk_messages(message, say):
-        match = re.match(r"^!aipk\s+(\S+)\s+(\S+)", message['text'], re.DOTALL)
+        match = re.match(r"^!pk\s+(\S+)\s+(\S+)", message['text'], re.DOTALL)
         if match:
             role1 = match.group(1).strip()
             role2 = match.group(2).strip()
             thread_ts = message['ts']                        
             answer = "請開始"
             # 使用不同 AI 模型生成問答內容
-            for i in range(6):                
+            for i in range(3):                
                 answer = role_generate_summary_claude(role2,role1,answer ,thread_ts)
                 say(text=f"*{role2}:* {answer}", thread_ts=thread_ts)
                 
