@@ -63,7 +63,7 @@ def role_generate_response(role1, role2,user_input,ts):
     response = claude.messages.create(
         model="claude-3-5-sonnet-20241022",
         max_tokens=1000,
-        system=f"模擬情境{role1} 與 {role2}之間的對話，你當{role1}我當{role2}",
+        system=f"請用繁體中文回覆 模擬情境你當{role1}我是{role2}",
         messages=formatted_messages
     )
     assistant_message = response.content[0].text

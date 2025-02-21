@@ -50,9 +50,8 @@ def clear_conversation_history():
 #角色扮演用回應
 def role_generate_response(role1, role2,user_input,ts):
     aimodel = "XAI"
-    if role_collection.count_documents({"tsid": ts, "ai_model": aimodel}) == 0:
-        role_collection.insert_one({"role": "system", "content": "請用繁體中文回答", "tsid": ts, "ai_model": aimodel })    
-        role_collection.insert_one({"role": "system", "content": f"模擬情境{role1} 與 {role2}之間的對話，你當{role1}我當{role2}", "tsid": ts, "ai_model": aimodel })
+    if role_collection.count_documents({"tsid": ts, "ai_model": aimodel}) == 0:        
+        role_collection.insert_one({"role": "system", "content": f"請用繁體中文回覆，你當{role1}我是{role2}", "tsid": ts, "ai_model": aimodel })
         role_collection.insert_one({"role": "user", "content": user_input, "tsid": ts, "ai_model": aimodel })
     else:
         user_message = {"role": "user", "content": user_input, "tsid": ts, "ai_model": aimodel }

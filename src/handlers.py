@@ -60,13 +60,14 @@ def register_handlers(app, config, db):
             role1 = match.group(1).strip()
             role2 = match.group(2).strip()
             thread_ts = message['ts']                        
-            answer = "你先開始"
+            answer = "請開始"
             # 使用不同 AI 模型生成問答內容
             for i in range(6):                
-                answer = role_generate_summary_xai(role1,role2,answer ,thread_ts)
-                say(text=f"{role1}: {answer}", thread_ts=thread_ts)                
                 answer = role_generate_summary_claude(role2,role1,answer ,thread_ts)
-                say(text=f"{role2}: {answer}", thread_ts=thread_ts)
+                say(text=f"*{role2}:* {answer}", thread_ts=thread_ts)
+                
+                answer = role_generate_summary_xai(role1,role2,answer ,thread_ts)
+                say(text=f"*{role1}:* {answer}", thread_ts=thread_ts)                
 
     # !熬雞湯    
     @app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
