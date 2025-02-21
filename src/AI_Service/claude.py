@@ -7,10 +7,8 @@ config = read_config('config/config.txt')
 ai_db = con_db(config)
 claude = Anthropic(api_key=config['CLAUDE_API_KEY'])
 collection = ai_db.ai_his
-try:        
-    role_collection = ai_db.create_collection("ai_role_claude_his")            
-finally:   
-    role_collection = ai_db.ai_role_his
+role_collection = ai_db.ai_role_claude_his
+
 
 def convert_to_claude_format(collection_name):
     c_collection = ai_db[collection_name]

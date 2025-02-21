@@ -13,10 +13,7 @@ XAI_clice = OpenAI(
 )
 model_target = "grok-2-latest"
 collection = ai_db.ai_his
-try:        
-    role_collection = ai_db.create_collection("ai_role_xai_his")            
-finally:   
-    role_collection = ai_db.ai_role_his
+role_collection = ai_db.ai_role_xai_his
 
 # 定義一個函數來轉換每條記錄為 
 def convert_to_openai_format(collection_name):
