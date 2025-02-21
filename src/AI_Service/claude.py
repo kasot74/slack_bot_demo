@@ -47,15 +47,15 @@ def clear_conversation_history():
 #角色扮演用回應
 def role_generate_response(role1, role2,user_input,ts):
     aimodel = "claude"
-    if role_collection.find({"tsid": ts, "ai_m": aimodel}).count() == 0:
-        role_collection.insert_one({"role": "system", "content": "請用繁體中文回答", "tsid" ts, "ai_m": aimodel })    
-        role_collection.insert_one({"role": "system", "content": f"模擬情境{role1} 與 {role2}之間的對話，你當{role1}我當{role2}", "tsid" ts, "ai_m": aimodel })
-        role_collection.insert_one({"role": "user", "content": user_input, "tsid": ts, "ai_m": aimodel })
+    if role_collection.find({"tsid": ts, "ai_model": aimodel}).count() == 0:
+        role_collection.insert_one({"role": "system", "content": "請用繁體中文回答", "tsid": ts, "ai_model": aimodel })    
+        role_collection.insert_one({"role": "system", "content": f"模擬情境{role1} 與 {role2}之間的對話，你當{role1}我當{role2}", "tsid": ts, "ai_model": aimodel })
+        role_collection.insert_one({"role": "user", "content": user_input, "tsid": ts, "ai_model": aimodel })
     else
-        user_message = {"role": "user", "content": user_input, "tsid": ts, "ai_m": aimodel }
+        user_message = {"role": "user", "content": user_input, "tsid": ts, "ai_model": aimodel }
         role_collection.insert_one(user_message)
         
-    history = list(role_collection.find({"tsid": ts, "ai_m": aimodel }))    
+    history = list(role_collection.find({"tsid": ts, "ai_model": aimodel }))    
     # 使用列表解析進行轉換
     formatted_messages = [
         {
@@ -71,7 +71,7 @@ def role_generate_response(role1, role2,user_input,ts):
         messages=formatted_messages
     )
     assistant_message = response.content[0].text
-    role_collection.insert_one({"role": "assistant", "content": assistant_message,"tsid": ts, "ai_m": aimodel })    
+    role_collection.insert_one({"role": "assistant", "content": assistant_message,"tsid": ts, "ai_model": aimodel })    
 
     return assistant_message
 
