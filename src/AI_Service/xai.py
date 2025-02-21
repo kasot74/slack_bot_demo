@@ -13,7 +13,10 @@ XAI_clice = OpenAI(
 )
 model_target = "grok-2-latest"
 collection = ai_db.ai_his
-
+try:        
+    role_collection = db.create_collection("ai_role_xai_his")            
+finally:   
+    role_collection = ai_db.ai_role_his
 
 # 定義一個函數來轉換每條記錄為 
 def convert_to_openai_format(collection_name):
@@ -46,7 +49,36 @@ def generate_summary(user_input):
 def clear_conversation_history():
     collection.delete_many({})
     collection.insert_one({"role": "system", "content": "請用繁體中文回答"})    
+                 
+#角色扮演用回應
+def role_generate_response(role1, role2,user_input,ts):
+    almodel = "XAI"
+    if role_collection.find({"tsid": ts, "AIMODEL": almodel}).count() == 0:
+        role_collection.insert_one({"role": "system", "content": "請用繁體中文回答", "tsid" ts, "AIMODEL": almodel })    
+        role_collection.insert_one({"role": "system", "content": f"模擬情境{role1} 與 {role2}之間的對話，你當{role1}我當{role2}", "tsid" ts, "AIMODEL": almodel })
+        role_collection.insert_one({"role": "user", "content": user_input, "tsid": ts, "AIMODEL": almodel })
+    else
+        user_message = {"role": "user", "content": user_input, "tsid": ts, "AIMODEL": almodel }
+        role_collection.insert_one(user_message)
+        
+    history = list(role_collection.find({"tsid": ts, "AIMODEL": almodel }))    
+    # 使用列表解析進行轉換
+    formatted_messages = [
+        {
+            "role": str(h.get("role", "user")),
+            "content": str(h.get("content", ""))
+        }
+        for h in history
+    ]            
+    response = XAI_clice.chat.completions.create(
+        messages=formatted_messages,
+        model=model_target        
+    )
+    assistant_message = response.choices[0].message.content
+    role_collection.insert_one({"role": "assistant", "content": assistant_message,"tsid": ts, "AIMODEL": almodel })
 
+    return assistant_message
+    
 def look_conversation_history():
     history = list(collection.find())
     # 建立一個包含所有雞湯語錄的列表    
@@ -54,22 +86,6 @@ def look_conversation_history():
     # 將列表轉換為單一字串，換行分隔
     his_text = "\n".join(all_his)
     return his_text
-
-def validate_with_openai(text):
-    # 使用 OpenAI 的 API 進行檢查
-    response = XAI_clice.chat.completions.create(
-        messages=[
-            {"role": "system", "content": "你是繁體中文錯別字檢查器，只會回答正確或是修正錯別字"},
-            {"role": "system", "content": "請用檢查文中是否有錯字 如果沒有請回答'正確'，有錯請回答修正錯字後的句子 "},
-            {
-                "role": "user",
-                "content": text,
-            }
-        ],
-        model=model_target,         
-    )    
-    print(response.choices[0].message.content)
-    return response.choices[0].message.content
 
 def analyze_sentiment(text):
     response = XAI_clice.chat.completions.create(

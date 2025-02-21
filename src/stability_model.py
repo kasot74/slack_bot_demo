@@ -4,7 +4,7 @@ import io
 import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
 from PIL import Image
 from stability_sdk import client
-from .AI_Service.claude import painting
+from .AI_Service.xai import painting
 from .utilities import read_config
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')

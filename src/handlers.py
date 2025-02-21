@@ -1,8 +1,19 @@
 import re
 import random
-from .AI_Service.openai import generate_summary as openai_generate_summary, analyze_sentiment as openai_analyze_sentiment, clear_conversation_history as openai_clear_conversation_history, look_conversation_history as openai_look_conversation_history
-from .AI_Service.claude import generate_summary as claude_generate_summary, analyze_sentiment as claude_analyze_sentiment, clear_conversation_history as claude_clear_conversation_history, look_conversation_history as claude_look_conversation_history
-from .AI_Service.xai import generate_summary as xai_generate_summary, analyze_sentiment as xai_analyze_sentiment, clear_conversation_history as xai_clear_conversation_history, look_conversation_history as xai_look_conversation_history
+# openai imports
+from .AI_Service.openai import generate_summary as generate_summary_openai
+from .AI_Service.openai import clear_conversation_history as openai_clear_conversation_history
+from .AI_Service.openai import look_conversation_history as openai_look_conversation_history
+
+# claude imports
+from .AI_Service.claude import generate_summary as generate_summary_claude
+from .AI_Service.claude import role_generate_response as role_generate_summary_claude
+
+# xai imports
+from .AI_Service.xai import generate_summary as generate_summary_xai
+from .AI_Service.xai import analyze_sentiment as analyze_sentiment_xai 
+from .AI_Service.xai import role_generate_response as role_generate_summary_xai
+
 from .stability_model import get_image
 import os
 
@@ -14,7 +25,7 @@ def register_handlers(app, config, db):
         user_input = message['text'].replace('!openai', '').strip()    
         # 調用 OpenAI API
         try:        
-            summary = openai_generate_summary(user_input)
+            summary = generate_summary_openai(user_input)
             say(f"{summary}")            
         except Exception as e:        
             say(f"非預期性問題 {e}")
@@ -25,7 +36,7 @@ def register_handlers(app, config, db):
         user_input = message['text'].replace('!claude', '').strip()    
         # 調用 Claude API
         try:        
-            summary = claude_generate_summary(user_input)
+            summary = generate_summary_claude(user_input)
             say(f"{summary}")            
         except Exception as e:        
             say(f"非預期性問題 {e}")        
@@ -36,18 +47,26 @@ def register_handlers(app, config, db):
         user_input = message['text'].replace('!xai', '').strip()    
         # 調用 xai API
         try:        
-            summary = xai_generate_summary(user_input)
+            summary = generate_summary_xai(user_input)
             say(f"{summary}")            
         except Exception as e:        
             say(f"非預期性問題 {e}")                
 
-    #!aipk
-    @app.message(re.compile(r"!aipk\s+(.+)"))
+    # !aipk role1 role2
+    @app.message(re.compile(r"^!aipk\s+(\S+)\s+(\S+)", re.DOTALL))
     def handle_aipk_messages(message, say):
-        channel_id = message['channel']
-        thread_ts = message['ts']
-        user_message = message['text']
-        say(text="Hello there!", thread_ts=message['ts'])
+        match = re.match(r"^!aipk\s+(\S+)\s+(\S+)", message['text'], re.DOTALL)
+        if match:
+            role1 = match.group(1).strip()
+            role2 = match.group(2).strip()
+            thread_ts = message['ts']                        
+            answer = "你先開始"
+            # 使用不同 AI 模型生成問答內容
+            for i in range(6):                
+                answer = role_generate_summary_xai(role1,role2,answer ,thread_ts)
+                say(text=f"{role1}: {answer}", thread_ts=thread_ts)                
+                answer = role_generate_summary_claude(role2,role1,answer ,thread_ts)
+                say(text=f"{role2}: {answer}", thread_ts=thread_ts)
 
     # !熬雞湯    
     @app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
@@ -59,7 +78,7 @@ def register_handlers(app, config, db):
         if existing_message:
             say("失敗! 已有此雞湯!")
         else:
-            sentiment_result = openai_analyze_sentiment(msg_text)
+            sentiment_result = analyze_sentiment_xai(msg_text)
             if "正能量" in sentiment_result:
                 collection.insert_one({"quote": msg_text})
                 say("雞湯熬煮成功!")

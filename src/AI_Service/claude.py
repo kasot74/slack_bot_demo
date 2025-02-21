@@ -7,6 +7,10 @@ config = read_config('config/config.txt')
 ai_db = con_db(config)
 claude = Anthropic(api_key=config['CLAUDE_API_KEY'])
 collection = ai_db.ai_his
+try:        
+    role_collection = db.create_collection("ai_role_claude_his")            
+finally:   
+    role_collection = ai_db.ai_role_his
 
 def convert_to_claude_format(collection_name):
     c_collection = ai_db[collection_name]
@@ -40,24 +44,43 @@ def clear_conversation_history():
     collection.delete_many({})
     collection.insert_one({"role": "system", "content": "請用繁體中文回答"})
 
+#角色扮演用回應
+def role_generate_response(role1, role2,user_input,ts):
+    almodel = "claude"
+    if role_collection.find({"tsid": ts, "AIMODEL": almodel}).count() == 0:
+        role_collection.insert_one({"role": "system", "content": "請用繁體中文回答", "tsid" ts, "AIMODEL": almodel })    
+        role_collection.insert_one({"role": "system", "content": f"模擬情境{role1} 與 {role2}之間的對話，你當{role1}我當{role2}", "tsid" ts, "AIMODEL": almodel })
+        role_collection.insert_one({"role": "user", "content": user_input, "tsid": ts, "AIMODEL": almodel })
+    else
+        user_message = {"role": "user", "content": user_input, "tsid": ts, "AIMODEL": almodel }
+        role_collection.insert_one(user_message)
+        
+    history = list(role_collection.find({"tsid": ts, "AIMODEL": almodel }))    
+    # 使用列表解析進行轉換
+    formatted_messages = [
+        {
+            "role": str(h.get("role", "user")),
+            "content": str(h.get("content", ""))
+        }
+        for h in history
+    ]            
+    response = claude.messages.create(
+        model="claude-3-5-sonnet-20241022",
+        max_tokens=1000,
+        system="請用繁體中文回答",
+        messages=formatted_messages
+    )
+    assistant_message = response.content[0].text
+    role_collection.insert_one({"role": "assistant", "content": assistant_message,"tsid": ts, "AIMODEL": almodel })    
+
+    return assistant_message
+
 def look_conversation_history():
     history = list(collection.find())
     all_his = [f"{idx + 1}. {'User:' if h.get('role', '') == 'user' else 'AI:'} {h.get('content', '')}" 
                for idx, h in enumerate(history)]
     his_text = "\n".join(all_his)
     return his_text
-
-def validate_with_claude(text):
-    response = claude.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=1000,
-        system="你是繁體中文錯別字檢查器，只會回答正確或是修正錯別字。請檢查文中是否有錯字，如果沒有請回答'正確'，有錯請回答修正錯字後的句子。",
-        messages=[
-            {"role": "user", "content": text}
-        ]
-    )
-    print(response.content[0].text)
-    return response.content[0].text
 
 def analyze_sentiment(text):
     response = claude.messages.create(
