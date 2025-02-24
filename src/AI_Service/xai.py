@@ -2,7 +2,8 @@ import openai
 from openai import OpenAI
 from ..utilities import read_config
 from ..database import con_db
-
+from ..stock import get_stock_info
+from ..stock import get_historical_data
 
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
@@ -86,6 +87,19 @@ def analyze_sentiment(text):
         ]
     )       
     return response.choices[0].message.content.strip().lower()
+
+def analyze_stock(his_data, now_data):
+    historical_data_strs = [f"這是股票的歷史紀錄：\n{record}" for record in his_data]
+    messages = [{"role": "system", "content": "你是一個股票的專業技術分析專家，給你股票歷史紀錄與現況幫我分析趨勢"}]
+    for record_str in historical_data_strs:
+        messages.append({"role": "user", "content": record_str})
+
+    messages.append({"role": "user", "content": f"這是該股現況 {now_data}"})
+    response = XAI_clice.chat.completions.create(
+        model=model_target,
+        messages=messages
+    )       
+    return response.choices[0].message.content.strip().lower()    
 
 def  painting(text):
     response = XAI_clice.chat.completions.create(

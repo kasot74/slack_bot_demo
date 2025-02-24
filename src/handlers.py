@@ -13,9 +13,13 @@ from .AI_Service.claude import role_generate_response as role_generate_summary_c
 from .AI_Service.xai import generate_summary as generate_summary_xai
 from .AI_Service.xai import analyze_sentiment as analyze_sentiment_xai 
 from .AI_Service.xai import role_generate_response as role_generate_summary_xai
+from .AI_Service.xai import analyze_stock as analyze_stock_xai
+
 
 from .stability_model import get_image
 from .stock import get_stock_info
+from .stock import get_historical_data
+
 import os
 
 def register_handlers(app, config, db):
@@ -75,6 +79,17 @@ def register_handlers(app, config, db):
         msg_text = re.match(r"^!查股\s+(.+)$", message['text']).group(1).strip()
         say(get_stock_info(msg_text))
         
+    @app.message(re.compile(r"^!技術分析\s+(.+)$"))
+    def analyze_slock(message, say):
+        msg_text = re.match(r"^!技術分析\s+(.+)$", message['text']).group(1).strip()
+        now_data = get_stock_info(msg_text)
+        his_data = []        
+        today = datetime.now()        
+        for i in range(3):
+            first_day_of_month = (today.replace(day=1) - timedelta(days=i*30)).strftime('%Y%m%d')
+            his_data.append(get_historical_data(msg_text,first_day_of_month))        
+        say(analyze_stock_xai(his_data,now_data))
+
     # !熬雞湯    
     @app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
     def new_philosophy_quotes(message, say):
