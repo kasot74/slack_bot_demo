@@ -1,5 +1,7 @@
 import re
 import random
+import os
+from datetime import datetime, timedelta
 # openai imports
 from .AI_Service.openai import generate_summary as generate_summary_openai
 from .AI_Service.openai import clear_conversation_history as openai_clear_conversation_history
@@ -20,7 +22,6 @@ from .stability_model import get_image
 from .stock import get_stock_info
 from .stock import get_historical_data
 
-import os
 
 def register_handlers(app, config, db):
     
@@ -78,7 +79,7 @@ def register_handlers(app, config, db):
     def search_slock(message, say):
         msg_text = re.match(r"^!查股\s+(.+)$", message['text']).group(1).strip()
         say(get_stock_info(msg_text))
-        
+
     @app.message(re.compile(r"^!技術分析\s+(.+)$"))
     def analyze_slock(message, say):
         msg_text = re.match(r"^!技術分析\s+(.+)$", message['text']).group(1).strip()
@@ -86,7 +87,7 @@ def register_handlers(app, config, db):
         his_data = []        
         today = datetime.now()        
         for i in range(3):
-            first_day_of_month = (today.replace(day=1) - timedelta(days=i*30)).strftime('%Y%m%d')
+            first_day_of_month = (today.replace(day=1) - timedelta(days=i*30)).strftime('%Y%m01')
             his_data.append(get_historical_data(msg_text,first_day_of_month))        
         say(analyze_stock_xai(his_data,now_data))
 
