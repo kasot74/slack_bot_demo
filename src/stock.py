@@ -43,21 +43,26 @@ def get_historical_data(stock_code, date):
         return f"請求失敗，狀態碼：{response.status_code}"
 
 def format_historical_data(data):
-    if not data:
-        return "無法取得歷史資料。"
-    
-    formatted_data = "歷史資料:\n"
-    fields = data["fields"]
-    for record in data["data"]:
-        formatted_data += (
-            f"日期: {record[0]}, "
-            f"成交股數: {record[1]}, "
-            f"成交金額: {record[2]}, "
-            f"開盤價: {record[3]}, "
-            f"最高價: {record[4]}, "
-            f"最低價: {record[5]}, "
-            f"收盤價: {record[6]}, "
-            f"漲跌價差: {record[7]}, "
-            f"成交筆數: {record[8]}\n"
-        )
-    return formatted_data
+    try:
+        if not data:
+            return "無法取得歷史資料。"
+        
+        formatted_data = "歷史資料:\n"
+        fields = data["fields"]
+        for record in data["data"]:
+            formatted_data += (
+                f"日期: {record[0]}, "
+                f"成交股數: {record[1]}, "
+                f"成交金額: {record[2]}, "
+                f"開盤價: {record[3]}, "
+                f"最高價: {record[4]}, "
+                f"最低價: {record[5]}, "
+                f"收盤價: {record[6]}, "
+                f"漲跌價差: {record[7]}, "
+                f"成交筆數: {record[8]}\n"
+            )
+        return formatted_data
+    except KeyError as e:
+        return f"資料格式錯誤，缺少欄位: {e}"
+    except Exception as e:
+        return f"發生錯誤: {e}"
