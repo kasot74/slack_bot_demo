@@ -12,25 +12,24 @@ def get_stock_info(stock_code):
         print(f"請求失敗，狀態碼：{response.status_code}")
         return "無法取得股票資訊"
 
-#轉換現價格式
 def format_stock_info(data):
-    if not data:
+    if not data or 'msgArray' not in data or len(data['msgArray']) == 0:
         return "無法取得股票資訊。"
-    
+
     stock_info = data["msgArray"][0]
     formatted_info = (
-        f"公司名稱: {stock_info['nf']} ({stock_info['ch']})\n"
-        f"最新成交價: {stock_info['z']} 新台幣\n"
-        f"成交時間: {stock_info['t']} (當地時間)\n"
-        f"今日開盤價: {stock_info['o']} 新台幣\n"
-        f"最高價: {stock_info['h']} 新台幣\n"
-        f"最低價: {stock_info['l']} 新台幣\n"
-        f"昨日收盤價: {stock_info['y']} 新台幣\n"
-        f"漲停價: {stock_info['u']} 新台幣\n"
-        f"跌停價: {stock_info['w']} 新台幣\n"
-        f"成交股數: {stock_info['v']} 股\n"
-        f"委買價: {stock_info['b'].replace('_', ', ')} 新台幣\n"
-        f"委賣價: {stock_info['a'].replace('_', ', ')} 新台幣\n"
+        f"公司名稱: {stock_info.get('nf', 'N/A')} ({stock_info.get('ch', 'N/A')})\n"
+        f"最新成交價: {stock_info.get('z', 'N/A')} 新台幣\n"
+        f"成交時間: {stock_info.get('t', 'N/A')} (當地時間)\n"
+        f"今日開盤價: {stock_info.get('o', 'N/A')} 新台幣\n"
+        f"最高價: {stock_info.get('h', 'N/A')} 新台幣\n"
+        f"最低價: {stock_info.get('l', 'N/A')} 新台幣\n"
+        f"昨日收盤價: {stock_info.get('y', 'N/A')} 新台幣\n"
+        f"漲停價: {stock_info.get('u', 'N/A')} 新台幣\n"
+        f"跌停價: {stock_info.get('w', 'N/A')} 新台幣\n"
+        f"成交股數: {stock_info.get('v', 'N/A')} 股\n"
+        f"委買價: {stock_info.get('b', 'N/A').replace('_', ', ')} 新台幣\n"
+        f"委賣價: {stock_info.get('a', 'N/A').replace('_', ', ')} 新台幣\n"
     )
     return formatted_info
 
