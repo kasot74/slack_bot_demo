@@ -15,6 +15,7 @@ from .AI_Service.xai import analyze_sentiment as analyze_sentiment_xai
 from .AI_Service.xai import role_generate_response as role_generate_summary_xai
 
 from .stability_model import get_image
+from .stock import get_stock_info
 import os
 
 def register_handlers(app, config, db):
@@ -69,6 +70,11 @@ def register_handlers(app, config, db):
                 answer = role_generate_summary_xai(role1,role2,answer ,thread_ts)
                 say(text=f"*{role1}:* {answer}", thread_ts=thread_ts)                
 
+    @app.message(re.compile(r"^!查股\s+(.+)$"))
+    def search_slock(message, say):
+        msg_text = re.match(r"^!查股\s+(.+)$", message['text']).group(1).strip()
+        say(get_stock_info(msg_text))
+        
     # !熬雞湯    
     @app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
     def new_philosophy_quotes(message, say):
