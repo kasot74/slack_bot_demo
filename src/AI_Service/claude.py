@@ -8,7 +8,7 @@ ai_db = con_db(config)
 claude = Anthropic(api_key=config['CLAUDE_API_KEY'])
 collection = ai_db.ai_his
 role_collection = ai_db.ai_role_claude_his
-
+model_target = "claude-3-7-sonnet-20250219"
 
 def convert_to_claude_format(collection_name):
     c_collection = ai_db[collection_name]
@@ -28,7 +28,7 @@ def generate_summary(user_input):
     conversation_history = convert_to_claude_format("ai_his")
     
     response = claude.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model=model_target,
         max_tokens=1000,
         system="用繁體中文回答",
         messages=conversation_history
@@ -61,7 +61,7 @@ def role_generate_response(role1, role2,user_input,ts):
         for h in history
     ]            
     response = claude.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model=model_target,
         max_tokens=1000,
         system=f"用繁體中文回覆 模擬情境你當{role1}我是{role2}",
         messages=formatted_messages
@@ -73,7 +73,7 @@ def role_generate_response(role1, role2,user_input,ts):
 
 def analyze_sentiment(text):
     response = claude.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model=model_target,
         max_tokens=1000,
         system="你是一個情感分析器，判定語錄是正能量還是負能量。",
         messages=[
@@ -84,7 +84,7 @@ def analyze_sentiment(text):
 
 def painting(text):
     response = claude.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model=model_target,
         max_tokens=1000,
         system="你是翻譯官，幫我將文字描述翻譯為英文用來直接提供給StabilityAI繪圖用，不需要其他說明",
         messages=[
