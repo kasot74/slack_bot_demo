@@ -1,5 +1,6 @@
 import os
 import datetime,time
+import requests
 import io
 import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
 from PIL import Image
@@ -44,3 +45,26 @@ def get_image(text):
     except Exception as e:
         # Handle potential errors during image generation                
         return f"繪圖失敗! {e}", None
+def get_image2(test):    
+    response = requests.post(
+        f"https://api.stability.ai/v2beta/stable-image/generate/ultra",
+        headers={
+            "authorization": f"Bearer {api_key}",
+            "accept": "image/*"
+        },
+        files={"none": ''},
+        data={
+            "prompt": test,
+            "output_format": "png",
+        },
+    )
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")    
+    if response.status_code == 200:
+        img_filename = f"{timestamp}.png"
+        with open(f"stability_image/{img_filename}", 'wb') as file:
+            file.write(response.content)
+        file_path = os.path.join("stability_image",img_filename)
+        return f"{test}繪圖成功! :art: ", file_path
+    else:
+        return f"繪圖失敗! {str(response.json())}", None
+        

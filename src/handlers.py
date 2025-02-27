@@ -18,7 +18,7 @@ from .AI_Service.xai import role_generate_response as role_generate_summary_xai
 from .AI_Service.xai import analyze_stock as analyze_stock_xai
 
 
-from .stability_model import get_image
+from .stability_model import get_image,get_image2
 from .stock import get_stock_info
 from .stock import get_historical_data
 
@@ -202,7 +202,8 @@ def register_handlers(app, config, db):
     def create_image(message, say):        
         channel = message['channel']
         msg_text = re.match(r"^!畫\s+(.+)$", message['text']).group(1).strip()
-        say_text, file_name = get_image(msg_text)                
+        #say_text, file_name = get_image(msg_text)                
+        say_text, file_name = get_image2(msg_text)                
         send_image(channel, say_text, say, file_name)
 
     #!clearai

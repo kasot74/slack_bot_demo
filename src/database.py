@@ -1,8 +1,7 @@
 from pymongo import MongoClient
 
 #創建連線
-def con_db(config):    
-    print(config)
+def con_db(config):        
     user=config['MONGO_USER']
     pas=config['MONGO_USER']
     host=config['MONGO_HOST']
