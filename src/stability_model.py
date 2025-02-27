@@ -1,5 +1,5 @@
 import os
-import time
+import datetime,time
 import io
 import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
 from PIL import Image
@@ -32,8 +32,8 @@ def get_image(text):
         for resp in answers:
             for artifact in resp.artifacts:                                
                 if artifact.type == generation.ARTIFACT_IMAGE:
-                    timestamp = int(time.time())
-                    img_filename = str(timestamp)+ ".png"
+                    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                    img_filename = f"{timestamp}.png"
                     img = Image.open(io.BytesIO(artifact.binary))
                     image_dir = os.path.join(image_dir,img_filename)
                     img.save(image_dir,"png") # Save our generated images with their seed number as the filename.                    
