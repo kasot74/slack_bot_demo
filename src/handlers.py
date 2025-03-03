@@ -202,8 +202,8 @@ def register_handlers(app, config, db):
     def create_image(message, say):        
         channel = message['channel']
         msg_text = re.match(r"^!畫\s+(.+)$", message['text']).group(1).strip()
-        #say_text, file_name = get_image(msg_text)                
-        say_text, file_name = get_image2(msg_text)                
+        say_text, file_name = get_image(msg_text)                
+        #say_text, file_name = get_image2(msg_text)                
         send_image(channel, say_text, say, file_name)
 
     #!clearai
