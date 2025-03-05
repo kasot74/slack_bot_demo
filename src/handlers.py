@@ -89,7 +89,7 @@ def register_handlers(app, config, db):
         for i in range(3):
             first_day_of_month = (today.replace(day=1) - timedelta(days=i*30)).strftime('%Y%m01')
             his_data.append(get_historical_data(msg_text,first_day_of_month))        
-        say(analyze_stock_xai(his_data,now_data))
+        say(analyze_stock_xai(his_data,now_data), thread_ts=message['ts'])
 
     # !熬雞湯    
     @app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
