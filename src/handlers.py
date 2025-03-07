@@ -139,6 +139,26 @@ def register_handlers(app, config, db):
         else:
             say("目前沒有雞湯語錄可用，請稍後再試。")
 
+    # !釣魚
+    @app.message(re.compile(r"^!釣魚$"))
+    def get_fish(message, say):        
+        folder_path=os.path.join('images','魚池')
+        try:
+            # 獲取資料夾中的所有檔案名稱
+            quotes = os.listdir(folder_path)            
+            # 檢查是否有可用的檔案
+            if quotes:
+                if random.random() < 0.7:  # 70%的機率釣到檔案
+                    # 隨機選取一個或多個檔案
+                    selected_files = random.sample(quotes, k=min(1, len(quotes)))  # k=2 表示最多選取2個
+                    send_image(channel, doc['say'],f"你釣到了：{', '.join(selected_files)}", os.path.join('魚池',selected_files))                                
+                else:
+                    # 30%的機率沒釣到
+                    say("很遺憾，你什麼也沒釣到！")
+            else:
+                say("資料夾是空的，沒有檔案可釣取。")
+        except Exception as e:
+            say(f"發生錯誤：{str(e)}")
 
     # !add 指令
     @app.message(re.compile(r"^!add\s+(.+)\s+([\s\S]+)", re.DOTALL))
