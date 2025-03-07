@@ -150,10 +150,10 @@ def register_handlers(app, config, db):
             # 檢查是否有可用的檔案
             if quotes:
                 if random.random() < 0.7:  # 70%的機率釣到檔案
-                    # 隨機選取一個或多個檔案
-                    selected_files = random.sample(quotes, k=min(1, len(quotes)))  # k=2 表示最多選取2個
-                    file_path = os.path.join('images', 'fishpond', selected_files[0])                     
-                    send_image(channel,f" :fishing_pole_and_fish: 你釣到了 {selected_files[0]}", file_path)                                
+                    # 隨機選取一個或多個檔案                    
+                    selected_quote = random.choice(quotes)           
+                    file_path = os.path.join('images', 'fishpond', selected_quote)                     
+                    send_image(channel,f" :fishing_pole_and_fish: 你釣到了!", file_path)                                
                 else:
                     # 30%的機率沒釣到
                     say(" :sob: 很遺憾，你什麼也沒釣到！")
