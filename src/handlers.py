@@ -143,6 +143,7 @@ def register_handlers(app, config, db):
     @app.message(re.compile(r"^!釣魚$"))
     def get_fish(message, say):        
         folder_path=os.path.join('images','fishpond')
+        channel = message['channel']
         try:
             # 獲取資料夾中的所有檔案名稱
             quotes = os.listdir(folder_path)            
