@@ -152,8 +152,13 @@ def register_handlers(app, config, db):
                 if random.random() < 0.7:  # 70%的機率釣到檔案
                     # 隨機選取一個或多個檔案                    
                     selected_quote = random.choice(quotes)           
-                    file_path = os.path.join('images', 'fishpond', selected_quote)                     
-                    send_image(channel,f" :fishing_pole_and_fish: 你釣到了!", file_path)                                
+                    message = " :fishing_pole_and_fish: 你釣到了!"
+                    file_path = os.path.join(folder_path, selected_quote)                                         
+                    response = app.client.files_upload_v2(
+                        channel=channel,
+                        file=file_path,
+                        initial_comment=message
+                    )    
                 else:
                     # 30%的機率沒釣到
                     say(" :sob: 很遺憾，你什麼也沒釣到！")
