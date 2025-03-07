@@ -152,15 +152,15 @@ def register_handlers(app, config, db):
                 if random.random() < 0.7:  # 70%的機率釣到檔案
                     # 隨機選取一個或多個檔案
                     selected_files = random.sample(quotes, k=min(1, len(quotes)))  # k=2 表示最多選取2個
-                    file_paths = [os.path.join('images', 'fishpond', file) for file in selected_files]  # 組合完整路徑
-                    send_image(channel,f"你釣到了：{', '.join(selected_files)}", os.path.join('fishpond',file_paths[0]))                                
+                    file_path = os.path.join('images', 'fishpond', selected_files[0])                     
+                    send_image(channel,f"你釣到了：{', '.join(selected_files)}", os.path.join('fishpond',file_path))                                
                 else:
                     # 30%的機率沒釣到
                     say("很遺憾，你什麼也沒釣到！")
             else:
                 say("資料夾是空的，沒有檔案可釣取。")
         except Exception as e:
-            say(f"發生錯誤：{str(e)}")
+            say(f"發生錯誤：{e}")
 
     # !add 指令
     @app.message(re.compile(r"^!add\s+(.+)\s+([\s\S]+)", re.DOTALL))
