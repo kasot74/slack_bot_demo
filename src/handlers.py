@@ -153,7 +153,7 @@ def register_handlers(app, config, db):
                     # 隨機選取一個或多個檔案
                     selected_files = random.sample(quotes, k=min(1, len(quotes)))  # k=2 表示最多選取2個
                     file_path = os.path.join('images', 'fishpond', selected_files[0])                     
-                    send_image(channel,f" :fishing_pole_and_fish: 你釣到了 {selected_files[0]}", os.path.join('fishpond',file_path))                                
+                    send_image(channel,f" :fishing_pole_and_fish: 你釣到了 {selected_files[0]}", file_path)                                
                 else:
                     # 30%的機率沒釣到
                     say(" :sob: 很遺憾，你什麼也沒釣到！")
