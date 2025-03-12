@@ -86,7 +86,7 @@ def register_handlers(app, config, db):
         now_data = get_stock_info(msg_text)
         his_data = []        
         today = datetime.now()        
-        for i in range(3):
+        for i in range(6):
             first_day_of_month = (today.replace(day=1) - timedelta(days=i*30)).strftime('%Y%m01')
             his_data.append(get_historical_data(msg_text,first_day_of_month))        
         say(analyze_stock_xai(his_data,now_data), thread_ts=message['ts'])
