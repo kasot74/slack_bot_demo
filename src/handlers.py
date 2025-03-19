@@ -16,6 +16,7 @@ from .AI_Service.xai import generate_summary as generate_summary_xai
 from .AI_Service.xai import analyze_sentiment as analyze_sentiment_xai 
 from .AI_Service.xai import role_generate_response as role_generate_summary_xai
 from .AI_Service.xai import analyze_stock as analyze_stock_xai
+from .AI_Service.xai import analyze_stock_inoutpoint as analyze_stock_inoutpoint_xai
 
 
 from .stability_model import get_image,get_image2
@@ -75,11 +76,13 @@ def register_handlers(app, config, db):
                 answer = role_generate_summary_xai(role1,role2,answer ,thread_ts)
                 say(text=f"*{role1}:* {answer}", thread_ts=thread_ts)                
 
+    # !查股    
     @app.message(re.compile(r"^!查股\s+(.+)$"))
     def search_slock(message, say):
         msg_text = re.match(r"^!查股\s+(.+)$", message['text']).group(1).strip()
         say(get_stock_info(msg_text))
 
+    # !技術分析    
     @app.message(re.compile(r"^!技術分析\s+(.+)$"))
     def analyze_slock(message, say):
         msg_text = re.match(r"^!技術分析\s+(.+)$", message['text']).group(1).strip()
@@ -90,6 +93,18 @@ def register_handlers(app, config, db):
             first_day_of_month = (today.replace(day=1) - timedelta(days=i*30)).strftime('%Y%m01')
             his_data.append(get_historical_data(msg_text,first_day_of_month))        
         say(analyze_stock_xai(his_data,now_data), thread_ts=message['ts'])
+
+    # !買賣建議    
+    @app.message(re.compile(r"^!買賣建議\s+(.+)$"))
+    def analyze_slock_point(message, say):
+        msg_text = re.match(r"^!買賣建議\s+(.+)$", message['text']).group(1).strip()
+        now_data = get_stock_info(msg_text)
+        his_data = []        
+        today = datetime.now()        
+        for i in range(3):
+            first_day_of_month = (today.replace(day=1) - timedelta(days=i*30)).strftime('%Y%m01')
+            his_data.append(get_historical_data(msg_text,first_day_of_month))        
+        say(analyze_stock_inoutpoint_xai(his_data,now_data), thread_ts=message['ts'])
 
     # !熬雞湯    
     @app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
