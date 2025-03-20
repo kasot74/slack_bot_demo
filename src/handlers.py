@@ -184,7 +184,7 @@ def register_handlers(app, config, db):
             say(f"發生錯誤：{e}")
 
     # !曬卡
-    @app.message(re.compile(r"^!曬卡$"))
+    @app.message(re.compile(r"^!曬卡.*"))
     def show_card(message, say):                
         channel = message['channel']
         try:
