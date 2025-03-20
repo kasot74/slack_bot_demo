@@ -1,6 +1,7 @@
 import re
 import random
 import os
+from math import comb
 from datetime import datetime, timedelta
 # openai imports
 from .AI_Service.openai import generate_summary as generate_summary_openai
@@ -181,6 +182,31 @@ def register_handlers(app, config, db):
                 say("資料夾是空的，沒有檔案可釣取。")
         except Exception as e:
             say(f"發生錯誤：{e}")
+
+    # !曬卡
+    @app.message(re.compile(r"^!曬卡$"))
+    def show_card(message, say):                
+        channel = message['channel']
+        try:
+            # quotes 中的可選元素
+            quotes = [":rainbow:", ":poop:"]
+            
+            # 抽選 10 次 quotes 的元素
+            selected_quotes = random.choices(quotes, k=10)
+            # 統計 :rainbow: 的出現次數
+            rainbow_count = selected_quotes.count(":rainbow:")
+            
+            # 計算該情況的機率
+            n = 10  # 總抽選次數
+            p = 0.5  # 每次選擇 :rainbow: 的機率
+            probability = comb(n, rainbow_count) * (p ** rainbow_count) * ((1 - p) ** (n - rainbow_count))
+            
+            # 傳送結果和機率
+            say(f"選出的卡片為：{' '.join(selected_quotes)}\n該情況的機率為 {probability:.4%}")
+        except Exception as e:
+            # 當發生錯誤時傳送錯誤訊息
+            say(f"發生錯誤：{e}")
+
 
     # !add 指令
     @app.message(re.compile(r"^!add\s+(.+)\s+([\s\S]+)", re.DOTALL))
