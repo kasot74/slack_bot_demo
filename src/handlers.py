@@ -201,8 +201,15 @@ def register_handlers(app, config, db):
             p = 0.5  # 每次選擇 :rainbow: 的機率
             probability = comb(n, rainbow_count) * (p ** rainbow_count) * ((1 - p) ** (n - rainbow_count))
             
+            hide_message = ""
+            if rainbow_count == 10:
+                hide_message = "🌈 彩蛋觸發！全是 :rainbow:！你今天是🌈神！"
+            if rainbow_count == 0:
+                hide_message = "💩 彩蛋觸發！全是 :poop:！你今天是💩神!"
             # 傳送結果和機率
-            say(f"選出的卡片為：{' '.join(selected_quotes)}\n該情況的機率為 {probability:.4%}")
+            say(f"選出的卡片為：{' '.join(selected_quotes)}\n {hide_message} 該情況的機率為 {probability:.4%}")
+            # 彩蛋邏輯
+
         except Exception as e:
             # 當發生錯誤時傳送錯誤訊息
             say(f"發生錯誤：{e}")
