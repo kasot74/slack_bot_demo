@@ -185,20 +185,23 @@ def register_handlers(app, config, db):
 
     # !曬卡
     @app.message(re.compile(r"^!曬卡.*"))
-    def show_card(message, say):                
+    def show_card(message, say):
         channel = message['channel']
         try:
             # quotes 中的可選元素
             quotes = [":rainbow:", ":poop:"]
             
+            # 設置每次選擇 :rainbow: 的機率為 20%
+            weights = [0.2, 0.8]
+            
             # 抽選 10 次 quotes 的元素
-            selected_quotes = random.choices(quotes, k=10)
+            selected_quotes = random.choices(quotes, weights=weights, k=10)
             # 統計 :rainbow: 的出現次數
             rainbow_count = selected_quotes.count(":rainbow:")
             
             # 計算該情況的機率
             n = 10  # 總抽選次數
-            p = 0.5  # 每次選擇 :rainbow: 的機率
+            p = 0.2  # 每次選擇 :rainbow: 的機率
             probability = comb(n, rainbow_count) * (p ** rainbow_count) * ((1 - p) ** (n - rainbow_count))
             
             hide_message = ""
