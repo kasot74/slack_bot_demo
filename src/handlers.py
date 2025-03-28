@@ -254,7 +254,8 @@ def register_handlers(app, config, db):
     @app.message(re.compile(r"^!抽牌\s+(.+)$"))
     def draw_cards(message, say):
         user_id = message['user']  # 獲取使用者的 ID
-
+        channel = message['channel']
+        
         # 嘗試抓取輸入的內容，若無輸入則預設為 1        
         num_cards_input = re.match(r"^!抽牌\s+(.+)$", message['text']).group(1).strip()                       
         
