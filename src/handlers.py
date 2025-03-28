@@ -188,6 +188,10 @@ def register_handlers(app, config, db):
     def show_card(message, say):
         channel = message['channel']
         try:            
+            # 1%
+            if random.random() < 0.01:
+                say("💔💔💔💔💔💔💔💔💔💔")
+                return
             # 5%
             if random.random() < 0.05:
                 # 隨機生成 1 到 8 個 :fish_body:
