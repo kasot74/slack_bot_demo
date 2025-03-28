@@ -309,9 +309,11 @@ def register_handlers(app, config, db):
         else:
             say(f"<@{user_id}> 你還沒有抽過任何牌，無法判斷最大牌型！", channel=channel)      
     
-    def evaluate_hand(cards):
-        ranks_only = [card[:-1] for card in cards]
-        suits_only = [card[-1] for card in cards]
+    def evaluate_hand(cards):        
+        # 確保正確提取數字和花色
+        ranks_only = [card[1:] if card[0] in suits else card[2:] for card in cards]
+        suits_only = [card[0] if card[0] in suits else card[:2] for card in cards]
+
         
         # 判斷是否為同花
         is_flush = len(set(suits_only)) == 1
