@@ -187,7 +187,15 @@ def register_handlers(app, config, db):
     @app.message(re.compile(r"^!曬卡.*"))
     def show_card(message, say):
         channel = message['channel']
-        try:
+        try:            
+            # 5%
+            if random.random() < 0.05:
+                # 隨機生成 1 到 8 個 :fish_body:
+                num_fish_body = random.randint(0, 8)  
+                fish_body = ":fish_body:" * num_fish_body
+                fish = f":fish_head:{fish_body}:fish_tail:"
+                say(fish + "機率:5%")
+                return
             # quotes 中的可選元素
             quotes = [":rainbow:", ":poop:"]
             
@@ -204,14 +212,14 @@ def register_handlers(app, config, db):
             p = 0.2  # 每次選擇 :rainbow: 的機率
             probability = comb(n, rainbow_count) * (p ** rainbow_count) * ((1 - p) ** (n - rainbow_count))
             
-            hide_message = ""
+            hide_message = f"機率:{probability:.1%}"
             if rainbow_count == 10:
-                hide_message = "🌈 彩蛋觸發！全是 :rainbow:！你今天是🌈神！"
+                hide_message = "全是 :rainbow:！你今天是🌈神！" + hide_message
             if rainbow_count == 0:
-                hide_message = "💩 彩蛋觸發！全是 :poop:！你今天是💩神!"
+                hide_message = "全是 :poop:！你今天是💩神!" + hide_message
             # 傳送結果和機率
-            say(f"選出的卡片為：{' '.join(selected_quotes)}\n {hide_message} 該情況的機率為 {probability:.4%}")
-            # 彩蛋邏輯
+            say(f"{' '.join(selected_quotes)}\n {hide_message} ")
+            
 
         except Exception as e:
             # 當發生錯誤時傳送錯誤訊息
