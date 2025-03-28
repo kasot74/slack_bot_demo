@@ -230,6 +230,45 @@ def register_handlers(app, config, db):
             say(f"發生錯誤：{e}")
 
 
+    # 定義一副撲克牌
+    deck = [f"{rank}{suit}" for rank in '23456789JQKA' for suit in '♣️♠️♥️♦️']
+
+    # 儲存每位使用者的牌組
+    user_cards = {}
+
+    @app.message(re.compile(r"^!抽牌"))
+    def draw_card(message, say):
+        user_id = message['user']  # 獲取使用者的 ID
+        channel = message['channel']
+
+        # 初始化使用者的牌組
+        if user_id not in user_cards:
+            user_cards[user_id] = []
+
+        # 檢查是否還有剩餘的牌
+        available_cards = list(set(deck) - set(user_cards[user_id]))
+        if not available_cards:
+            say(f"所有的牌已經被抽光了，無法再抽！", channel=channel)
+            return
+
+        # 隨機選擇一張牌
+        random_card = random.choice(available_cards)
+        user_cards[user_id].append(random_card)  # 記錄使用者的牌
+
+        # 回應結果
+        say(f"<@{user_id}> 抽到的撲克牌是：{random_card}", channel=channel)
+
+    @app.message(re.compile(r"^!我的牌"))
+    def show_user_cards(message, say):
+        user_id = message['user']  # 獲取使用者的 ID
+        channel = message['channel']
+
+        if user_id in user_cards and user_cards[user_id]:
+            cards = ", ".join(user_cards[user_id])
+            say(f"<@{user_id}> 你目前擁有的牌是：{cards}", channel=channel)
+        else:
+            say(f"<@{user_id}> 你還沒有抽過任何牌！", channel=channel)
+
     # !add 指令
     @app.message(re.compile(r"^!add\s+(.+)\s+([\s\S]+)", re.DOTALL))
     def handle_add_message(message, say):
