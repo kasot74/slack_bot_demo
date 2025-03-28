@@ -235,6 +235,19 @@ def register_handlers(app, config, db):
     deck = [f"{suit}{rank}" for rank in ranks for suit in suits]        
     # 儲存每位使用者的牌組
     user_cards = {}
+    
+    # 定義牌型的大小和對應的中文名稱
+    hand_rankings = {
+        "high_card": ("高牌", 1),
+        "pair": ("一對", 2),
+        "three_of_a_kind": ("三條", 3),
+        "straight": ("順子", 4),
+        "flush": ("同花", 5),
+        "full_house": ("葫蘆", 6),
+        "four_of_a_kind": ("四條", 7),
+        "straight_flush": ("同花順", 8),
+        "royal_flush": ("皇家同花順", 9)
+    }
 
     @app.message(re.compile(r"^!抽牌(\s*\d+)?$"))
     def draw_cards(message, say):
@@ -258,7 +271,7 @@ def register_handlers(app, config, db):
         user_cards[user_id].extend(drawn_cards)  # 記錄使用者的牌
 
         # 回應結果
-        say(f"<@{user_id}> 抽到的撲克牌是：{', '.join(drawn_cards)}", channel=channel)
+        say(f"<@{user_id}> 抽到的是：{', '.join(drawn_cards)}", channel=channel)
 
     @app.message(re.compile(r"^!我的牌"))
     def show_user_cards(message, say):
@@ -270,6 +283,56 @@ def register_handlers(app, config, db):
             say(f"<@{user_id}> 你擁有的牌是：{cards}", channel=channel)
         else:
             say(f"<@{user_id}> 你還沒有抽過任何牌！", channel=channel)
+
+    @app.message(re.compile(r"^!我的牌型$"))
+    def show_best_hand(message, say):
+        user_id = message['user']  # 獲取使用者的 ID
+        channel = message['channel']
+
+        if user_id in user_cards and user_cards[user_id]:
+            # 判斷使用者目前的最佳牌型
+            cards = user_cards[user_id]
+            hand_type, best_cards = evaluate_hand(cards)
+            best_cards_display = ", ".join(best_cards)
+            say(f"<@{user_id}> 最大牌型是：{hand_type}, {best_cards_display}！", channel=channel)
+        else:
+            say(f"<@{user_id}> 你還沒有抽過任何牌，無法判斷最大牌型！", channel=channel)      
+    
+    def evaluate_hand(cards):
+        ranks_only = [card[:-1] for card in cards]
+        suits_only = [card[-1] for card in cards]
+        
+        # 判斷是否為同花
+        is_flush = len(set(suits_only)) == 1
+        
+        # 判斷是否為順子
+        sorted_ranks = sorted(ranks_only, key=lambda x: ranks.index(x))
+        is_straight = all(ranks.index(sorted_ranks[i]) + 1 == ranks.index(sorted_ranks[i + 1]) for i in range(len(sorted_ranks) - 1))
+        
+        # 判斷其他牌型 (示例：簡化版)
+        rank_counts = {rank: ranks_only.count(rank) for rank in ranks_only}
+        if is_flush and is_straight:
+            if sorted_ranks[-1] == 'A':  # 順子且最高為 A
+                return hand_rankings["royal_flush"]
+            return hand_rankings["straight_flush"]
+        elif 4 in rank_counts.values():
+            return hand_rankings["four_of_a_kind"]
+        elif 3 in rank_counts.values() and 2 in rank_counts.values():
+            return hand_rankings["full_house"]
+        elif is_flush:
+            return hand_rankings["flush"]
+        elif is_straight:
+            return hand_rankings["straight"]
+        elif 3 in rank_counts.values():
+            return hand_rankings["three_of_a_kind"]
+        elif list(rank_counts.values()).count(2) == 2:
+            return hand_rankings["two_pair"]
+        elif 2 in rank_counts.values():
+            return hand_rankings["pair"]
+        else:
+            highest_card = max(cards, key=lambda card: ranks.index(card[:-1]))
+            return hand_rankings["high_card"], [highest_card]
+
 
     # !add 指令
     @app.message(re.compile(r"^!add\s+(.+)\s+([\s\S]+)", re.DOTALL))
