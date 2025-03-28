@@ -255,7 +255,7 @@ def register_handlers(app, config, db):
     def draw_cards(message, say):
         user_id = message['user']  # 獲取使用者的 ID
         channel = message['channel']
-        
+
         # 嘗試抓取輸入的內容，若無輸入則預設為 1        
         num_cards_input = re.match(r"^!抽牌\s+(.+)$", message['text']).group(1).strip()                       
         
@@ -295,7 +295,7 @@ def register_handlers(app, config, db):
         else:
             say(f"<@{user_id}> 你還沒有抽過任何牌！", channel=channel)
 
-    @app.message(re.compile(r"^!我的牌型$"))
+    @app.message(re.compile(r"^!最大牌型$"))
     def show_best_hand(message, say):
         user_id = message['user']  # 獲取使用者的 ID
         channel = message['channel']
