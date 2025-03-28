@@ -251,12 +251,19 @@ def register_handlers(app, config, db):
     }
 
 
-    @app.message(re.compile(r"^!抽牌(?:\s*(\d+))?$"))
+    @app.message(re.compile(r"^!抽牌(?:\s*(.+))?$"))
     def draw_cards(message, say):
         user_id = message['user']  # 獲取使用者的 ID
-        # 判斷數量，若無指定則預設為 1
-        match = re.search(r"^!抽牌(?:\s*(\d+))?$", message['text'])
-        num_cards = int(match.group(2)) if match and match.group(2) else 1  # 預設抽 1 張牌
+        
+        # 嘗試抓取輸入的內容，若無輸入則預設為 1
+        match = re.search(r"^!抽牌(?:\s*(.*))?$", message['text'])
+        num_cards_input = match.group(1) if match and match.group(1) else "1"
+
+        try:
+            # 嘗試將輸入轉換為整數，非整數輸入將自動設為 1
+            num_cards = int(num_cards_input)
+        except ValueError:
+            num_cards = 1  # 非數字情況，設為 1
 
         # 初始化使用者的牌組
         if user_id not in user_cards:
