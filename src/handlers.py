@@ -250,14 +250,13 @@ def register_handlers(app, config, db):
         "royal_flush": ("皇家同花順", 10)
     }
 
-
-    @app.message(re.compile(r"^!抽牌(?:\s*(.+))?$"))
+    
+    @app.message(re.compile(r"^!抽牌\s+(.+)$"))
     def draw_cards(message, say):
         user_id = message['user']  # 獲取使用者的 ID
-        
-        # 嘗試抓取輸入的內容，若無輸入則預設為 1
-        match = re.search(r"^!抽牌(?:\s*(.*))?$", message['text'])
-        num_cards_input = match.group(1) if match and match.group(1) else "1"
+
+        # 嘗試抓取輸入的內容，若無輸入則預設為 1        
+        num_cards_input = re.match(r"^!抽牌\s+(.+)$", message['text']).group(1).strip()        
 
         try:
             # 嘗試將輸入轉換為整數，非整數輸入將自動設為 1
