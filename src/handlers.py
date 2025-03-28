@@ -236,10 +236,12 @@ def register_handlers(app, config, db):
     # 儲存每位使用者的牌組
     user_cards = {}
 
-    @app.message(re.compile(r"^!抽牌"))
-    def draw_card(message, say):
+    @app.message(re.compile(r"^!抽牌(\s*\d+)?$"))
+    def draw_cards(message, say):
         user_id = message['user']  # 獲取使用者的 ID
-        channel = message['channel']
+        # 判斷數量，若無指定則預設為 1
+        match = re.search(r"^!抽牌(\s*(\d+))?$", message['text'])
+        num_cards = int(match.group(2)) if match and match.group(2) else 1  # 預設抽 1 張牌
 
         # 初始化使用者的牌組
         if user_id not in user_cards:
@@ -247,16 +249,16 @@ def register_handlers(app, config, db):
 
         # 檢查是否還有剩餘的牌
         available_cards = list(set(deck) - set(user_cards[user_id]))
-        if not available_cards:
-            say(f"所有的牌已經被抽光了，無法再抽！", channel=channel)
+        if num_cards > len(available_cards):
+            say(f"剩餘牌數不足，你只能抽 {len(available_cards)} 張！", channel=channel)
             return
 
-        # 隨機選擇一張牌
-        random_card = random.choice(available_cards)
-        user_cards[user_id].append(random_card)  # 記錄使用者的牌
+        # 隨機選擇多張牌
+        drawn_cards = random.sample(available_cards, num_cards)
+        user_cards[user_id].extend(drawn_cards)  # 記錄使用者的牌
 
         # 回應結果
-        say(f"<@{user_id}> 抽到的撲克牌是：{random_card}", channel=channel)
+        say(f"<@{user_id}> 抽到的撲克牌是：{', '.join(drawn_cards)}", channel=channel)
 
     @app.message(re.compile(r"^!我的牌"))
     def show_user_cards(message, say):
