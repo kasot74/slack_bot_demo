@@ -240,20 +240,22 @@ def register_handlers(app, config, db):
     hand_rankings = {
         "high_card": ("高牌", 1),
         "pair": ("一對", 2),
-        "three_of_a_kind": ("三條", 3),
-        "straight": ("順子", 4),
-        "flush": ("同花", 5),
-        "full_house": ("葫蘆", 6),
-        "four_of_a_kind": ("四條", 7),
-        "straight_flush": ("同花順", 8),
-        "royal_flush": ("皇家同花順", 9)
+        "two_pair": ("兩對", 3),
+        "three_of_a_kind": ("三條", 4),
+        "straight": ("順子", 5),
+        "flush": ("同花", 6),
+        "full_house": ("葫蘆", 7),
+        "four_of_a_kind": ("四條", 8),
+        "straight_flush": ("同花順", 9),
+        "royal_flush": ("皇家同花順", 10)
     }
 
-    @app.message(re.compile(r"^!抽牌(\s*\d+)?$"))
+
+    @app.message(re.compile(r"^!抽牌(?:\s*(\d+))?$"))
     def draw_cards(message, say):
         user_id = message['user']  # 獲取使用者的 ID
         # 判斷數量，若無指定則預設為 1
-        match = re.search(r"^!抽牌(\s*(\d+))?$", message['text'])
+        match = re.search(r"^!抽牌(?:\s*(\d+))?$", message['text'])
         num_cards = int(match.group(2)) if match and match.group(2) else 1  # 預設抽 1 張牌
 
         # 初始化使用者的牌組
@@ -309,27 +311,48 @@ def register_handlers(app, config, db):
         sorted_ranks = sorted(ranks_only, key=lambda x: ranks.index(x))
         is_straight = all(ranks.index(sorted_ranks[i]) + 1 == ranks.index(sorted_ranks[i + 1]) for i in range(len(sorted_ranks) - 1))
         
-        # 判斷其他牌型 (示例：簡化版)
+        # 判斷各種牌型 (改進處理)
         rank_counts = {rank: ranks_only.count(rank) for rank in ranks_only}
+        
         if is_flush and is_straight:
-            if sorted_ranks[-1] == 'A':  # 順子且最高為 A
-                return hand_rankings["royal_flush"]
-            return hand_rankings["straight_flush"]
+            # 皇家同花順或普通同花順
+            if sorted_ranks[-1] == 'A' and sorted_ranks[0] == '10':
+                return hand_rankings["royal_flush"], cards
+            return hand_rankings["straight_flush"], cards
         elif 4 in rank_counts.values():
-            return hand_rankings["four_of_a_kind"]
+            # 四條
+            quad_rank = [rank for rank, count in rank_counts.items() if count == 4][0]
+            best_cards = [card for card in cards if card[:-1] == quad_rank]
+            return hand_rankings["four_of_a_kind"], best_cards
         elif 3 in rank_counts.values() and 2 in rank_counts.values():
-            return hand_rankings["full_house"]
+            # 葫蘆
+            triple_rank = [rank for rank, count in rank_counts.items() if count == 3][0]
+            pair_rank = [rank for rank, count in rank_counts.items() if count == 2][0]
+            best_cards = [card for card in cards if card[:-1] in [triple_rank, pair_rank]]
+            return hand_rankings["full_house"], best_cards
         elif is_flush:
-            return hand_rankings["flush"]
+            # 同花
+            return hand_rankings["flush"], cards
         elif is_straight:
-            return hand_rankings["straight"]
+            # 順子
+            return hand_rankings["straight"], cards
         elif 3 in rank_counts.values():
-            return hand_rankings["three_of_a_kind"]
+            # 三條
+            triple_rank = [rank for rank, count in rank_counts.items() if count == 3][0]
+            best_cards = [card for card in cards if card[:-1] == triple_rank]
+            return hand_rankings["three_of_a_kind"], best_cards
         elif list(rank_counts.values()).count(2) == 2:
-            return hand_rankings["two_pair"]
+            # 兩對
+            pair_ranks = [rank for rank, count in rank_counts.items() if count == 2]
+            best_cards = [card for card in cards if card[:-1] in pair_ranks]
+            return hand_rankings["two_pair"], best_cards
         elif 2 in rank_counts.values():
-            return hand_rankings["pair"]
+            # 一對
+            pair_rank = [rank for rank, count in rank_counts.items() if count == 2][0]
+            best_cards = [card for card in cards if card[:-1] == pair_rank]
+            return hand_rankings["pair"], best_cards
         else:
+            # 高牌
             highest_card = max(cards, key=lambda card: ranks.index(card[:-1]))
             return hand_rankings["high_card"], [highest_card]
 
