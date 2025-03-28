@@ -311,18 +311,20 @@ def register_handlers(app, config, db):
     
     def evaluate_hand(cards):        
         # 確保正確提取數字和花色
-        ranks_only = [card[1:] if card[0] in suits else card[2:] for card in cards]
-        suits_only = [card[0] if card[0] in suits else card[:2] for card in cards]
+        ranks_only = [card[2:] if card[1].isdigit() else card[1:] for card in cards]
+        suits_only = [card[:2] if card[1].isdigit() else card[:1] for card in cards]
 
-        
         # 判斷是否為同花
         is_flush = len(set(suits_only)) == 1
         
         # 判斷是否為順子
-        sorted_ranks = sorted(ranks_only, key=lambda x: ranks.index(x))
-        is_straight = all(ranks.index(sorted_ranks[i]) + 1 == ranks.index(sorted_ranks[i + 1]) for i in range(len(sorted_ranks) - 1))
-        
-        # 判斷各種牌型 (改進處理)
+        try:
+            sorted_ranks = sorted(ranks_only, key=lambda x: ranks.index(x))
+            is_straight = all(ranks.index(sorted_ranks[i]) + 1 == ranks.index(sorted_ranks[i + 1]) for i in range(len(sorted_ranks) - 1))
+        except ValueError:
+            raise ValueError("Invalid rank detected in the cards.")
+
+        # 判斷各種牌型
         rank_counts = {rank: ranks_only.count(rank) for rank in ranks_only}
         
         if is_flush and is_straight:
@@ -333,13 +335,13 @@ def register_handlers(app, config, db):
         elif 4 in rank_counts.values():
             # 四條
             quad_rank = [rank for rank, count in rank_counts.items() if count == 4][0]
-            best_cards = [card for card in cards if card[:-1] == quad_rank]
+            best_cards = [card for card in cards if card[2:] == quad_rank or card[1:] == quad_rank]
             return hand_rankings["four_of_a_kind"], best_cards
         elif 3 in rank_counts.values() and 2 in rank_counts.values():
             # 葫蘆
             triple_rank = [rank for rank, count in rank_counts.items() if count == 3][0]
             pair_rank = [rank for rank, count in rank_counts.items() if count == 2][0]
-            best_cards = [card for card in cards if card[:-1] in [triple_rank, pair_rank]]
+            best_cards = [card for card in cards if card[2:] in [triple_rank, pair_rank] or card[1:] in [triple_rank, pair_rank]]
             return hand_rankings["full_house"], best_cards
         elif is_flush:
             # 同花
@@ -350,22 +352,23 @@ def register_handlers(app, config, db):
         elif 3 in rank_counts.values():
             # 三條
             triple_rank = [rank for rank, count in rank_counts.items() if count == 3][0]
-            best_cards = [card for card in cards if card[:-1] == triple_rank]
+            best_cards = [card for card in cards if card[2:] == triple_rank or card[1:] == triple_rank]
             return hand_rankings["three_of_a_kind"], best_cards
         elif list(rank_counts.values()).count(2) == 2:
             # 兩對
             pair_ranks = [rank for rank, count in rank_counts.items() if count == 2]
-            best_cards = [card for card in cards if card[:-1] in pair_ranks]
+            best_cards = [card for card in cards if card[2:] in pair_ranks or card[1:] in pair_ranks]
             return hand_rankings["two_pair"], best_cards
         elif 2 in rank_counts.values():
             # 一對
             pair_rank = [rank for rank, count in rank_counts.items() if count == 2][0]
-            best_cards = [card for card in cards if card[:-1] == pair_rank]
+            best_cards = [card for card in cards if card[2:] == pair_rank or card[1:] == pair_rank]
             return hand_rankings["pair"], best_cards
         else:
             # 高牌
-            highest_card = max(cards, key=lambda card: ranks.index(card[:-1]))
+            highest_card = max(cards, key=lambda card: ranks.index(card[2:] if card[1].isdigit() else card[1:]))
             return hand_rankings["high_card"], [highest_card]
+
 
 
     # !add 指令
