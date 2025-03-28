@@ -229,10 +229,10 @@ def register_handlers(app, config, db):
             # 當發生錯誤時傳送錯誤訊息
             say(f"發生錯誤：{e}")
 
-
     # 定義一副撲克牌
-    deck = [f"{rank}{suit}" for rank in '23456789JQKA' for suit in '♣️♠️♥️♦️']
-
+    ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    suits = ['♣️', '♠️', '♥️', '♦️']
+    deck = [f"{suit}{rank}" for rank in ranks for suit in suits]        
     # 儲存每位使用者的牌組
     user_cards = {}
 
@@ -265,7 +265,7 @@ def register_handlers(app, config, db):
 
         if user_id in user_cards and user_cards[user_id]:
             cards = ", ".join(user_cards[user_id])
-            say(f"<@{user_id}> 你目前擁有的牌是：{cards}", channel=channel)
+            say(f"<@{user_id}> 你擁有的牌是：{cards}", channel=channel)
         else:
             say(f"<@{user_id}> 你還沒有抽過任何牌！", channel=channel)
 
