@@ -256,8 +256,8 @@ def register_handlers(app, config, db):
         user_id = message['user']  # 獲取使用者的 ID
 
         # 嘗試抓取輸入的內容，若無輸入則預設為 1        
-        num_cards_input = re.match(r"^!抽牌\s+(.+)$", message['text']).group(1).strip()        
-
+        num_cards_input = re.match(r"^!抽牌\s+(.+)$", message['text']).group(1).strip()                       
+        
         try:
             # 嘗試將輸入轉換為整數，非整數輸入將自動設為 1
             num_cards = int(num_cards_input)
@@ -267,9 +267,11 @@ def register_handlers(app, config, db):
         # 初始化使用者的牌組
         if user_id not in user_cards:
             user_cards[user_id] = []
-
-        # 檢查是否還有剩餘的牌
-        available_cards = list(set(deck) - set(user_cards[user_id]))
+        
+        # 計算所有使用者已抽的牌
+        all_used_cards = [card for cards in user_cards.values() for card in cards]
+        available_cards = list(set(deck) - set(all_used_cards))
+        
         if num_cards > len(available_cards):
             say(f"剩餘牌數不足，你只能抽 {len(available_cards)} 張！", channel=channel)
             return
