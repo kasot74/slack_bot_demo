@@ -300,7 +300,7 @@ def register_handlers(app, config, db):
         send_image(channel, say_text, say, file_name)
 
     #!改風格
-    @app.message(re.compile(r"^!改風格\s+(.+)$"))
+    @app.message(re.compile(r"^!改風格"))
     def change_image_style(message, say):        
         channel = message['channel']
         # 檢查是否有上傳的圖檔
