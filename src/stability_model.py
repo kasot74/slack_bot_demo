@@ -102,12 +102,12 @@ def change_style(image_input):
             },
             files={
                 "init_image": image_input,
-                "style_image": style_image,
-                "style_strength": 0.5,  # 風格強度
-                "composition_fidelity": 0.5  # 組合保真度
+                "style_image": style_image
             },
             data={
                 "output_format": "png",
+                "style_strength": 0.5,  # 風格強度
+                "composition_fidelity": 0.5  # 組合保真度
             },
         )
     finally:
