@@ -321,7 +321,14 @@ def register_handlers(app, config, db):
                         with Image.open(BytesIO(response.content)) as img:
                             img.verify()  # 驗證是否為有效圖像
                     except Exception as e:
-                        say(f"上傳的檔案無法識別為有效圖像：{e}")
+                        # 顯示更多檔案資訊
+                        file_name = file_info.get('name', '未知檔案名稱')
+                        mime_type = file_info.get('mimetype', '未知 MIME 類型')
+                        file_size = len(response.content)
+                        say(f"上傳的檔案無法識別為有效圖像：{e}\n{file_info['url_private']}\n"
+                            f"檔案名稱：{file_name}\n"
+                            f"MIME 類型：{mime_type}\n"
+                            f"檔案大小：{file_size} bytes")
                         return
 
                     # 將圖檔傳遞給 change_style 函數
