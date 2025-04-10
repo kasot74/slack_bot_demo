@@ -71,7 +71,7 @@ def get_image2(test):
 
 def change_style(image_url):
     style_image = "https://herry537.sytes.net/uploads/%E5%90%89%E4%BC%8A%E5%8D%A1%E5%A8%83/1000003082.jpg"
-    #檢查URL
+    # 檢查 URL
     if image_url.startswith("<") and image_url.endswith(">"):
         image_url = image_url[1:-1]
     # 檢查 image_url 是否為 URL，並下載檔案
@@ -106,13 +106,17 @@ def change_style(image_url):
             "output_format": "png",
         },
     )
-
     if response.status_code == 200:
+        image_dir = os.path.join("images", "change_style")
+        # 如果目錄不存在，則創建它    
+        if not os.path.exists(image_dir):
+            os.makedirs(image_dir)
+
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         img_filename = f"{timestamp}.png"
-        with open(f"stability_image/{img_filename}", 'wb') as file:
+        img_path = os.path.join(image_dir, img_filename)
+        with open(img_path, 'wb') as file:
             file.write(response.content)
-        file_path = os.path.join("stability_image", img_filename)
-        return f"修改風格成功! :art: ", file_path
+        return f"修改風格成功! :art: ", img_path
     else:
         return f"修改風格失敗! {str(response.json())}", None
