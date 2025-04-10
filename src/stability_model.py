@@ -107,16 +107,22 @@ def change_style(image_url):
         },
     )
     if response.status_code == 200:
+        # 確保目錄存在
         image_dir = os.path.join("images", "change_style")
-        # 如果目錄不存在，則創建它    
         if not os.path.exists(image_dir):
             os.makedirs(image_dir)
 
+        # 儲存圖片到指定路徑
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         img_filename = f"{timestamp}.png"
         img_path = os.path.join(image_dir, img_filename)
-        with open(img_path, 'wb') as file:
-            file.write(response.content)
-        return f"修改風格成功! :art: ", img_path
+
+        # 將 JPEG 位元組轉換為 PNG 並儲存
+        try:
+            img = Image.open(BytesIO(response.content))  # 開啟 JPEG 圖片
+            img.save(img_path, "PNG")  # 儲存為 PNG 格式
+            return f"修改風格成功! :art: ", img_path
+        except Exception as e:
+            return f"圖片處理失敗! {e}", None
     else:
         return f"修改風格失敗! {str(response.json())}", None
