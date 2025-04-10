@@ -28,7 +28,8 @@ from .stability_model import get_image,get_image2,change_style
 from .stock import get_stock_info
 from .stock import get_historical_data
 
-
+from .utilities import read_config
+config = read_config('config/config.txt')
 def register_handlers(app, config, db):
     
     # Call OpenAI
@@ -309,7 +310,7 @@ def register_handlers(app, config, db):
             if file_info['mimetype'].startswith('image/'):
                 # 下載圖檔
                 try:
-                    response = requests.get(file_info['url_private'], headers={"Authorization": f"Bearer {os.environ['SLACK_BOT_TOKEN']}"})
+                    response = requests.get(file_info['url_private'], headers={"Authorization": f"Bearer {config['SLACK_BOT_TOKEN']}"})
                     response.raise_for_status()
                     with Image.open(BytesIO(response.content)) as img:
                         img.verify()  # 驗證是否為有效圖像
