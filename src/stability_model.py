@@ -110,6 +110,8 @@ def change_style(image_input):
                 "composition_fidelity": 0.5  # 組合保真度
             },
         )
+    except Exception as e:
+        return f"change_style 請求失敗：{e}", None
     finally:
         style_image.close()  # 確保風格圖片檔案被正確關閉
 
