@@ -67,4 +67,33 @@ def get_image2(test):
         return f"{test}繪圖成功! :art: ", file_path
     else:
         return f"繪圖失敗! {str(response.json())}", None
-        
+
+def change_style(image_url):
+    style_image = "https://herry537.sytes.net/uploads/%E5%90%89%E4%BC%8A%E5%8D%A1%E5%A8%83/1000003082.jpg"
+    response = requests.post(
+        f"https://api.stability.ai/v2beta/stable-image/control/style-transfer",
+        headers={
+            "authorization": f"Bearer {api_key}",
+            "accept": "image/*"
+        },
+        files={
+            "init_image": open(image_url, "rb"),
+            "style_image": open(style_image, "rb")
+        },
+        data={
+            "output_format": "png",
+        },
+    )
+
+    if response.status_code == 200:
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")    
+        if response.status_code == 200:
+            img_filename = f"{timestamp}.png"
+            with open(f"stability_image/{img_filename}", 'wb') as file:
+                file.write(response.content)
+            file_path = os.path.join("stability_image",img_filename)
+            return f"{test}修改風格成功! :art: ", file_path
+        else:
+            return f"修改風格失敗! {str(response.json())}", None                
+    else:
+        return f"修改風格失敗! {str(response.json())}", None
