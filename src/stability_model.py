@@ -121,7 +121,8 @@ def change_style(image_url):
         try:
             img = Image.open(BytesIO(response.content))  # 開啟 JPEG 圖片
             img.save(img_path, "PNG")  # 儲存為 PNG 格式
-            return f"修改風格成功! :art: ", img_path
+            file_path = os.path.join("change_style",img_filename)
+            return f"修改風格成功! :art: ", file_path
         except Exception as e:
             return f"圖片處理失敗! {e}", None
     else:
