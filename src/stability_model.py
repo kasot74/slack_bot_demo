@@ -61,47 +61,8 @@ def get_image2(test):
     )
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")    
     if response.status_code == 200:
-        img_filename = f"{timestamp}.png"
-        with open(f"stability_image/{img_filename}", 'wb') as file:
-            file.write(response.content)
-        file_path = os.path.join("stability_image",img_filename)
-        return f"{test}繪圖成功! :art: ", file_path
-    else:
-        return f"繪圖失敗! {str(response.json())}", None
-
-def change_style(image_url):
-    style_dir = os.path.join("images", "change_style", "1000003636.jpg")
-    style_image = open(style_dir, "rb") # 讀取風格圖片
-    # 檢查 URL
-    if image_url.startswith("<") and image_url.endswith(">"):
-        image_url = image_url[1:-1]
-    # 檢查 image_url 是否為 URL，並下載檔案
-    if image_url.startswith("http://") or image_url.startswith("https://"):
-        response = requests.get(image_url)
-        if response.status_code == 200:
-            init_image = BytesIO(response.content)
-        else:
-            return f"無法下載圖片，錯誤代碼：{response.status_code}", None
-    else:
-        # 如果是本地檔案，直接開啟
-        init_image = open(image_url, "rb")
-    response = requests.post(
-        f"https://api.stability.ai/v2beta/stable-image/control/style-transfer",
-        headers={
-            "authorization": f"Bearer {api_key}",
-            "accept": "image/*"
-        },
-        files={
-            "init_image": init_image,
-            "style_image": style_image
-        },
-        data={
-            "output_format": "png",
-        },
-    )
-    if response.status_code == 200:
         # 確保目錄存在
-        image_dir = os.path.join("images", "change_style")
+        image_dir = os.path.join("images", "stability_image")
         if not os.path.exists(image_dir):
             os.makedirs(image_dir)
 
@@ -114,7 +75,61 @@ def change_style(image_url):
         try:
             img = Image.open(BytesIO(response.content))  # 開啟 JPEG 圖片
             img.save(img_path, "PNG")  # 儲存為 PNG 格式
-            file_path = os.path.join("change_style",img_filename)
+            file_path = os.path.join("stability_image",img_filename)
+            return f"繪圖成功! :art: ", file_path
+        except Exception as e:
+            return f"繪圖失敗! {e}", None
+    else:
+        return f"繪圖失敗! {str(response.json())}", None
+
+def change_style(image_input):
+    if not isinstance(image_input, BytesIO):  # 確保輸入是 BytesIO
+        return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
+
+    style_dir = os.path.join("images", "change_style", "change_style.jpg")
+    try:
+        style_image = open(style_dir, "rb")  # 讀取風格圖片
+    except Exception as e:
+        return f"無法讀取風格圖片：{e}", None
+
+    # 發送請求到 Stability AI 的風格轉換 API
+    try:
+        response = requests.post(
+            f"https://api.stability.ai/v2beta/stable-image/control/style-transfer",
+            headers={
+                "authorization": f"Bearer {api_key}",
+                "accept": "image/*"
+            },
+            files={
+                "init_image": image_input,
+                "style_image": style_image,
+                "style_strength": "0.5",  # 風格強度
+                "composition_fidelity": "0.5"  # 組合保真度
+            },
+            data={
+                "output_format": "png",
+            },
+        )
+    finally:
+        style_image.close()  # 確保風格圖片檔案被正確關閉
+
+    # 處理 API 回應
+    if response.status_code == 200:
+        # 確保目錄存在
+        image_dir = os.path.join("images", "change_style")
+        if not os.path.exists(image_dir):
+            os.makedirs(image_dir)
+
+        # 儲存圖片到指定路徑
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        img_filename = f"{timestamp}.png"
+        img_path = os.path.join(image_dir, img_filename)
+
+        # 儲存圖片
+        try:
+            img = Image.open(BytesIO(response.content))  # 開啟圖片
+            img.save(img_path, "PNG")  # 儲存為 PNG 格式
+            file_path = os.path.join("change_style", img_filename)
             return f"修改風格成功! :art: ", file_path
         except Exception as e:
             return f"圖片處理失敗! {e}", None

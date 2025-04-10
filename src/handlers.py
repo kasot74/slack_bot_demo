@@ -1,6 +1,10 @@
 import re
 import random
 import os
+import requests
+from PIL import Image
+from io import BytesIO
+
 from math import comb
 from datetime import datetime, timedelta
 # openai imports
@@ -297,11 +301,28 @@ def register_handlers(app, config, db):
 
     #!改風格
     @app.message(re.compile(r"^!改風格\s+(.+)$"))
-    def create_image(message, say):        
+    def change_image_style(message, say):        
         channel = message['channel']
-        image_url = re.match(r"^!改風格\s+(.+)$", message['text']).group(1).strip()
-        say_text, file_name = change_style(image_url)                        
-        send_image(channel, say_text, say, file_name)
+        # 檢查是否有上傳的圖檔
+        if 'files' in message:
+            file_info = message['files'][0]  # 假設只處理第一個檔案
+            if file_info['mimetype'].startswith('image/'):
+                # 下載圖檔
+                try:
+                    response = requests.get(file_info['url_private'], headers={"Authorization": f"Bearer {os.environ['SLACK_BOT_TOKEN']}"})
+                    response.raise_for_status()
+                    with Image.open(BytesIO(response.content)) as img:
+                        img.verify()  # 驗證是否為有效圖像
+                    # 將圖檔傳遞給 change_style 函數
+                    say_text, file_name = change_style(BytesIO(response.content))
+                    send_image(channel, say_text, say, file_name)
+                    return
+                except Exception as e:
+                    say(f"無法處理上傳的圖檔：{e}")
+                    return
+            else:
+                say("上傳的檔案不是有效的圖像格式！")
+                return
 
     #!clearai
     @app.message(re.compile(r"^!clearai$"))
