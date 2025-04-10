@@ -70,6 +70,27 @@ def get_image2(test):
 
 def change_style(image_url):
     style_image = "https://herry537.sytes.net/uploads/%E5%90%89%E4%BC%8A%E5%8D%A1%E5%A8%83/1000003082.jpg"
+    #檢查URL
+    if image_url.startswith("<") and image_url.endswith(">"):
+        image_url = image_url[1:-1]
+    # 檢查 image_url 是否為 URL，並下載檔案
+    if image_url.startswith("http://") or image_url.startswith("https://"):
+        response = requests.get(image_url)
+        if response.status_code == 200:
+            init_image = BytesIO(response.content)
+        else:
+            return f"無法下載圖片，錯誤代碼：{response.status_code}", None
+    else:
+        # 如果是本地檔案，直接開啟
+        init_image = open(image_url, "rb")
+
+    # 同樣處理 style_image
+    style_response = requests.get(style_image)
+    if style_response.status_code == 200:
+        style_image_data = BytesIO(style_response.content)
+    else:
+        return f"無法下載風格圖片，錯誤代碼：{style_response.status_code}", None
+
     response = requests.post(
         f"https://api.stability.ai/v2beta/stable-image/control/style-transfer",
         headers={
@@ -77,8 +98,8 @@ def change_style(image_url):
             "accept": "image/*"
         },
         files={
-            "init_image": open(image_url, "rb"),
-            "style_image": open(style_image, "rb")
+            "init_image": init_image,
+            "style_image": style_image_data
         },
         data={
             "output_format": "png",
@@ -86,14 +107,11 @@ def change_style(image_url):
     )
 
     if response.status_code == 200:
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")    
-        if response.status_code == 200:
-            img_filename = f"{timestamp}.png"
-            with open(f"stability_image/{img_filename}", 'wb') as file:
-                file.write(response.content)
-            file_path = os.path.join("stability_image",img_filename)
-            return f"{test}修改風格成功! :art: ", file_path
-        else:
-            return f"修改風格失敗! {str(response.json())}", None                
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        img_filename = f"{timestamp}.png"
+        with open(f"stability_image/{img_filename}", 'wb') as file:
+            file.write(response.content)
+        file_path = os.path.join("stability_image", img_filename)
+        return f"修改風格成功! :art: ", file_path
     else:
         return f"修改風格失敗! {str(response.json())}", None
