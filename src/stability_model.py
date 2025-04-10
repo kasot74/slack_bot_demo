@@ -3,6 +3,7 @@ import datetime,time
 import requests
 import io
 import stability_sdk.interfaces.gooseai.generation.generation_pb2 as generation
+from io import BytesIO
 from PIL import Image
 from stability_sdk import client
 from .AI_Service.xai import painting
