@@ -70,7 +70,8 @@ def get_image2(test):
         return f"繪圖失敗! {str(response.json())}", None
 
 def change_style(image_url):
-    style_image = "https://herry537.sytes.net/uploads/%E5%90%89%E4%BC%8A%E5%8D%A1%E5%A8%83/1000003082.jpg"
+    style_dir = os.path.join("images", "change_style", "1000003636.jpg")
+    style_image = open(style_dir, "rb") # 讀取風格圖片
     # 檢查 URL
     if image_url.startswith("<") and image_url.endswith(">"):
         image_url = image_url[1:-1]
@@ -84,14 +85,6 @@ def change_style(image_url):
     else:
         # 如果是本地檔案，直接開啟
         init_image = open(image_url, "rb")
-
-    # 同樣處理 style_image
-    style_response = requests.get(style_image)
-    if style_response.status_code == 200:
-        style_image_data = BytesIO(style_response.content)
-    else:
-        return f"無法下載風格圖片，錯誤代碼：{style_response.status_code}", None
-
     response = requests.post(
         f"https://api.stability.ai/v2beta/stable-image/control/style-transfer",
         headers={
@@ -100,7 +93,7 @@ def change_style(image_url):
         },
         files={
             "init_image": init_image,
-            "style_image": style_image_data
+            "style_image": style_image
         },
         data={
             "output_format": "png",
