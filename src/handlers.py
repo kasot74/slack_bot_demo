@@ -310,13 +310,26 @@ def register_handlers(app, config, db):
             if file_info['mimetype'].startswith('image/'):
                 # 下載圖檔
                 try:
-                    response = requests.get(file_info['url_private'], headers={"Authorization": f"Bearer {config['SLACK_BOT_TOKEN']}"})
+                    response = requests.get(
+                        file_info['url_private'],
+                        headers={"Authorization": f"Bearer {config['SLACK_BOT_TOKEN']}"}
+                    )
                     response.raise_for_status()
-                    with Image.open(BytesIO(response.content)) as img:
-                        img.verify()  # 驗證是否為有效圖像
+
+                    # 嘗試驗證圖像
+                    try:
+                        with Image.open(BytesIO(response.content)) as img:
+                            img.verify()  # 驗證是否為有效圖像
+                    except Exception as e:
+                        say(f"上傳的檔案無法識別為有效圖像：{e}")
+                        return
+
                     # 將圖檔傳遞給 change_style 函數
                     say_text, file_name = change_style(BytesIO(response.content))
                     send_image(channel, say_text, say, file_name)
+                    return
+                except requests.exceptions.RequestException as e:
+                    say(f"無法下載圖檔：{e}")
                     return
                 except Exception as e:
                     say(f"無法處理上傳的圖檔：{e}")
@@ -324,6 +337,9 @@ def register_handlers(app, config, db):
             else:
                 say("上傳的檔案不是有效的圖像格式！")
                 return
+
+        # 如果沒有上傳檔案，提示用戶
+        say("請上傳圖檔以進行風格修改！")
 
     #!clearai
     @app.message(re.compile(r"^!clearai$"))
