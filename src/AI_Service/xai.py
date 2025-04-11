@@ -1,4 +1,7 @@
 import openai
+import base64
+import os
+from datetime import datetime
 from openai import OpenAI
 from ..utilities import read_config
 from ..database import con_db
@@ -75,8 +78,46 @@ def role_generate_response(role1, role2,user_input,ts):
     role_collection.insert_one({"role": "assistant", "content": assistant_message,"tsid": ts, "ai_model": aimodel })
 
     return assistant_message
-    
 
+def xai_create_image(prompt):
+    try:
+        # 呼叫 XAI API 生成圖片
+        response = XAI_clice.images.generate(
+            model="grok-2-image",
+            prompt=prompt,
+            response_format="b64_json"
+        )
+
+        # 獲取 base64 圖片數據
+        b64_data = response.data[0].b64_json
+
+        # 將 base64 解碼為二進位數據
+        image_data = base64.b64decode(b64_data)
+
+        # 確保目錄存在
+        output_dir = os.path.join("images", "xai_generated")
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            
+        # 檢測圖片格式
+        try:
+            img = Image.open(BytesIO(image_data))
+            img_format = img.format.lower()  # 獲取圖片格式 (如 'png', 'jpeg')
+        except Exception as e:
+            return f"無法解析圖片格式，錯誤：{e}"            
+
+        # 生成檔案名稱
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        img_filename = f"{timestamp}.{img_format}"
+        img_path = os.path.join(output_dir, img_filename)
+
+        # 將圖片數據寫入檔案
+        with open(img_path, "wb") as img_file:
+            img_file.write(image_data)
+        
+        return f"圖片已成功儲存", os.path.join("xai_generated",img_filename)
+    except Exception as e:        
+        return f"生成圖片失敗: {e}", None
 
 def analyze_sentiment(text):
     response = XAI_clice.chat.completions.create(
