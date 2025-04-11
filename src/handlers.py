@@ -28,8 +28,7 @@ from .stability_model import get_image,get_image2,change_style
 from .stock import get_stock_info
 from .stock import get_historical_data
 
-from .utilities import read_config
-config = read_config('config/config.txt')
+
 def register_handlers(app, config, db):
     
     # Call OpenAI
