@@ -98,13 +98,10 @@ def xai_create_image(prompt):
         output_dir = os.path.join("images", "xai_generated")
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-            
+
         # 檢測圖片格式
-        try:
-            img = Image.open(BytesIO(image_data))
-            img_format = img.format.lower()  # 獲取圖片格式 (如 'png', 'jpeg')
-        except Exception as e:
-            return f"無法解析圖片格式，錯誤：{e}"            
+        img = Image.open(BytesIO(image_data))
+        img_format = img.format.lower()  # 獲取圖片格式 (如 'png', 'jpeg')        
 
         # 生成檔案名稱
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
