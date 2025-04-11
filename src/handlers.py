@@ -432,7 +432,7 @@ def register_handlers(app, config, db):
         for doc in keyword_all:            
             message = doc.get('message')
             if re.search(re.escape(message), text):                            
-                file_path = doc.get('file')
+                file_path = os.path.join('slack_images',doc.get('file'))                
                 send_image(channel, doc['say'],say, file_path)            
                 return
 
