@@ -82,15 +82,11 @@ def get_image2(test):
     else:
         return f"繪圖失敗! {str(response.json())}", None
 
-def change_style(image_input):
+def change_style(image_input,style_image):
     if not isinstance(image_input, BytesIO):  # 確保輸入是 BytesIO
         return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
-
-    style_dir = os.path.join("images", "change_style", "change_style.jpg")
-    try:
-        style_image = open(style_dir, "rb")  # 讀取風格圖片
-    except Exception as e:
-        return f"無法讀取風格圖片：{e}", None
+    if not isinstance(style_image, BytesIO):  # 確保輸入是 BytesIO
+        return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
 
     # 發送請求到 Stability AI 的風格轉換 API
     try:

@@ -305,31 +305,29 @@ def register_handlers(app, config, db):
     def change_image_style(message, say):        
         channel = message['channel']
         # 檢查是否有上傳的圖檔
-        if 'files' in message:
-            file_info = message['files'][0]  # 假設只處理第一個檔案
-            if file_info['mimetype'].startswith('image/'):
-                # 下載圖檔
+        if 'files' in message and len(message['files']) >= 2:
+            file_info_1 = message['files'][0]  # 第一個檔案
+            file_info_2 = message['files'][1]  # 第二個檔案
+
+            # 確保兩個檔案都是圖像格式
+            if file_info_1['mimetype'].startswith('image/') and file_info_2['mimetype'].startswith('image/'):
                 try:
-                    response = requests.get(
-                        file_info['url_private'],
+                    # 下載第一個圖檔
+                    response_1 = requests.get(
+                        file_info_1['url_private'],
                         headers={"Authorization": f"Bearer {config['SLACK_BOT_TOKEN']}"}
                     )
-                    response.raise_for_status()
+                    response_1.raise_for_status()
 
-                    # 嘗試驗證圖像
-                    try:
-                        with Image.open(BytesIO(response.content)) as img:
-                            img.verify()  # 驗證是否為有效圖像
-                    except Exception as e:
-                        # 顯示更多檔案資訊
-                        file_name = file_info.get('name', '未知檔案名稱')                        
-                        say(f"上傳的檔案無法識別為有效圖像：{e}\n{response.content}\n"
-                            f"file_info{file_info}\n"
-                            )
-                        return
+                    # 下載第二個圖檔
+                    response_2 = requests.get(
+                        file_info_2['url_private'],
+                        headers={"Authorization": f"Bearer {config['SLACK_BOT_TOKEN']}"}
+                    )
+                    response_2.raise_for_status()
 
-                    # 將圖檔傳遞給 change_style 函數
-                    say_text, file_name = change_style(BytesIO(response.content))
+                    # 將兩個圖檔傳遞給 change_style 函數
+                    say_text, file_name = change_style(BytesIO(response_1.content), BytesIO(response_2.content))
                     send_image(channel, say_text, say, file_name)
                     return
                 except requests.exceptions.RequestException as e:
@@ -339,11 +337,11 @@ def register_handlers(app, config, db):
                     say(f"無法處理上傳的圖檔：{e}")
                     return
             else:
-                say("上傳的檔案不是有效的圖像格式！")
+                say("上傳的檔案中有非圖像格式的檔案！")
                 return
 
-        # 如果沒有上傳檔案，提示用戶
-        say("請上傳圖檔以進行風格修改！")
+        # 如果沒有上傳足夠的檔案，提示用戶
+        say("請上傳兩個圖檔以進行風格修改！ 第一張是修改原圖，第二張是風格參考圖！")
 
     #!clearai
     @app.message(re.compile(r"^!clearai$"))
