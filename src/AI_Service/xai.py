@@ -2,6 +2,8 @@ import openai
 import base64
 import os
 from datetime import datetime
+from PIL import Image
+from io import BytesIO
 from openai import OpenAI
 from ..utilities import read_config
 from ..database import con_db
