@@ -12,7 +12,7 @@ XAI_clice = OpenAI(
     api_key=config['XAI_API_KEY'],
     base_url="https://api.x.ai/v1",    
 )
-model_target = "grok-2-latest"
+model_target = "grok-3-beta" #grok-2-latest
 collection = ai_db.ai_his
 role_collection = ai_db.ai_role_xai_his
 
