@@ -388,7 +388,7 @@ def register_handlers(app, config, db):
             # 異常處理
             print(f"Error inserting/updating document: {e}")
             # 發生例外錯誤!
-            say("發生例外錯誤!")
+            say(f"發生例外錯誤!{e}")
 
     # DB 刪除處理
     def remove_commit(message_text, say):
