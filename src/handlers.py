@@ -32,7 +32,7 @@ from .stock import get_historical_data
 
 def register_handlers(app, config, db):
     @app.message(re.compile("(.*)"))
-    def all 
+    def all(message, say):
         say(f"烏薩奇修練中! 請稍後在訪問...")
     # Call OpenAI
     @app.message(re.compile(r"!openai\s+(.+)"))
