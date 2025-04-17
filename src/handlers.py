@@ -221,11 +221,11 @@ def register_handlers(app, config, db):
             p = 0.2  # 每次選擇 :rainbow: 的機率
             probability = comb(n, rainbow_count) * (p ** rainbow_count) * ((1 - p) ** (n - rainbow_count))
             
-            hide_message = f"機率:{probability:.1%}"
+            hide_message = ""
             if rainbow_count == 10:
-                hide_message = "全是 :rainbow:！你今天是🌈神！" + hide_message
+                hide_message = "全是 :rainbow:！你今天是🌈神！"
             if rainbow_count == 0:
-                hide_message = "全是 :poop:！你今天是💩神!" + hide_message
+                hide_message = "全是 :poop:！你今天是💩神!"
             # 傳送結果和機率
             say(f"{' '.join(selected_quotes)}\n {hide_message} ")
             
