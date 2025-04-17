@@ -209,7 +209,7 @@ def register_handlers(app, config, db):
             quotes = [":rainbow:", ":poop:"]
             
             # 設置每次選擇 :rainbow: 的機率為 20%
-            weights = [0.2, 0.8]
+            weights = [0.65, 0.35]
             
             # 抽選 10 次 quotes 的元素
             selected_quotes = random.choices(quotes, weights=weights, k=10)
