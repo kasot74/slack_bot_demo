@@ -39,7 +39,7 @@ def register_handlers(app, config, db):
         # 調用 OpenAI API
         try:        
             summary = generate_summary_openai(user_input)
-            say(f"{summary}")            
+            say(f"{summary}", thread_ts=message['ts'])            
         except Exception as e:        
             say(f"非預期性問題 {e}")
 
@@ -50,7 +50,7 @@ def register_handlers(app, config, db):
         # 調用 Claude API
         try:        
             summary = generate_summary_claude(user_input)
-            say(f"{summary}")            
+            say(f"{summary}", thread_ts=message['ts'])                        
         except Exception as e:        
             say(f"非預期性問題 {e}")        
 
@@ -61,7 +61,7 @@ def register_handlers(app, config, db):
         # 調用 xai API
         try:        
             summary = generate_summary_xai(user_input)
-            say(f"{summary}")            
+            say(f"{summary}", thread_ts=message['ts'])            
         except Exception as e:        
             say(f"非預期性問題 {e}")                
 
