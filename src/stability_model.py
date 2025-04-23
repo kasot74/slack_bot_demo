@@ -152,7 +152,7 @@ def change_image(image_input,style_image,text):
             },
             files={
                 "init_image": image_input,
-                "style_image": image_input
+                "style_image": style_image
             },
             data={
                 "prompt": prompt_str,                
