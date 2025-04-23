@@ -320,6 +320,7 @@ def register_handlers(app, config, db):
     @app.message(re.compile(r"^!改風格"))
     def change_image_style(message, say):        
         channel = message['channel']
+        msg_text = re.match(r"^!改風格\s+(.+)$", message['text']).group(1).strip()
         # 檢查是否有上傳的圖檔
         if 'files' in message and len(message['files']) >= 2:
             file_info_1 = message['files'][0]  # 第一個檔案
@@ -343,7 +344,7 @@ def register_handlers(app, config, db):
                     response_2.raise_for_status()
 
                     # 將兩個圖檔傳遞給 change_style 函數
-                    say_text, file_name = change_style(BytesIO(response_1.content), BytesIO(response_2.content))
+                    say_text, file_name = change_style(BytesIO(response_1.content), BytesIO(response_2.content),msg_text)
                     send_image(channel, say_text, say, file_name)
                     return
                 except requests.exceptions.RequestException as e:

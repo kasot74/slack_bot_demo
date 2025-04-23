@@ -83,12 +83,12 @@ def get_image2(test):
     else:
         return f"繪圖失敗! {str(response.json())}", None
 
-def change_style(image_input,style_image):
+def change_style(image_input,style_image,text):
     if not isinstance(image_input, BytesIO):  # 確保輸入是 BytesIO
         return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
     if not isinstance(style_image, BytesIO):  # 確保輸入是 BytesIO
         return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
-
+    prompt_str = painting(text)  
     # 發送請求到 Stability AI 的風格轉換 API
     try:
         response = requests.post(
@@ -102,6 +102,7 @@ def change_style(image_input,style_image):
                 "style_image": style_image
             },
             data={
+                "prompt": prompt_str,                
                 "output_format": "png",
                 "style_strength": 0.5,  # 風格強度
                 "composition_fidelity": 0.5  # 組合保真度
@@ -135,10 +136,10 @@ def change_style(image_input,style_image):
     else:
         return f"修改風格失敗! {str(response.json())}", None
 
-def change_image(image_input,text):
+def change_image(image_input,style_image,text):
     if not isinstance(image_input, BytesIO):  # 確保輸入是 BytesIO
         return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
-    if not isinstance(image_input, BytesIO):  # 確保輸入是 BytesIO
+    if not isinstance(style_image, BytesIO):  # 確保輸入是 BytesIO
         return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
     prompt_str = painting(text)  
     # 發送請求到 Stability AI 的風格轉換 API
@@ -182,8 +183,8 @@ def change_image(image_input,text):
             img = Image.open(BytesIO(response.content))  # 開啟圖片
             img.save(img_path, "PNG")  # 儲存為 PNG 格式
             file_path = os.path.join("change_style", img_filename)
-            return f"修改風格成功! :art: ", file_path
+            return f"修改成功! :art: ", file_path
         except Exception as e:
             return f"圖片處理失敗! {e}", None
     else:
-        return f"修改風格失敗! {str(response.json())}", None
+        return f"修改失敗! {text} {str(response.json())}", None
