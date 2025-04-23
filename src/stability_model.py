@@ -133,3 +133,56 @@ def change_style(image_input,style_image):
             return f"圖片處理失敗! {e}", None
     else:
         return f"修改風格失敗! {str(response.json())}", None
+
+def change_image(image_input,text):
+    if not isinstance(image_input, BytesIO):  # 確保輸入是 BytesIO
+        return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
+    if not isinstance(image_input, BytesIO):  # 確保輸入是 BytesIO
+        return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
+
+    # 發送請求到 Stability AI 的風格轉換 API
+    try:
+        response = requests.post(
+            f"https://api.stability.ai/v2beta/stable-image/control/style-transfer",
+            headers={
+                "authorization": f"Bearer {api_key}",
+                "accept": "image/*"
+            },
+            files={
+                "init_image": image_input,
+                "style_image": image_input
+            },
+            data={
+                "prompt": text,                
+                "output_format": "png",
+                "style_strength": 0,  # 風格強度
+                "composition_fidelity": 0.5  # 組合保真度
+            },
+        )
+    except Exception as e:
+        return f"change_style 請求失敗：{e}", None
+    finally:
+        image_input.close()  # 確保風格圖片檔案被正確關閉
+
+    # 處理 API 回應
+    if response.status_code == 200:
+        # 確保目錄存在
+        image_dir = os.path.join("images", "change_style")
+        if not os.path.exists(image_dir):
+            os.makedirs(image_dir)
+
+        # 儲存圖片到指定路徑
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        img_filename = f"{timestamp}.png"
+        img_path = os.path.join(image_dir, img_filename)
+
+        # 儲存圖片
+        try:
+            img = Image.open(BytesIO(response.content))  # 開啟圖片
+            img.save(img_path, "PNG")  # 儲存為 PNG 格式
+            file_path = os.path.join("change_style", img_filename)
+            return f"修改風格成功! :art: ", file_path
+        except Exception as e:
+            return f"圖片處理失敗! {e}", None
+    else:
+        return f"修改風格失敗! {str(response.json())}", None
