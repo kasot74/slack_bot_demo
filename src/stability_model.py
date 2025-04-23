@@ -47,6 +47,7 @@ def get_image(text):
         # Handle potential errors during image generation                
         return f"繪圖失敗! {e}", None
 def get_image2(test):    
+    prompt_str = painting(text)  
     response = requests.post(
         f"https://api.stability.ai/v2beta/stable-image/generate/ultra",
         headers={
@@ -55,7 +56,7 @@ def get_image2(test):
         },
         files={"none": ''},
         data={
-            "prompt": test,
+            "prompt": prompt_str,
             "output_format": "png",
         },
     )
@@ -139,7 +140,7 @@ def change_image(image_input,text):
         return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
     if not isinstance(image_input, BytesIO):  # 確保輸入是 BytesIO
         return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
-
+    prompt_str = painting(text)  
     # 發送請求到 Stability AI 的風格轉換 API
     try:
         response = requests.post(
@@ -153,7 +154,7 @@ def change_image(image_input,text):
                 "style_image": image_input
             },
             data={
-                "prompt": text,                
+                "prompt": prompt_str,                
                 "output_format": "png",
                 "style_strength": 0,  # 風格強度
                 "composition_fidelity": 0.5  # 組合保真度
