@@ -157,7 +157,7 @@ def change_image(image_input,style_image,text):
             data={
                 "prompt": prompt_str,                
                 "output_format": "png",
-                "style_strength": 0,  # 風格強度
+                "style_strength": 0.1,  # 風格強度
                 "composition_fidelity": 0.5  # 組合保真度
             },
         )

@@ -317,7 +317,7 @@ def register_handlers(app, config, db):
         send_image(channel, say_text, say, file_name)
 
     #!改風格
-    @app.message(re.compile(r"^!改風格"))
+    @app.message(re.compile(r"^!改風格\s+(.+)$"))
     def change_image_style(message, say):        
         channel = message['channel']
         msg_text = re.match(r"^!改風格\s+(.+)$", message['text']).group(1).strip()
@@ -386,7 +386,7 @@ def register_handlers(app, config, db):
                     )
                     response_2.raise_for_status()      
                     
-                    say_text, file_name = change_image(BytesIO(response_1.content), BytesIO(response_2.content), msg_text)
+                    say_text, file_name = change_image(BytesIO(response_1.content), BytesIO(response_2.content),msg_text)
                     send_image(channel, say_text, say, file_name)
                     return
                 except requests.exceptions.RequestException as e:
