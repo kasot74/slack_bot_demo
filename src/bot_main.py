@@ -14,7 +14,7 @@ db = con_db(config)
 app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_SECRET'])
 
 # 初始化 RTMClient
-rtm_client = RTMClient(token=config['SLACK_BOT_TOKEN'])
+rtm_client = RTMClient(token=config['SLACK_USER_TOKEN'])
 
 # 註冊事件處理器
 @rtm_client.on("open")
@@ -27,7 +27,7 @@ def subscribe_presence(client, event):
 
         if not user_ids:
             app.client.chat_postMessage(
-                channel="C02QLJMNLAE",  # 替換為你的頻道 ID
+                channel="C02QLJMNLAE",  
                 text="資料庫中沒有用戶 ID，無法訂閱在線狀態！"
             )
             return
@@ -35,12 +35,12 @@ def subscribe_presence(client, event):
         # 訂閱所有用戶的 presence_change 事件
         client.send_json({"type": "presence_sub", "ids": user_ids})
         app.client.chat_postMessage(
-            channel="C02QLJMNLAE",  # 替換為你的頻道 ID
+            channel="C02QLJMNLAE",  
             text=f"RTM 成功訂閱用戶的在線狀態！訂閱的用戶 ID：{user_ids}"
         )
     except Exception as e:
         app.client.chat_postMessage(
-            channel="C02QLJMNLAE",  # 替換為你的頻道 ID
+            channel="C02QLJMNLAE",  
             text=f"RTM 訂閱用戶在線狀態失敗：{e}"
         )
 
