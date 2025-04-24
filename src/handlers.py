@@ -405,6 +405,8 @@ def register_handlers(app, config, db):
     #!clearai
     @app.message(re.compile(r"^!clearai$"))
     def clearai(message, say):        
+        say(f"權限不足!!")
+        return
         try:
             openai_clear_conversation_history()
             say("AI聊天紀錄清除成功!")
