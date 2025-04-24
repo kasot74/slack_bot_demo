@@ -33,9 +33,9 @@ def subscribe_presence(client, event):
 
         # 訂閱所有用戶的 presence_change 事件
         client.send_json({"type": "presence_sub", "ids": user_ids})
-        print(f"成功訂閱用戶的在線狀態！訂閱的用戶 ID：{user_ids}")
+        print(f"rtm成功訂閱用戶的在線狀態！訂閱的用戶 ID：{user_ids}")
     except Exception as e:
-        print(f"訂閱用戶在線狀態失敗：{e}")
+        print(f"rtm訂閱用戶在線狀態失敗：{e}")
 
 @rtm_client.on("presence_change")
 def user_online(client, event):
@@ -46,12 +46,12 @@ def user_online(client, event):
         try:
             user_info = client.users_info(user=user_id)
             user_name = user_info["user"]["name"]
-            print(f"{user_name} 上線啦！")  # 替換為你需要的動作，例如發送訊息
+            print(f"rtm{user_name} 上線啦！")  # 替換為你需要的動作，例如發送訊息
         except Exception as e:
-            print(f"無法獲取用戶資訊：{e}")
+            print(f"rtm無法獲取用戶資訊：{e}")
 
 # 啟動 SocketModeHandler
 if __name__ == "__main__":
-    print(f"Slack Bot 啟動成功!")    
+    
     SocketModeHandler(app, config['SLACK_APP_TOKEN']).start()
-    #rtm_client.start()
+    rtm_client.start()
