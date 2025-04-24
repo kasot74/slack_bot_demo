@@ -13,29 +13,36 @@ db = con_db(config)
 # 初始化 Slack App
 app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_SECRET'])
 
-# 註冊所有處理器
-register_handlers(app, config, db)
-
 # 初始化 RTMClient
 rtm_client = RTMClient(token=config['SLACK_BOT_TOKEN'])
 
-
+# 註冊事件處理器
 @rtm_client.on("open")
 def subscribe_presence(client, event):
     try:
         # 從資料庫中讀取用戶 ID
+        
         collection = db.slackuserid  # 指定 MongoDB 集合
         user_ids = [user["user_id"] for user in collection.find()]  # 獲取所有用戶的 ID
 
         if not user_ids:
-            print("資料庫中沒有用戶 ID，無法訂閱在線狀態！")
+            app.client.chat_postMessage(
+                channel="C02QLJMNLAE",  # 替換為你的頻道 ID
+                text="資料庫中沒有用戶 ID，無法訂閱在線狀態！"
+            )
             return
 
         # 訂閱所有用戶的 presence_change 事件
         client.send_json({"type": "presence_sub", "ids": user_ids})
-        print(f"rtm成功訂閱用戶的在線狀態！訂閱的用戶 ID：{user_ids}")
+        app.client.chat_postMessage(
+            channel="C02QLJMNLAE",  # 替換為你的頻道 ID
+            text=f"RTM 成功訂閱用戶的在線狀態！訂閱的用戶 ID：{user_ids}"
+        )
     except Exception as e:
-        print(f"rtm訂閱用戶在線狀態失敗：{e}")
+        app.client.chat_postMessage(
+            channel="C02QLJMNLAE",  # 替換為你的頻道 ID
+            text=f"RTM 訂閱用戶在線狀態失敗：{e}"
+        )
 
 @rtm_client.on("presence_change")
 def user_online(client, event):
@@ -44,14 +51,25 @@ def user_online(client, event):
 
     if presence == "active":
         try:
-            user_info = client.users_info(user=user_id)
+            user_info = app.client.users_info(user=user_id)
             user_name = user_info["user"]["name"]
-            print(f"rtm{user_name} 上線啦！")  # 替換為你需要的動作，例如發送訊息
+            app.client.chat_postMessage(
+                channel="C02QLJMNLAE",  # 替換為你的頻道 ID
+                text=f"RTM {user_name} 上線啦！"
+            )
         except Exception as e:
-            print(f"rtm無法獲取用戶資訊：{e}")
+            app.client.chat_postMessage(
+                channel="C02QLJMNLAE",  # 替換為你的頻道 ID
+                text=f"RTM 無法獲取用戶資訊：{e}"
+            )
+
+
+rtm_client.start()
+
+# 註冊所有處理器
+register_handlers(app, config, db,rtm_client)
 
 # 啟動 SocketModeHandler
 if __name__ == "__main__":
     
-    SocketModeHandler(app, config['SLACK_APP_TOKEN']).start()
-    rtm_client.start()
+    SocketModeHandler(app, config['SLACK_APP_TOKEN']).start()    
