@@ -20,14 +20,12 @@ register_handlers(app, config, db)
 rtm_client = RTMClient(token=config['SLACK_BOT_TOKEN'])
 
 @rtm_client.on("presence_change")
-def user_online(payload):
-    data = payload['data']
-    user_id = data.get("user")
-    presence = data.get("presence")
+def user_online(client, event):
+    user_id = event.get("user")
+    presence = event.get("presence")
 
     if presence == "active":
         try:
-            client = WebClient(token=config['SLACK_BOT_TOKEN'])
             user_info = client.users_info(user=user_id)
             user_name = user_info["user"]["name"]
             print(f"{user_name} 上線啦！")  # 替換為你需要的動作，例如發送訊息
