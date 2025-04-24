@@ -4,6 +4,9 @@ import os
 import requests
 from PIL import Image
 from io import BytesIO
+from slack_sdk import WebClient
+import time
+import threading
 
 from math import comb
 from datetime import datetime, timedelta
@@ -29,40 +32,70 @@ from .stability_model import get_image,get_image2,change_style,change_image
 from .stock import get_stock_info
 from .stock import get_historical_data
 
+class MemberMonitor:
+    def __init__(self, bot_token, say):
+        self.client = WebClient(token=bot_token)
+        self.last_check_time = None
+        self.user_status = {}  # 用於記錄用戶的狀態
+        
+
+    def get_all_members(self):
+        try:
+            result = self.client.users_list()
+            return result["members"]
+        except Exception as e:
+            print(f"Error getting members: {e}")
+            return []
+
+    def check_and_greet_members(self):
+        members = self.get_all_members()
+        
+        for member in members:
+            # 排除機器人和應用用戶
+            if not (member.get("is_bot") or member.get("is_app_user")):
+                try:
+                    presence = self.client.users_getPresence(user=member["id"])
+                    user_id = member["id"]
+                    user_name = member.get("real_name", "there")
+                    current_presence = presence["presence"]
+
+                    # 檢查狀態是否變化
+                    if user_id in self.user_status:
+                        previous_presence = self.user_status[user_id]
+                        if previous_presence != current_presence and current_presence == "active":
+                            #print(f"Hi {user_name}!")
+                            # 狀態變化時通知
+                            self.client.chat_postMessage(
+                                channel="C02QLJMNLAE",  # 使用關鍵字參數
+                                text=f"Hi {user_name}!"
+                            )
+                    else:
+                        # 首次檢查時初始化狀態
+                        print(f"用戶 {user_name} 狀態初始化為 {current_presence}")
+
+                    # 更新用戶狀態
+                    self.user_status[user_id] = current_presence
+                except Exception as e:
+                    print(f"Error processing member {member['id']}: {e}")
+
+        self.last_check_time = datetime.now()
+
+    def start_monitoring(self, interval=30):  # 每30秒檢查一次
+        def monitor():
+            while True:
+                self.check_and_greet_members()
+                #print(f"Checked and greeted members at {self.last_check_time}")
+                time.sleep(interval)
+
+        monitor_thread = threading.Thread(target=monitor, daemon=True)
+        monitor_thread.start()
 
 def register_handlers(app, config, db):
-    # 訂閱 presence_change 事件
-    @app.event("app_home_opened")
-    def subscribe_presence(message, client, event, say):
-        try:
-            # 從資料庫中讀取用戶 ID
-            collection = db.slackuserid  # 指定 MongoDB 集合
-            user_ids = [user["user_id"] for user in collection.find()]  # 獲取所有用戶的 ID
 
-            if not user_ids:
-                say("資料庫中沒有用戶 ID，無法訂閱在線狀態！")
-                return
-
-            say("正在訂閱用戶的在線狀態...")
-            # 訂閱所有用戶的 presence_change 事件
-            # 使用 RTMClient 訂閱用戶的 presence_change 事件
-            #rtm_client.send_json({"type": "presence_sub", "ids": user_ids})
-
-            say(f"成功訂閱用戶的在線狀態！訂閱的用戶 ID：{user_ids}")
-        except Exception as e:
-            say(f"訂閱用戶在線狀態失敗：{e}")
-
-
-
-    # 用戶上線事件處理
-    @app.event("presence_change")    
-    def user_online(event, say, client):
-        user_id = event["user"]
-        presence = event["presence"]
-        if presence == "active":
-            user_info = client.users_info(user=user_id)
-            user_name = user_info["user"]["name"]
-            say(f"{user_name} 上線啦！")
+    # 初始化 MemberMonitor 並傳入 say 方法
+    monitor = MemberMonitor(bot_token=config["SLACK_BOT_TOKEN"], say=app.client.chat_postMessage)
+    # 啟動定時檢查
+    monitor.start_monitoring(interval=30) 
 
     
     # Call OpenAI
