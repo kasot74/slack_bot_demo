@@ -63,13 +63,10 @@ def user_online(client, event):
                 text=f"RTM 無法獲取用戶資訊：{e}"
             )
 
-
-rtm_client.start()
-
 # 註冊所有處理器
-register_handlers(app, config, db,rtm_client)
+register_handlers(app, config, db)
 
 # 啟動 SocketModeHandler
 if __name__ == "__main__":
-    
+    rtm_client.start()
     SocketModeHandler(app, config['SLACK_APP_TOKEN']).start()    
