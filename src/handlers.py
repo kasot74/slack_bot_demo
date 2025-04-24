@@ -33,7 +33,7 @@ from .stock import get_historical_data
 def register_handlers(app, config, db):
     # 訂閱 presence_change 事件
     @app.event("app_home_opened")
-    def subscribe_presence(client, event, say):
+    def subscribe_presence(message, client, event, say):
         try:
             # 獲取當前頻道的所有成員
             channel_id = message['channel']
