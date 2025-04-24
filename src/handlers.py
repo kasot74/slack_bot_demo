@@ -31,6 +31,27 @@ from .stock import get_historical_data
 
 
 def register_handlers(app, config, db):
+    # 訂閱 presence_change 事件
+    @app.event("app_home_opened")
+    def subscribe_presence(client,say):
+        try:
+            # 從資料庫中讀取用戶 ID
+            collection = db.slackuserid  # 指定 MongoDB 集合
+            user_ids = [user["user_id"] for user in collection.find()]  # 獲取所有用戶的 ID
+
+            if not user_ids:
+                say("資料庫中沒有用戶 ID，無法訂閱在線狀態！")
+                return
+
+            # 訂閱所有用戶的 presence_change 事件
+            client.api_call("rtm.start")  # 確保 RTM 已啟動
+            client.send_json({"type": "presence_sub", "ids": user_ids})
+            say(f"成功訂閱用戶的在線狀態！訂閱的用戶 ID：{user_ids}")
+        except Exception as e:
+            say(f"訂閱用戶在線狀態失敗：{e}")
+
+
+
     # 用戶上線事件處理
     @app.event("presence_change")    
     def user_online(event, say, client):
@@ -430,6 +451,42 @@ def register_handlers(app, config, db):
             say(his)
         except Exception as e:
             say(f"AI聊天紀錄查看錯誤!{e}")
+
+    @app.message(re.compile(r"^!取所有ID$"))
+    def get_all_user_ids(message, say, client):
+        try:
+            # 獲取當前頻道的所有成員
+            channel_id = message['channel']
+            result = client.conversations_members(channel=channel_id)
+            members = result['members']
+
+            # 獲取每個用戶的 ID 和名稱，並存入資料庫
+            collection = db.slackuserid  # 指定 MongoDB 集合
+            user_info_list = []
+            for user_id in members:
+                user_info = client.users_info(user=user_id)
+                user_name = user_info['user']['real_name']
+
+                # 準備要存入資料庫的資料
+                user_data = {
+                    "user_id": user_id,
+                    "user_name": user_name
+                }
+
+                # 插入或更新資料
+                collection.update_one(
+                    {"user_id": user_id},  # 查找條件
+                    {"$set": user_data},   # 更新的內容
+                    upsert=True            # 如果不存在則插入
+                )
+
+                user_info_list.append(f"{user_name}: {user_id}")
+
+            # 將用戶資訊組合成字串
+            user_info_text = "\n".join(user_info_list)
+            say(f"以下是所有用戶的 ID 和名稱，並已存入資料庫：\n{user_info_text}")
+        except Exception as e:
+            say(f"無法取得用戶 ID，錯誤：{e}")
 
     # DB 新增處理    
     def add_commit(message_text, response_text, say):
