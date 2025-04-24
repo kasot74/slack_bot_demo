@@ -33,7 +33,7 @@ from .stock import get_historical_data
 def register_handlers(app, config, db):
     # 訂閱 presence_change 事件
     @app.event("app_home_opened")
-    def subscribe_presence(client,say):
+    def subscribe_presence(client, event, say):
         try:
             # 從資料庫中讀取用戶 ID
             collection = db.slackuserid  # 指定 MongoDB 集合
@@ -44,8 +44,10 @@ def register_handlers(app, config, db):
                 return
 
             # 訂閱所有用戶的 presence_change 事件
-            client.api_call("rtm.start")  # 確保 RTM 已啟動
-            client.send_json({"type": "presence_sub", "ids": user_ids})
+            client.api_call(
+                api_method="users.prefs.set",
+                json={"type": "presence_sub", "ids": user_ids}
+            )
             say(f"成功訂閱用戶的在線狀態！訂閱的用戶 ID：{user_ids}")
         except Exception as e:
             say(f"訂閱用戶在線狀態失敗：{e}")
