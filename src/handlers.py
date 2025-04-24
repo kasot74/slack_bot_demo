@@ -31,6 +31,16 @@ from .stock import get_historical_data
 
 
 def register_handlers(app, config, db):
+    # 用戶上線事件處理
+    @app.event("presence_change")    
+    def user_online(event, say, client):
+        user_id = event["user"]
+        presence = event["presence"]
+        if presence == "active":
+            user_info = client.users_info(user=user_id)
+            user_name = user_info["user"]["name"]
+            say(f"{user_name} 上線啦！")
+
     
     # Call OpenAI
     @app.message(re.compile(r"!openai\s+(.+)"))
