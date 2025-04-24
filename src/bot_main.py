@@ -46,22 +46,22 @@ app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_
 #
 #@rtm_client.on("presence_change")
 #def user_online(client, event):
-    user_id = event.get("user")
-    presence = event.get("presence")
-
-    if presence == "active":
-        try:
-            user_info = app.client.users_info(user=user_id)
-            user_name = user_info["user"]["name"]
-            app.client.chat_postMessage(
-                channel="C02QLJMNLAE",  # 替換為你的頻道 ID
-                text=f"RTM {user_name} 上線啦！"
-            )
-        except Exception as e:
-            app.client.chat_postMessage(
-                channel="C02QLJMNLAE",  # 替換為你的頻道 ID
-                text=f"RTM 無法獲取用戶資訊：{e}"
-            )
+#    user_id = event.get("user")
+#    presence = event.get("presence")
+#
+#    if presence == "active":
+#        try:
+#            user_info = app.client.users_info(user=user_id)
+#            user_name = user_info["user"]["name"]
+#            app.client.chat_postMessage(
+#                channel="C02QLJMNLAE",  # 替換為你的頻道 ID
+#                text=f"RTM {user_name} 上線啦！"
+#            )
+#        except Exception as e:
+#            app.client.chat_postMessage(
+#                channel="C02QLJMNLAE",  # 替換為你的頻道 ID
+#                text=f"RTM 無法獲取用戶資訊：{e}"
+#            )
 #
 # 註冊所有處理器
 register_handlers(app, config, db)
