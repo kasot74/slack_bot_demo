@@ -21,7 +21,7 @@ rtm_client = RTMClient(token=config['SLACK_BOT_TOKEN'])
 
 
 @rtm_client.on("open")
-def subscribe_presence(client):
+def subscribe_presence(client, event):
     try:
         # 從資料庫中讀取用戶 ID
         collection = db.slackuserid  # 指定 MongoDB 集合
