@@ -67,12 +67,12 @@ class MemberMonitor:
                             if current_presence == "active":                                                            
                                 self.client.chat_postMessage(
                                     channel="C02QLJMNLAE",  
-                                    text=f"親愛的 {name} 出現了!",
+                                    text=f"親愛的 {user_name} 出現了!",
                                 )
                             else:                                
                                 self.client.chat_postMessage(
                                     channel="C02QLJMNLAE",  
-                                    text=f" {name} 掰掰!",
+                                    text=f" {user_name} 掰掰!",
                                 )
                     else:
                         # 首次檢查時初始化狀態
