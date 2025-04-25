@@ -24,25 +24,46 @@ role_collection = ai_db.ai_role_xai_his
 # 定義一個函數來轉換每條記錄為 
 def convert_to_openai_format(collection_name):
     c_collection = ai_db[collection_name]
-    history = list(c_collection.find())    
-    # 使用列表解析進行轉換
-    formatted_messages = [
-        {
-            "role": str(h.get("role", "user")),
-            "content": str(h.get("content", ""))
-        }
-        for h in history
-    ]
+    history = list(c_collection.find())
+    # 使用列表解析進行轉換，支援圖片格式
+    formatted_messages = []
+    for h in history:
+        if h.get("type") == "image_url":
+            formatted_messages.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": h.get("image_url", {}).get("url", ""),
+                    "detail": h.get("image_url", {}).get("detail", "high"),
+                },
+            })
+        else:
+            formatted_messages.append({
+                "role": str(h.get("role", "user")),
+                "content": str(h.get("content", ""))
+            })
     return formatted_messages
 
-def generate_summary(user_input):
+def generate_summary(user_input, include_images=False, image_urls=None):
         
     user_message = {"role": "user", "content": user_input}
     collection.insert_one(user_message)
-    conversation_history = convert_to_openai_format("ai_his")        
+
+    # 如果 include_images 為 True，將圖片 URL 插入到對話歷史中
+    if include_images and image_urls:
+        for image_url in image_urls:
+            image_message = {
+                "type": "image_url",
+                "image_url": {
+                    "url": image_url,
+                    "detail": "high",
+                },
+            }
+            collection.insert_one(image_message)
+
+    conversation_history = convert_to_openai_format("ai_his")
     response = XAI_clice.chat.completions.create(
         messages=conversation_history,
-        model=model_target        
+        model=model_target
     )
     assistant_message = response.choices[0].message.content
     collection.insert_one({"role": "assistant", "content": assistant_message})
