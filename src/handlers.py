@@ -58,8 +58,7 @@ class MemberMonitor:
                     user_id = member["id"]
                     user_name = member.get("real_name", "")
                     name = member.get("name", "")
-                    current_presence = presence["presence"]
-                    online = presence["online"]
+                    current_presence = presence["online"] #presence["presence"]                    
                     # 檢查狀態是否變化
                     if user_id in self.user_status:
                         previous_presence = self.user_status[user_id]
@@ -76,7 +75,7 @@ class MemberMonitor:
                                 )
                     else:
                         # 首次檢查時初始化狀態
-                        print(f"用戶 {user_name} 狀態初始化為 {current_presence}")
+                        print(f"用戶 {user_name}狀態初始化為")
 
                     # 更新用戶狀態
                     self.user_status[user_id] = current_presence
@@ -85,7 +84,7 @@ class MemberMonitor:
 
         self.last_check_time = datetime.now()
 
-    def start_monitoring(self, interval=60):  # 每60秒檢查一次
+    def start_monitoring(self, interval=30):  # 每60秒檢查一次
         def monitor():
             while True:
                 self.check_and_greet_members()
@@ -100,8 +99,7 @@ def register_handlers(app, config, db):
     # 初始化 MemberMonitor 並傳入 say 方法
     monitor = MemberMonitor(bot_token=config["SLACK_BOT_TOKEN"], say=app.client.chat_postMessage)
     # 啟動定時檢查
-    monitor.start_monitoring(interval=60) 
-
+    monitor.start_monitoring(interval=30)     
     
     # Call OpenAI
     @app.message(re.compile(r"!openai\s+(.+)"))
@@ -548,12 +546,11 @@ def register_handlers(app, config, db):
         except Exception as e:
             print(f"Error send_image uploading file ")     
 
-    @app.message(re.compile(r"^!存使用者ID$"))
+    @app.message(re.compile(r"^!look_members$"))
     def get_all_user_ids(message, say, client):
         try:
             # 獲取當前頻道的所有成員
-            channel_id = message['channel']
-            say(channel_id)
+            channel_id = message['channel']            
             result = client.conversations_members(channel=channel_id)
             members = result['members']
 
@@ -562,28 +559,9 @@ def register_handlers(app, config, db):
             user_info_list = []
             for user_id in members:
                 user_info = client.users_info(user=user_id)
-                user_name = user_info['user']['real_name']
-
-                # 準備要存入資料庫的資料
-                user_data = {
-                    "user_id": user_id,
-                    "user_name": user_name
-                }
-
-                # 插入或更新資料
-                collection.update_one(
-                    {"user_id": user_id},  # 查找條件
-                    {"$set": user_data},   # 更新的內容
-                    upsert=True            # 如果不存在則插入
-                )
-
-                user_info_list.append(f"{user_name}: {user_id}")
-
-            # 將用戶資訊組合成字串
-            user_info_text = "\n".join(user_info_list)
-            say(f"以下是所有用戶的 ID 和名稱，並已存入資料庫：\n{user_info_text}")
+                say(user_info)
         except Exception as e:
-            say(f"無法取得用戶 ID，錯誤：{e}")
+            say(f"無法取得用戶 錯誤：{e}")
 
     @app.message(re.compile(r"^!頻道ID$"))
     def get_channel_id(message, say, client):                    
