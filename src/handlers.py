@@ -63,13 +63,17 @@ class MemberMonitor:
                     # 檢查狀態是否變化
                     if user_id in self.user_status:
                         previous_presence = self.user_status[user_id]
-                        if previous_presence != current_presence and current_presence == "active":
-                            #print(f"Hi {user_name}!")
-                            # 狀態變化時通知
-                            self.client.chat_postMessage(
-                                channel="C02QLJMNLAE",  
-                                text=f"Hi {name}!"
-                            )
+                        if previous_presence != current_presence:
+                            if current_presence == "active":                                                            
+                                self.client.chat_postMessage(
+                                    channel="C02QLJMNLAE",  
+                                    text=f"親愛的 {name} 出現了!",
+                                )
+                            else:                                
+                                self.client.chat_postMessage(
+                                    channel="C02QLJMNLAE",  
+                                    text=f" {name} 掰掰!",
+                                )
                     else:
                         # 首次檢查時初始化狀態
                         print(f"用戶 {user_name} 狀態初始化為 {current_presence}")
@@ -94,9 +98,9 @@ class MemberMonitor:
 def register_handlers(app, config, db):
 
     # 初始化 MemberMonitor 並傳入 say 方法
-    #monitor = MemberMonitor(bot_token=config["SLACK_BOT_TOKEN"], say=app.client.chat_postMessage)
+    monitor = MemberMonitor(bot_token=config["SLACK_BOT_TOKEN"], say=app.client.chat_postMessage)
     # 啟動定時檢查
-    #monitor.start_monitoring(interval=60) 
+    monitor.start_monitoring(interval=60) 
 
     
     # Call OpenAI
