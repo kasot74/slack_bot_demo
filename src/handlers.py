@@ -56,8 +56,9 @@ class MemberMonitor:
                 try:
                     presence = self.client.users_getPresence(user=member["id"])
                     user_id = member["id"]
-                    user_name = member.get("real_name", "")
-                    name = member.get("name", "")
+                    #name = member.get("name", "")
+                    #user_name = member.get("real_name", "")
+                    user_name = member.get("profile", {}).get("display_name", "")
                     current_presence = presence["presence"] #presence["online"]
                     # 檢查狀態是否變化
                     if user_id in self.user_status:
