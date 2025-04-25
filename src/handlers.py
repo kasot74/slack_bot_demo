@@ -152,16 +152,9 @@ def register_handlers(app, config, db):
     @app.message(re.compile(r"!xai\s+(.+)"))
     def handle_summary_command(message, say):
         user_input = message['text'].replace('!xai', '').strip()    
-        image_urls = []
-
-        # 檢查是否有上傳的圖片
-        if 'files' in message:
-            for file_info in message['files']:
-                if file_info['mimetype'].startswith('image/'):  # 確保是圖片類型
-                    image_urls.append(file_info['url_private'])        
         # 調用 xai API
         try:        
-            summary = generate_summary_xai(user_input, include_images=bool(image_urls), image_urls=image_urls)
+            summary = generate_summary_xai(user_input)
             say(f"{summary}", thread_ts=message['ts'])            
         except Exception as e:        
             say(f"非預期性問題 {e}")                
