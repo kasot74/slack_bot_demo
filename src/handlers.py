@@ -58,7 +58,7 @@ class MemberMonitor:
                     user_id = member["id"]
                     user_name = member.get("real_name", "")
                     name = member.get("name", "")
-                    current_presence = presence["online"] #presence["presence"]                    
+                    current_presence = presence["presence"] #presence["online"]
                     # 檢查狀態是否變化
                     if user_id in self.user_status:
                         previous_presence = self.user_status[user_id]
@@ -545,29 +545,6 @@ def register_handlers(app, config, db):
                 say(f"{message} \n找不到{file_path}" )                
         except Exception as e:
             print(f"Error send_image uploading file ")     
-
-    @app.message(re.compile(r"^!look_members$"))
-    def get_all_user_ids(message, say, client):
-        try:
-            # 獲取當前頻道的所有成員
-            channel_id = message['channel']            
-            result = client.conversations_members(channel=channel_id)
-            members = result['members']
-
-            # 獲取每個用戶的 ID 和名稱，並存入資料庫
-            collection = db.slackuserid  # 指定 MongoDB 集合
-            user_info_list = []
-            for user_id in members:
-                user_info = client.users_info(user=user_id)
-                say(user_info)
-        except Exception as e:
-            say(f"無法取得用戶 錯誤：{e}")
-
-    @app.message(re.compile(r"^!頻道ID$"))
-    def get_channel_id(message, say, client):                    
-        channel_id = message['channel']
-        say(channel_id)
-
 
     #關鍵字
     @app.message(re.compile("(.*)"))
