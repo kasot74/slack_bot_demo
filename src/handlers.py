@@ -47,6 +47,29 @@ class MemberMonitor:
             print(f"Error getting members: {e}")
             return []
 
+    def get_admin_members(self):
+        try:
+            # 調用 Slack API 的 users_list 方法
+            result = self.client.users_list()
+            
+            # 提取 members 資料
+            members = result.get("members", [])
+            
+            # 篩選出具有管理員權限的成員
+            admin_members = [member for member in members if member.get("is_admin", False)]
+            
+            # 打印管理員資訊
+            for admin in admin_members:
+                user_id = admin.get("id", "未知ID")
+                display_name = admin.get("profile", {}).get("display_name", "未知顯示名稱")
+                real_name = admin.get("profile", {}).get("real_name", "未知真實名稱")
+                print(f"管理員ID: {user_id}, 顯示名稱: {display_name}, 真實名稱: {real_name}")
+            
+            return admin_members
+        except Exception as e:
+            print(f"Error getting admin members: {e}")
+            return []
+
     def check_and_greet_members(self):
         members = self.get_all_members()
         
@@ -474,14 +497,25 @@ def register_handlers(app, config, db):
 
     #!clearai
     @app.message(re.compile(r"^!clearai$"))
-    def clearai(message, say):        
-        say(f"權限不足!!")
-        return
+    def clearai(message, say):
         try:
+            # 獲取發送指令的使用者 ID
+            user_id = message['user']
+
+            # 獲取管理員列表
+            monitor = MemberMonitor(bot_token=config["SLACK_BOT_TOKEN"], say=say)
+            admin_members = monitor.get_admin_members()
+
+            # 檢查使用者是否具有管理員權限
+            if not any(admin.get("id") == user_id for admin in admin_members):
+                say("權限不足，無法執行此操作！")
+                return
+
+            # 如果有權限，執行清除操作
             openai_clear_conversation_history()
-            say("AI聊天紀錄清除成功!")
+            say("AI 聊天紀錄清除成功！")
         except Exception as e:
-            say(f"AI聊天紀錄清除錯誤!{e}")
+            say(f"AI 聊天紀錄清除錯誤！{e}")
     #!lookai        
     @app.message(re.compile(r"^!lookai$"))
     def lookai(message, say):        
