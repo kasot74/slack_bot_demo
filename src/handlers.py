@@ -41,6 +41,7 @@ class MemberMonitor:
         self.user_status = {}  # 用於記錄用戶的狀態
         self.greet_enabled = True  # 問候功能開關
         self.lock = Lock()  # 新增一個 Lock 對象
+        self.channel_id = channel_id
         
     def set_greet_enabled(self, enabled):
         """線程安全地設置 greet_enabled 的值"""
@@ -104,13 +105,13 @@ class MemberMonitor:
                             if current_presence == "active":                                                            
                                 greet_message = xai_create_greet(user_name,"上線")
                                 self.client.chat_postMessage(
-                                    channel=channel_id,  
+                                    channel=self.channel_id,  
                                     text=greet_message,
                                 )
                             if current_presence != "active":                                                                                        
                                 greet_message = xai_create_greet(user_name,"下線")
                                 self.client.chat_postMessage(
-                                    channel=channel_id,
+                                    channel=self.channel_id,
                                     text=greet_message,
                                 )
                     else:
@@ -123,13 +124,13 @@ class MemberMonitor:
                     print(f"Error processing member {member['id']}: {e}")
         
 
-    def start_monitoring(self, interval=30):  # 每60秒檢查一次
+    def start_monitoring(self, interval=30):  # 每30秒檢查一次
         def monitor():
             while True:
                 print(f"Checking member status...{ self.get_greet_enabled() }")                
-                if self.get_greet_enabled():  # 使用線程安全的方式讀取 greet_enabled
-                    self.check_and_greet_members()
-                    time.sleep(interval)
+                #if self.get_greet_enabled():  # 使用線程安全的方式讀取 greet_enabled
+                self.check_and_greet_members()
+                time.sleep(interval)
 
         monitor_thread = threading.Thread(target=monitor, daemon=True)
         monitor_thread.start()
