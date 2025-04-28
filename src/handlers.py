@@ -92,13 +92,13 @@ class MemberMonitor:
                             if current_presence == "active":                                                            
                                 greet_message = xai_create_greet(user_name,"上線")
                                 self.client.chat_postMessage(
-                                    channel="C02QLJMNLAE",  
+                                    channel=channel_id,  
                                     text=greet_message,
                                 )
                             if current_presence != "active":                                                                                        
                                 greet_message = xai_create_greet(user_name,"下線")
                                 self.client.chat_postMessage(
-                                    channel="C02QLJMNLAE",  
+                                    channel=channel_id,
                                     text=greet_message,
                                 )
                     else:
