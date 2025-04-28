@@ -4,7 +4,7 @@ import os
 import requests
 import json  # 確保引入 json 模組
 import time
-import threading
+import threading import Lock
 from PIL import Image
 from io import BytesIO
 from slack_sdk import WebClient
@@ -39,6 +39,17 @@ class MemberMonitor:
         self.client = WebClient(token=bot_token)        
         self.user_status = {}  # 用於記錄用戶的狀態
         self.greet_enabled = True  # 問候功能開關
+        self.lock = Lock()  # 新增一個 Lock 對象
+        
+    def set_greet_enabled(self, enabled):
+        """線程安全地設置 greet_enabled 的值"""
+        with self.lock:
+            self.greet_enabled = enabled
+
+    def get_greet_enabled(self):
+        """線程安全地獲取 greet_enabled 的值"""
+        with self.lock:
+            return self.greet_enabled
 
     def get_all_members(self):
         try:
@@ -114,9 +125,8 @@ class MemberMonitor:
     def start_monitoring(self, interval=30):  # 每60秒檢查一次
         def monitor():
             while True:
-                if(self.greet_enabled):
-                    # 檢查所有成員的狀態並發送問候
-                    self.check_and_greet_members()                                
+                if self.get_greet_enabled():  # 使用線程安全的方式讀取 greet_enabled
+                    self.check_and_greet_members()
                 time.sleep(interval)
 
         monitor_thread = threading.Thread(target=monitor, daemon=True)
@@ -131,18 +141,16 @@ def register_handlers(app, config, db):
 
     @app.message(re.compile(r"^!問候開啟$"))
     def enable_greet(message, say):
-        
         try:
-            monitor.greet_enabled = True
+            monitor.set_greet_enabled(True)  # 使用線程安全的方法設置值
             say("問候功能已啟用！")
         except Exception as e:
             say(f"啟用問候功能時發生錯誤：{e}")
 
     @app.message(re.compile(r"^!問候關閉$"))
     def disable_greet(message, say):
-        
         try:
-            monitor.greet_enabled = False
+            monitor.set_greet_enabled(False)  # 使用線程安全的方法設置值
             say("問候功能已關閉！")
         except Exception as e:
             say(f"關閉問候功能時發生錯誤：{e}")
@@ -541,8 +549,7 @@ def register_handlers(app, config, db):
             # 獲取發送指令的使用者 ID
             user_id = message['user']
 
-            # 獲取管理員列表
-            monitor = MemberMonitor(bot_token=config["SLACK_BOT_TOKEN"], say=say)
+            # 獲取管理員列表            
             admin_members = monitor.get_admin_members()
 
             # 檢查使用者是否具有管理員權限
