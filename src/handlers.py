@@ -129,8 +129,8 @@ class MemberMonitor:
                 logger.info("Checking member status...")
                 logger.info(self.get_greet_enabled())
                 if self.get_greet_enabled():  # 使用線程安全的方式讀取 greet_enabled
-                self.check_and_greet_members()
-                time.sleep(interval)
+                    self.check_and_greet_members()
+                    time.sleep(interval)
 
         monitor_thread = threading.Thread(target=monitor, daemon=True)
         monitor_thread.start()
