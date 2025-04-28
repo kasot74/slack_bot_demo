@@ -2,11 +2,12 @@ import re
 import random
 import os
 import requests
+import json  # 確保引入 json 模組
+import time
+import threading
 from PIL import Image
 from io import BytesIO
 from slack_sdk import WebClient
-import time
-import threading
 
 from math import comb
 from datetime import datetime, timedelta
@@ -88,12 +89,18 @@ class MemberMonitor:
                     if user_id in self.user_status:
                         previous_presence = self.user_status[user_id]
                         if previous_presence != current_presence:
-                            greet_message = xai_create_greet(user_name)
                             if current_presence == "active":                                                            
+                                greet_message = xai_create_greet(user_name,"上線")
                                 self.client.chat_postMessage(
                                     channel="C02QLJMNLAE",  
                                     text=greet_message,
-                                )                            
+                                )
+                            if current_presence == "active":                                                                                        
+                                greet_message = xai_create_greet(user_name,"下線")
+                                self.client.chat_postMessage(
+                                    channel="C02QLJMNLAE",  
+                                    text=greet_message,
+                                )
                     else:
                         # 首次檢查時初始化狀態
                         print(f"用戶 {user_name}狀態初始化為")
@@ -130,7 +137,8 @@ def register_handlers(app, config, db):
             
             # 使用 Slack API 獲取用戶信息
             user_info = client.users_info(user=user_id)            
-            say(user_info)            
+            user_info_str = json.dumps(user_info["user"], indent=4, ensure_ascii=False)
+            say(user_info_str)            
         except Exception as e:        
             say(f"非預期性問題 {e}")
     
