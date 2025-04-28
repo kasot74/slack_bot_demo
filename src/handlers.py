@@ -34,7 +34,7 @@ from .stock import get_stock_info
 from .stock import get_historical_data
 
 class MemberMonitor:
-    def __init__(self, bot_token, say):
+    def __init__(self, bot_token):
         self.client = WebClient(token=bot_token)        
         self.user_status = {}  # 用於記錄用戶的狀態
         
@@ -88,11 +88,11 @@ class MemberMonitor:
                     if user_id in self.user_status:
                         previous_presence = self.user_status[user_id]
                         if previous_presence != current_presence:
-                            
+                            greet_message = xai_create_greet(user_name)
                             if current_presence == "active":                                                            
                                 self.client.chat_postMessage(
                                     channel="C02QLJMNLAE",  
-                                    text=xai_create_greet(user_name),
+                                    text=greet_message,
                                 )                            
                     else:
                         # 首次檢查時初始化狀態
@@ -117,9 +117,22 @@ class MemberMonitor:
 def register_handlers(app, config, db):
 
     # 初始化 MemberMonitor 並傳入 say 方法
-    monitor = MemberMonitor(bot_token=config["SLACK_BOT_TOKEN"], say=app.client.chat_postMessage)
+    monitor = MemberMonitor(bot_token=config["SLACK_BOT_TOKEN"])
     # 啟動定時檢查
     monitor.start_monitoring(interval=30)     
+
+    # user_info
+    @app.message(re.compile(r"!me$"))
+    def get_user_info(message, say):                
+        try:        
+            # 獲取發送指令的用戶 ID
+            user_id = message['user']
+            
+            # 使用 Slack API 獲取用戶信息
+            user_info = client.users_info(user=user_id)            
+            say(user_info)            
+        except Exception as e:        
+            say(f"非預期性問題 {e}")
     
     # Call OpenAI
     @app.message(re.compile(r"!openai\s+(.+)"))
