@@ -138,7 +138,7 @@ def register_handlers(app, config, db):
             # 使用 Slack API 獲取用戶信息
             user_info = client.users_info(user=user_id)            
             user_info_str = json.dumps(user_info["user"], indent=4, ensure_ascii=False)
-            say(f"```{user_info_str}```")
+            say(f"使用者信息:\n```{user_info_str}```")
         except Exception as e:        
             say(f"非預期性問題 {e}")
     
