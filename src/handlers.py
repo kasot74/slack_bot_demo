@@ -126,8 +126,8 @@ class MemberMonitor:
     def start_monitoring(self, interval=30):  # 每60秒檢查一次
         def monitor():
             while True:
-                if self.get_greet_enabled():  # 使用線程安全的方式讀取 greet_enabled
-                    self.check_and_greet_members()
+                #if self.get_greet_enabled():  # 使用線程安全的方式讀取 greet_enabled
+                self.check_and_greet_members()
                 time.sleep(interval)
 
         monitor_thread = threading.Thread(target=monitor, daemon=True)
