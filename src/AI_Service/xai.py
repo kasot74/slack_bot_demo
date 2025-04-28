@@ -164,14 +164,13 @@ def  painting(text):
     )       
     return response.choices[0].message.content.strip().lower()
 
-def create_greet(member)
-    try:
-        # 呼叫 XAI API 生成問候
-        response = XAI_clice.chat.completions.create(
-            model=model_target,
-            messages=[
-                {"role": "system", "content": "你是一個專業的問候語生成器，幫我生成一個問候語越有趣越好!"},
-                {"role": "user", "content": f"幫我問候：'{member}' "}
-            ]
-        )       
-        return response.choices[0].message.content.strip().lower()
+def create_greet(member)    
+    # 呼叫 XAI API 生成問候
+    response = XAI_clice.chat.completions.create(
+        model=model_target,
+        messages=[
+            {"role": "system", "content": "你是一個專業的問候語生成器，幫我生成一個問候語越有趣越好!"},
+            {"role": "user", "content": f"幫我問候：'{member}' "}
+        ]
+    )       
+    return response.choices[0].message.content.strip().lower()
