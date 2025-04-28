@@ -630,7 +630,7 @@ def register_handlers(app, config, db):
 
     #關鍵字
     @app.message(re.compile("(.*)"))
-    def handle_message(say):        
+    def handle_message(message,say):        
         text = message['text']
         if re.search(r"^!.*", text):
             say("目前無此指令功能!")            
@@ -640,8 +640,8 @@ def register_handlers(app, config, db):
         keyword_all = collection.find()        
         # 遍歷每條資料
         for doc in keyword_all:            
-            message = doc.get('message')
-            if re.search(re.escape(message), text):                            
+            message_text = doc.get('message')
+            if re.search(re.escape(message_text), text):                            
                 file_path = os.path.join('slack_images',doc.get('file'))                
                 send_image(channel, doc['say'],say, file_path)            
                 return
