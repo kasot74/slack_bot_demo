@@ -164,7 +164,7 @@ def  painting(text):
     )       
     return response.choices[0].message.content.strip().lower()
 
-def create_greet(member)    
+def create_greet(member):
     # 呼叫 XAI API 生成問候
     response = XAI_clice.chat.completions.create(
         model=model_target,
