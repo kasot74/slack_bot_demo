@@ -123,7 +123,7 @@ def register_handlers(app, config, db):
 
     # user_info
     @app.message(re.compile(r"!me$"))
-    def get_user_info(message, say):                
+    def get_user_info(message, say, client):                
         try:        
             # 獲取發送指令的用戶 ID
             user_id = message['user']
