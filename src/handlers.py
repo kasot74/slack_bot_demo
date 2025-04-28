@@ -38,20 +38,11 @@ from .stock import get_historical_data
 class MemberMonitor:
     def __init__(self, bot_token,channel_id):
         self.client = WebClient(token=bot_token)        
-        self.user_status = {}  # 用於記錄用戶的狀態
-        self.greet_enabled = True  # 問候功能開關
-        self.lock = Lock()  # 新增一個 Lock 對象
+        self.user_status = {}  # 用於記錄用戶的狀態                
         self.channel_id = channel_id
-        
-    def set_greet_enabled(self, enabled):
-        """線程安全地設置 greet_enabled 的值"""
-        with self.lock:
-            self.greet_enabled = enabled
-
-    def get_greet_enabled(self):
-        """線程安全地獲取 greet_enabled 的值"""
-        with self.lock:
-            return self.greet_enabled
+        self.stop_event = threading.Event()  # 用於停止線程的事件
+        self.monitor_thread = None  # 用於存儲線程對象
+            
 
     def get_all_members(self):
         try:
@@ -124,16 +115,27 @@ class MemberMonitor:
                     print(f"Error processing member {member['id']}: {e}")
         
 
-    def start_monitoring(self, interval=30):  # 每30秒檢查一次
+    def start_monitoring(self, interval=30):
         def monitor():
-            while True:
-                print(f"Checking member status...{ self.get_greet_enabled() }")                
-                #if self.get_greet_enabled():  # 使用線程安全的方式讀取 greet_enabled
+            while not self.stop_event.is_set():
                 self.check_and_greet_members()
                 time.sleep(interval)
 
-        monitor_thread = threading.Thread(target=monitor, daemon=True)
-        monitor_thread.start()
+        if self.monitor_thread and self.monitor_thread.is_alive():
+            print("Monitoring is already running.")
+            return
+
+        self.stop_event.clear()
+        self.monitor_thread = threading.Thread(target=monitor, daemon=True)
+        self.monitor_thread.start()
+
+    def stop_monitoring(self):
+        if self.monitor_thread and self.monitor_thread.is_alive():
+            self.stop_event.set()
+            self.monitor_thread.join()
+            print("Monitoring has been stopped.")
+        else:
+            print("No monitoring thread is running.")    
 
 def register_handlers(app, config, db):
     
@@ -144,20 +146,13 @@ def register_handlers(app, config, db):
 
     @app.message(re.compile(r"^!問候開啟$"))
     def enable_greet(message, say):
-        try:
-            monitor.set_greet_enabled(True)  # 使用線程安全的方法設置值
-            say("問候功能已啟用！")
-        except Exception as e:
-            say(f"啟用問候功能時發生錯誤：{e}")
+        monitor.stop_event.clear()
+        say("問候功能已啟用！")
 
     @app.message(re.compile(r"^!問候關閉$"))
     def disable_greet(message, say):
-        try:
-            monitor.set_greet_enabled(False)  # 使用線程安全的方法設置值
-            say("問候功能已關閉！")
-        except Exception as e:
-            say(f"關閉問候功能時發生錯誤：{e}")
-
+        monitor.stop_event.set()
+        say("問候功能已關閉！")    
 
     # user_info
     @app.message(re.compile(r"!me$"))
