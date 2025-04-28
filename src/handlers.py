@@ -137,9 +137,9 @@ def register_handlers(app, config, db):
             
             # 使用 Slack API 獲取用戶信息
             user_info = client.users_info(user=user_id)            
-            user_info_str = json.dumps(user_info["user"], indent=4, ensure_ascii=False)
+            user_info_str = json.dumps(user_info, indent=4, ensure_ascii=False)
             user_Presence = client.users_getPresence(user=user_id)            
-            user_Presence_str = json.dumps(user_Presence["user"], indent=4, ensure_ascii=False)
+            user_Presence_str = json.dumps(user_Presence, indent=4, ensure_ascii=False)
             say(f"使用者信息:\n```{user_info_str}```\n \n使用者狀態:\n```{user_Presence_str}```")
         except Exception as e:        
             say(f"非預期性問題 {e}")       
