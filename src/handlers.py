@@ -35,7 +35,7 @@ from .stock import get_stock_info
 from .stock import get_historical_data
 
 class MemberMonitor:
-    def __init__(self, bot_token):
+    def __init__(self, bot_token,channel_id):
         self.client = WebClient(token=bot_token)        
         self.user_status = {}  # 用於記錄用戶的狀態
         
@@ -95,7 +95,7 @@ class MemberMonitor:
                                     channel="C02QLJMNLAE",  
                                     text=greet_message,
                                 )
-                            if current_presence == "active":                                                                                        
+                            if current_presence != "active":                                                                                        
                                 greet_message = xai_create_greet(user_name,"下線")
                                 self.client.chat_postMessage(
                                     channel="C02QLJMNLAE",  
@@ -124,7 +124,7 @@ class MemberMonitor:
 def register_handlers(app, config, db):
 
     # 初始化 MemberMonitor 並傳入 say 方法
-    monitor = MemberMonitor(bot_token=config["SLACK_BOT_TOKEN"])
+    monitor = MemberMonitor(bot_token=config["SLACK_BOT_TOKEN"],channel_id =config["SLACK_CHANNEL_ID"])
     # 啟動定時檢查
     monitor.start_monitoring(interval=30)     
 
