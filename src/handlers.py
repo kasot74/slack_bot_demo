@@ -126,8 +126,7 @@ class MemberMonitor:
     def start_monitoring(self, interval=30):  # 每60秒檢查一次
         def monitor():
             while True:
-                logger.info("Checking member status...")
-                logger.info(self.get_greet_enabled())
+                print(f"Checking member status...{ self.get_greet_enabled() }")                
                 if self.get_greet_enabled():  # 使用線程安全的方式讀取 greet_enabled
                     self.check_and_greet_members()
                     time.sleep(interval)
@@ -647,7 +646,3 @@ def register_handlers(app, config, db):
                 file_path = os.path.join('slack_images',doc.get('file'))                
                 send_image(channel, doc['say'],say, file_path)            
                 return
-
-    @app.event("message")
-    def handle_message_events(body, logger):
-        logger.info(body)
