@@ -25,7 +25,8 @@ from .AI_Service.xai import analyze_sentiment as analyze_sentiment_xai
 from .AI_Service.xai import role_generate_response as role_generate_summary_xai
 from .AI_Service.xai import analyze_stock as analyze_stock_xai
 from .AI_Service.xai import analyze_stock_inoutpoint as analyze_stock_inoutpoint_xai
-from .AI_Service.xai import xai_create_image as xai_create_image
+from .AI_Service.xai import create_image as xai_create_image
+from .AI_Service.xai import create_greet as xai_create_greet
 
 
 from .stability_model import get_image,get_image2,change_style,change_image
@@ -34,8 +35,7 @@ from .stock import get_historical_data
 
 class MemberMonitor:
     def __init__(self, bot_token, say):
-        self.client = WebClient(token=bot_token)
-        self.last_check_time = None
+        self.client = WebClient(token=bot_token)        
         self.user_status = {}  # 用於記錄用戶的狀態
         
 
@@ -88,16 +88,12 @@ class MemberMonitor:
                     if user_id in self.user_status:
                         previous_presence = self.user_status[user_id]
                         if previous_presence != current_presence:
+                            
                             if current_presence == "active":                                                            
                                 self.client.chat_postMessage(
                                     channel="C02QLJMNLAE",  
-                                    text=f"親愛的 {user_name} 出現了!",
-                                )
-                            else:                                
-                                self.client.chat_postMessage(
-                                    channel="C02QLJMNLAE",  
-                                    text=f" {user_name} 掰掰!",
-                                )
+                                    text=xai_create_greet(user_name),
+                                )                            
                     else:
                         # 首次檢查時初始化狀態
                         print(f"用戶 {user_name}狀態初始化為")
@@ -106,8 +102,7 @@ class MemberMonitor:
                     self.user_status[user_id] = current_presence
                 except Exception as e:
                     print(f"Error processing member {member['id']}: {e}")
-
-        self.last_check_time = datetime.now()
+        
 
     def start_monitoring(self, interval=30):  # 每60秒檢查一次
         def monitor():
