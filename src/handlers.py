@@ -38,7 +38,7 @@ class MemberMonitor:
     def __init__(self, bot_token,channel_id):
         self.client = WebClient(token=bot_token)        
         self.user_status = {}  # 用於記錄用戶的狀態
-        
+        self.greet_enabled = True  # 問候功能開關
 
     def get_all_members(self):
         try:
@@ -114,19 +114,39 @@ class MemberMonitor:
     def start_monitoring(self, interval=30):  # 每60秒檢查一次
         def monitor():
             while True:
-                self.check_and_greet_members()
-                
+                if(self.greet_enabled):
+                    # 檢查所有成員的狀態並發送問候
+                    self.check_and_greet_members()                                
                 time.sleep(interval)
 
         monitor_thread = threading.Thread(target=monitor, daemon=True)
         monitor_thread.start()
 
 def register_handlers(app, config, db):
-
+    
     # 初始化 MemberMonitor 並傳入 say 方法
     monitor = MemberMonitor(bot_token=config["SLACK_BOT_TOKEN"],channel_id =config["SLACK_CHANNEL_ID"])
     # 啟動定時檢查
     monitor.start_monitoring(interval=30)     
+
+    @app.message(re.compile(r"^!問候開啟$"))
+    def enable_greet(message, say):
+        
+        try:
+            monitor.greet_enabled = True
+            say("問候功能已啟用！")
+        except Exception as e:
+            say(f"啟用問候功能時發生錯誤：{e}")
+
+    @app.message(re.compile(r"^!問候關閉$"))
+    def disable_greet(message, say):
+        
+        try:
+            monitor.greet_enabled = False
+            say("問候功能已關閉！")
+        except Exception as e:
+            say(f"關閉問候功能時發生錯誤：{e}")
+
 
     # user_info
     @app.message(re.compile(r"!me$"))
@@ -602,7 +622,7 @@ def register_handlers(app, config, db):
 
     #關鍵字
     @app.message(re.compile("(.*)"))
-    def handle_message(message,say):        
+    def handle_message(say):        
         text = message['text']
         if re.search(r"^!.*", text):
             say("目前無此指令功能!")            
