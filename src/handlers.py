@@ -4,7 +4,8 @@ import os
 import requests
 import json  # 確保引入 json 模組
 import time
-import threading import Lock
+import threading 
+from threading import Lock
 from PIL import Image
 from io import BytesIO
 from slack_sdk import WebClient
