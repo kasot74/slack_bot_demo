@@ -146,8 +146,16 @@ def register_handlers(app, config, db):
 
     @app.message(re.compile(r"^!問候開啟$"))
     def enable_greet(message, say):
-        monitor.stop_event.clear()
-        say("問候功能已啟用！")
+        try:
+            if monitor.monitor_thread and monitor.monitor_thread.is_alive():
+                say("問候功能已經啟用！")
+                return
+
+            monitor.stop_event.clear()  # 清除停止標誌
+            monitor.start_monitoring(interval=30)  # 重新啟動線程
+            say("問候功能已啟用！")
+        except Exception as e:
+            say(f"啟用問候功能時發生錯誤：{e}")
 
     @app.message(re.compile(r"^!問候關閉$"))
     def disable_greet(message, say):
