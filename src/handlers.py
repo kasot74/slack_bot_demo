@@ -178,6 +178,18 @@ def register_handlers(app, config, db):
         except Exception as e:        
             say(f"非預期性問題 {e}")       
     
+    @app.message(re.compile(r"!admin$"))
+    def get_admin_info(message, say, client):                
+        try:        
+            admin_list = monitor.get_admin_members()
+            m = "管理員列表:\n"            
+            for admin in admin_list:
+                m += f"顯示名稱: {admin.get('profile', {}).get('display_name', '')}, 真實名稱: {admin.get('profile', {}).get('real_name', '')}\n"                
+            say(m)
+        except Exception as e:        
+            say(f"非預期性問題 {e}")    
+
+
     # Call OpenAI
     @app.message(re.compile(r"!openai\s+(.+)"))
     def handle_summary_command(message, say):
