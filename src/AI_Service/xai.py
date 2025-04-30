@@ -169,8 +169,8 @@ def create_greet(member,types):
     response = XAI_clice.chat.completions.create(
         model=model_target,
         messages=[
-            {"role": "system", "content": f"你是一個有趣的問候語生成器，幫我生成一句{types}問候語"},
-            {"role": "user", "content": f"問候：'{member}' "}
+            {"role": "system", "content": f"你是一個有趣的上下線通知生成器，給你成員名稱，幫我生成一句{types}通知"},
+            {"role": "user", "content": f"成員名稱：'{member}' "}
         ]
     )       
     return response.choices[0].message.content.strip().lower()
