@@ -61,7 +61,7 @@ class MemberMonitor:
             members = result.get("members", [])
             
             # 篩選出具有管理員權限的成員
-            admin_members = [member for member in members if member.get("is_admin", False)]
+            admin_members = [member for member in members if member.get("is_admin", False) ]
             
             # 打印管理員資訊
             for admin in admin_members:
@@ -72,7 +72,10 @@ class MemberMonitor:
             
             return admin_members
         except Exception as e:
-            print(f"Error getting admin members: {e}")
+            self.client.chat_postMessage(
+                channel=self.channel_id,
+                text=f"get_admin_error: {e}",
+            )
             return []
 
     def check_and_greet_members(self):
@@ -177,7 +180,7 @@ def register_handlers(app, config, db):
             say(f"使用者信息:\n```{user_info_str}```\n \n使用者狀態:\n```{user_Presence}```")
         except Exception as e:        
             say(f"非預期性問題 {e}")       
-    
+    #admin_info
     @app.message(re.compile(r"!admin$"))
     def get_admin_info(message, say, client):                
         try:        
