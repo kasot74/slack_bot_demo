@@ -42,7 +42,7 @@ class MemberMonitor:
         self.channel_id = channel_id
         self.stop_event = threading.Event()  # 用於停止線程的事件
         self.monitor_thread = None  # 用於存儲線程對象
-            
+        self.admin_list = self.get_admin_members()  # 用於存儲管理員列表
 
     def get_all_members(self):
         try:
@@ -184,7 +184,7 @@ def register_handlers(app, config, db):
     @app.message(re.compile(r"!admin$"))
     def get_admin_info(message, say, client):                
         try:        
-            admin_list = monitor.get_admin_members()
+            admin_list = monitor.admin_list
             m = "管理員列表:\n"            
             for admin in admin_list:
                 m += f"顯示名稱: {admin.get('profile', {}).get('display_name', '')}, 真實名稱: {admin.get('profile', {}).get('real_name', '')}\n"                
@@ -571,7 +571,7 @@ def register_handlers(app, config, db):
             user_id = message['user']
 
             # 獲取管理員列表            
-            admin_members = monitor.get_admin_members()
+            admin_members = monitor.admin_list
 
             # 檢查使用者是否具有管理員權限
             if not any(admin.get("id") == user_id for admin in admin_members):
