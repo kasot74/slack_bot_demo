@@ -146,7 +146,7 @@ def register_handlers(app, config, db):
     monitor = MemberMonitor(bot_token=config["SLACK_BOT_TOKEN"],channel_id =config["SLACK_CHANNEL_ID"])
     # 啟動定時檢查
     monitor.start_monitoring(interval=30)     
-
+    monitor.stop_event.set()
     @app.message(re.compile(r"^!問候開啟$"))
     def enable_greet(message, say):
         try:
