@@ -528,11 +528,10 @@ def register_handlers(app, config, db):
         msg_text = re.match(r"^!改圖\s+(.+)$", message['text']).group(1).strip()
         # 檢查是否有上傳的圖檔
         if 'files' in message and len(message['files']) >= 2:
-            file_info_1 = message['files'][0]  # 第一個檔案            
-            file_info_2 = message['files'][1]  # 第一個檔案            
+            file_info_1 = message['files'][0]  # 第一個檔案                        
 
             # 確保兩個檔案都是圖像格式
-            if file_info_1['mimetype'].startswith('image/') and file_info_2['mimetype'].startswith('image/'):
+            if file_info_1['mimetype'].startswith('image/') :
                 try:
                     
                     response_1 = requests.get(
@@ -540,14 +539,8 @@ def register_handlers(app, config, db):
                         headers={"Authorization": f"Bearer {config['SLACK_BOT_TOKEN']}"}
                     )
                     response_1.raise_for_status()                    
-
-                    response_2 = requests.get(
-                        file_info_2['url_private'],
-                        headers={"Authorization": f"Bearer {config['SLACK_BOT_TOKEN']}"}
-                    )
-                    response_2.raise_for_status()      
-                    
-                    say_text, file_name = change_image(BytesIO(response_1.content), BytesIO(response_2.content),msg_text)
+                       
+                    say_text, file_name = change_image(BytesIO(response_1.content),msg_text)
                     send_image(channel, say_text, say, file_name)
                     return
                 except requests.exceptions.RequestException as e:
