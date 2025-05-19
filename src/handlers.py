@@ -527,7 +527,7 @@ def register_handlers(app, config, db):
         channel = message['channel']
         msg_text = re.match(r"^!改圖\s+(.+)$", message['text']).group(1).strip()
         # 檢查是否有上傳的圖檔
-        if 'files' in message and len(message['files']) >= 2:
+        if 'files' in message and len(message['files']) >= 1:
             file_info_1 = message['files'][0]  # 第一個檔案                        
 
             # 確保兩個檔案都是圖像格式
