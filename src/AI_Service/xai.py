@@ -1,6 +1,7 @@
 import openai
 import base64
 import os
+import requests
 from datetime import datetime
 from PIL import Image
 from io import BytesIO
