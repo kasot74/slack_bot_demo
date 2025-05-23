@@ -29,6 +29,7 @@ from .AI_Service.xai import analyze_stock as analyze_stock_xai
 from .AI_Service.xai import analyze_stock_inoutpoint as analyze_stock_inoutpoint_xai
 from .AI_Service.xai import create_image as xai_create_image
 from .AI_Service.xai import create_greet as xai_create_greet
+from .AI_Service.xai import generate_search_summary as generate_search_summary
 
 
 from .stability_model import get_image,get_image2,change_style,change_image
@@ -225,6 +226,22 @@ def register_handlers(app, config, db):
             say(f"{summary}", thread_ts=message['ts'])            
         except Exception as e:        
             say(f"非預期性問題 {e}")                
+
+
+    # Call XAI查
+    @app.message(re.compile(r"!xai查\s+(\w+)\s+(.+)"))
+    def handle_search_summary_command(message, say):
+        try:
+            match = re.match(r"!xai查\s+(\w+)\s+(.+)", message['text'])
+            if not match:
+                say("請輸入正確格式：!xai查 [web|x|news] 查詢內容")
+                return
+            search_type = match.group(1).strip()
+            user_input = match.group(2).strip()
+            summary = generate_search_summary(user_input, search_type)
+            say(f"{summary}", thread_ts=message['ts'])
+        except Exception as e:
+            say(f"非預期性問題 {e}")
 
     # !pk role1 role2
     @app.message(re.compile(r"^!pk\s+(\S+)\s+(\S+)", re.DOTALL))

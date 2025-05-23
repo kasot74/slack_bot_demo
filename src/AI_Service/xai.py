@@ -174,3 +174,27 @@ def create_greet(member,types):
         ]
     )       
     return response.choices[0].message.content.strip().lower()
+
+
+def generate_search_summary(user_input, search_type):
+    # 僅允許 "web"、"x"、"news"
+    if search_type not in ["web", "x", "news"]:
+        return "無效的搜尋類型"
+    search_set = {
+        "mode": "auto",
+        "max_search_results": 5,
+        "return_citations": True,
+        "search_type": search_type
+    }
+    user_message = {"role": "user", "content": user_input}
+    collection.insert_one(user_message)
+    conversation_history = convert_to_openai_format("ai_his")
+    response = XAI_clice.chat.completions.create(
+        messages=conversation_history,
+        search_parameters=search_set,
+        model=model_target
+    )
+    assistant_message = response.choices[0].message.content
+    collection.insert_one({"role": "assistant", "content": assistant_message})
+
+    return assistant_message
