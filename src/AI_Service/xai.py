@@ -213,7 +213,6 @@ def generate_search_summary(user_input, search_type):
         assistant_message = data["choices"][0]["message"]["content"]
         # 儲存 AI 回覆到資料庫
         collection.insert_one({"role": "assistant", "content": assistant_message})
-        #return assistant_message
-        return json.dumps(data, ensure_ascii=False, indent=2)
+        return assistant_message        
     except Exception as e:
         return f"查詢失敗: {e}"
