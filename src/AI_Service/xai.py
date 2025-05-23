@@ -180,21 +180,39 @@ def generate_search_summary(user_input, search_type):
     # 僅允許 "web"、"x"、"news"
     if search_type not in ["web", "x", "news"]:
         return "無效的搜尋類型"
-    search_set = {
-        "mode": "auto",
-        "max_search_results": 5,
-        "return_citations": True,
-        "search_type": search_type
-    }
+
+    # 儲存用戶查詢到資料庫
     user_message = {"role": "user", "content": user_input}
     collection.insert_one(user_message)
-    conversation_history = convert_to_openai_format("ai_his")
-    response = XAI_clice.chat.completions.create(
-        messages=conversation_history,
-        search_parameters=search_set,
-        model=model_target
-    )
-    assistant_message = response.choices[0].message.content
-    collection.insert_one({"role": "assistant", "content": assistant_message})
 
-    return assistant_message
+    url = "https://api.x.ai/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {config['XAI_API_KEY']}"
+    }
+    payload = {
+        "messages": [
+            {
+                "role": "user",
+                "content": user_input
+            }
+        ],
+        "search_parameters": {
+            "mode": "auto",
+            "max_search_results": 5,
+            "return_citations": True,
+            "search_type": search_type
+        },
+        "model": "grok-3-latest"
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        assistant_message = data["choices"][0]["message"]["content"]
+        # 儲存 AI 回覆到資料庫
+        collection.insert_one({"role": "assistant", "content": assistant_message})
+        return assistant_message
+    except Exception as e:
+        return f"查詢失敗: {e}"
