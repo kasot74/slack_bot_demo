@@ -278,10 +278,10 @@ def register_handlers(app, config, db):
             his_data.append(get_historical_data(msg_text,first_day_of_month))        
         say(analyze_stock_xai(his_data,now_data), thread_ts=message['ts'])
 
-    # !買賣建議    
-    @app.message(re.compile(r"^!買賣建議\s+(.+)$"))
+    # !進出點分析
+    @app.message(re.compile(r"^!進出點分析\s+(.+)$"))
     def analyze_slock_point(message, say):
-        msg_text = re.match(r"^!買賣建議\s+(.+)$", message['text']).group(1).strip()
+        msg_text = re.match(r"^!進出點分析\s+(.+)$", message['text']).group(1).strip()
         now_data = get_stock_info(msg_text)
         his_data = []        
         today = datetime.now()        
@@ -401,9 +401,9 @@ def register_handlers(app, config, db):
             
             hide_message = ""
             if rainbow_count == 10:
-                hide_message = "全是 :rainbow:！你今天是🌈神！"
+                hide_message = "全是 :rainbow:！你今天是🌈運！"
             if rainbow_count == 0:
-                hide_message = "全是 :poop:！你今天是💩神!"
+                hide_message = "全是 :poop:！你今天是💩運!"
             # 傳送結果和機率
             say(f"{' '.join(selected_quotes)}\n {hide_message} ")
             
