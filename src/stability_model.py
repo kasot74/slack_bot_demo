@@ -153,8 +153,8 @@ def image_to_video(image_input):
             files={"image": r_image},
             data={
                 "seed": 0,
-                "cfg_scale": 2.0,
-                "motion_bucket_id": 127,
+                "cfg_scale": 7.5,  # 控制生成的多樣性
+                "motion_bucket_id": 200,  # 選擇的運動桶 ID
             },
         )
     except Exception as e:
