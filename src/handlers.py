@@ -575,7 +575,7 @@ def register_handlers(app, config, db):
 
     #!動起來
     @app.message(re.compile(r"^!動起來.*"))    
-    def image_to_video(message, say):
+    def image_video(message, say):
         channel = message['channel']        
         # 檢查是否有上傳的圖檔
         if 'files' in message and len(message['files']) >= 1:
