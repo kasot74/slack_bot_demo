@@ -182,12 +182,12 @@ def image_to_video(image_input):
 
         if get_response.status_code == 200:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"video_{timestamp}.mp4"
+            filename = f"video_{generation_id}_{timestamp}.mp4"
             filepath = os.path.join(save_dir, filename)
-
+            file_path = os.path.join("images_to_videos", filename)            
             with open(filepath, 'wb') as f:
                 f.write(get_response.content)
-            return "影片成功儲存", filepath
+            return "影片成功儲存", file_path
 
         elif get_response.status_code == 202:
             time.sleep(5)  # 等待後重試
