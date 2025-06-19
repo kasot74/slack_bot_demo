@@ -32,7 +32,7 @@ from .AI_Service.xai import create_greet as xai_create_greet
 from .AI_Service.xai import generate_search_summary as generate_search_summary
 
 
-from .stability_model import get_image,get_image2,change_style,change_image
+from .stability_model import get_image,get_image2,change_style,change_image,image_to_video
 from .stock import get_stock_info
 from .stock import get_historical_data
 
@@ -572,6 +572,41 @@ def register_handlers(app, config, db):
 
         # 如果沒有上傳足夠的檔案，提示用戶
         say("請上傳1個圖檔以進行修改！")
+
+    #!動起來
+    @app.message(re.compile(r"^!動起來\s+(.+)$"))    
+    def image_to_video(message, say):
+        channel = message['channel']
+        msg_text = re.match(r"^!動起來\s+(.+)$", message['text']).group(1).strip()
+        # 檢查是否有上傳的圖檔
+        if 'files' in message and len(message['files']) >= 1:
+            file_info_1 = message['files'][0]  # 第一個檔案                        
+
+            # 確保檔案是圖像格式
+            if file_info_1['mimetype'].startswith('image/') :
+                try:
+                    
+                    response_1 = requests.get(
+                        file_info_1['url_private'],
+                        headers={"Authorization": f"Bearer {config['SLACK_BOT_TOKEN']}"}
+                    )
+                    response_1.raise_for_status()                    
+                       
+                    say_text, file_name = image_to_video(BytesIO(response_1.content))
+                    send_image(channel, say_text, say, file_name)
+                    return
+                except requests.exceptions.RequestException as e:
+                    say(f"無法下載圖檔：{e}")
+                    return
+                except Exception as e:
+                    say(f"無法處理上傳的圖檔：{e}")
+                    return
+            else:
+                say("上傳的檔案中有非圖像格式的檔案！")
+                return
+
+        # 如果沒有上傳足夠的檔案，提示用戶
+        say("請上傳1個圖檔以進行修改！")        
 
     #!clearai
     @app.message(re.compile(r"^!clearai$"))

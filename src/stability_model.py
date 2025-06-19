@@ -136,6 +136,65 @@ def change_style(image_input,style_image,text):
     else:
         return f"修改風格失敗! {str(response.json())}", None
 
+def image_to_video(image_input):
+    if not isinstance(image_input, BytesIO):
+        return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
+
+    save_dir = os.path.join("images", "images_to_videos")
+    if not os.path.exists(image_dir):
+        os.makedirs(image_dir)
+
+    try:
+        response = requests.post(
+            "https://api.stability.ai/v2beta/image-to-video",
+            headers={
+                "authorization": f"Bearer {api_key}",
+            },
+            files={"image": image_input},
+            data={
+                "seed": 0,
+                "cfg_scale": 2.0,
+                "motion_bucket_id": 127,
+            },
+        )
+    except Exception as e:
+        return f"image_to_video 請求失敗：{e}", None
+    finally:
+        image_input.close()
+
+    if response.status_code != 200:
+        return f"發送失敗: {response.status_code} - {response.text}", None
+
+    generation_id = response.json().get('id')
+    if not generation_id:
+        return "無法取得 generation ID", None
+
+    # 嘗試輪詢結果
+    for attempt in range(10):
+        get_response = requests.get(
+            f"https://api.stability.ai/v2beta/image-to-video/result/{generation_id}",
+            headers={
+                "accept": "video/*",
+                "authorization": f"Bearer {api_key}",
+            },
+        )
+
+        if get_response.status_code == 200:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"video_{timestamp}.mp4"
+            filepath = os.path.join(save_dir, filename)
+
+            with open(filepath, 'wb') as f:
+                f.write(get_response.content)
+            return "影片成功儲存", filepath
+
+        elif get_response.status_code == 202:
+            time.sleep(5)  # 等待後重試
+        else:
+            return f"取得影片失敗: {get_response.status_code}", None
+
+    return "影片生成超時或失敗", None
+
 def change_image(image_input,text):
     if not isinstance(image_input, BytesIO):  # 確保輸入是 BytesIO
         return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
