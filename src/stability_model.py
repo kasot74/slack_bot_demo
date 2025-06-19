@@ -141,8 +141,8 @@ def image_to_video(image_input):
         return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
 
     save_dir = os.path.join("images", "images_to_videos")
-    if not os.path.exists(image_dir):
-        os.makedirs(image_dir)
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
 
     try:
         response = requests.post(
