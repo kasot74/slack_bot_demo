@@ -139,7 +139,7 @@ def change_style(image_input,style_image,text):
 def image_to_video(image_input):
     if not isinstance(image_input, BytesIO):
         return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
-
+    r_image = resize_image(image_input)  # 確保圖片大小符合 API 要求
     save_dir = os.path.join("images", "images_to_videos")
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -150,7 +150,7 @@ def image_to_video(image_input):
             headers={
                 "authorization": f"Bearer {api_key}",
             },
-            files={"image": image_input},
+            files={"image": r_image},
             data={
                 "seed": 0,
                 "cfg_scale": 2.0,
@@ -160,7 +160,8 @@ def image_to_video(image_input):
     except Exception as e:
         return f"image_to_video 請求失敗：{e}", None
     finally:
-        image_input.close()
+        r_image.close()
+        image_input.close()  # 確保圖片檔案被正確關閉
 
     if response.status_code != 200:
         return f"發送失敗: {response.status_code} - {response.text}", None
@@ -194,6 +195,15 @@ def image_to_video(image_input):
             return f"取得影片失敗: {get_response.status_code}", None
 
     return "影片生成超時或失敗", None
+
+#挑整圖片大小 為API可接受的大小
+def resize_image(image_input, target_size=(1024, 576)):
+    image = Image.open(image_input)
+    resized = image.resize(target_size)
+    output = BytesIO()
+    resized.save(output, format="PNG")
+    output.seek(0)
+    return output
 
 def change_image(image_input,text):
     if not isinstance(image_input, BytesIO):  # 確保輸入是 BytesIO
