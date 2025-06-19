@@ -181,7 +181,7 @@ def image_to_video(image_input):
         )
 
         if get_response.status_code == 200:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"video_{timestamp}.mp4"
             filepath = os.path.join(save_dir, filename)
 
