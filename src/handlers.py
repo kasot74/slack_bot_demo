@@ -574,10 +574,9 @@ def register_handlers(app, config, db):
         say("請上傳1個圖檔以進行修改！")
 
     #!動起來
-    @app.message(re.compile(r"^!動起來\s+(.+)$"))    
+    @app.message(re.compile(r"^!動起來.*"))    
     def image_to_video(message, say):
-        channel = message['channel']
-        msg_text = re.match(r"^!動起來\s+(.+)$", message['text']).group(1).strip()
+        channel = message['channel']        
         # 檢查是否有上傳的圖檔
         if 'files' in message and len(message['files']) >= 1:
             file_info_1 = message['files'][0]  # 第一個檔案                        
