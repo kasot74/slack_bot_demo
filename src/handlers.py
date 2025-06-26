@@ -33,8 +33,12 @@ from .AI_Service.xai import generate_search_summary as generate_search_summary
 
 
 from .stability_model import get_image,get_image2,change_style,change_image,image_to_video
+# stock_model
 from .stock import get_stock_info
 from .stock import get_historical_data
+
+# coin_model
+from .model.coin_model import register_coin_handlers
 
 class MemberMonitor:
     def __init__(self, bot_token,channel_id):
@@ -165,6 +169,8 @@ def register_handlers(app, config, db):
     def disable_greet(message, say):
         monitor.stop_event.set()
         say("問候功能已關閉！")    
+
+    register_coin_handlers(app, db)
 
     # user_info
     @app.message(re.compile(r"!me$"))

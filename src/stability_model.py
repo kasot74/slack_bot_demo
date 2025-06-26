@@ -154,7 +154,7 @@ def image_to_video(image_input):
             data={
                 "seed": 0,
                 "cfg_scale": 3.5,  # 控制生成的多樣性
-                "motion_bucket_id": 150,  # 選擇的運動桶 ID
+                "motion_bucket_id": 200,  # 選擇的運動桶 ID
             },
         )
     except Exception as e:
