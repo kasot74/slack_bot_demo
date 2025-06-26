@@ -192,6 +192,7 @@ def register_handlers(app, config, db):
         say(f"<@{user_id}>，簽到成功！獲得 100 烏薩奇幣 🎉")
 
     @app.message(re.compile(r"^!查幣$"))
+    def check_coins(message, say):
         coin_collection = db.user_coins   
         user_id = message['user']
         total = coin_collection.aggregate([
