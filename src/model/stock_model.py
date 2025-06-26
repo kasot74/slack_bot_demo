@@ -7,8 +7,8 @@ from pymongo import MongoClient
 from slack_sdk import WebClient
 
 # stock_model
-from .stock import get_stock_info
-from .stock import get_historical_data
+from ..stock import get_stock_info
+from ..stock import get_historical_data
 
 def register_stock_handlers(app, config, db):
     # !查股    
