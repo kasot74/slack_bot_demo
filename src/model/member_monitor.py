@@ -112,6 +112,10 @@ class MemberMonitor:
         else:
             print("No monitoring thread is running.")    
 
+COMMANDS_HELP = [
+    ("!問候開啟", "啟用成員上下線問候"),
+    ("!問候關閉", "關閉成員上下線問候"),
+]
 
 def register_member_handlers(app, config, db):
     

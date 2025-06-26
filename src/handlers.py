@@ -34,8 +34,29 @@ from .AI_Service.xai import generate_search_summary as generate_search_summary
 
 from .stability_model import get_image,get_image2,change_style,change_image,image_to_video
 
-
-
+COMMANDS_HELP = [
+    ("!openai 內容", "詢問 GPT "),
+    ("!claude 內容", "詢問 Claude "),
+    ("!xai 內容", "詢問 grok"),
+    ("!xai查 [web|x|news] 查詢內容", "AI 搜尋摘要"),
+    ("!熬雞湯 內容", "新增正能量雞湯語錄"),
+    ("!喝雞湯", "隨機獲得一則雞湯語錄"),
+    ("!雞湯菜單", "列出所有雞湯語錄"),
+    ("!釣魚", "隨機獲得一張魚圖"),
+    ("!曬卡", "隨機曬卡趣味指令"),
+    ("!add 指令 回覆", "新增自訂指令"),
+    ("!show", "顯示所有自訂指令"),
+    ("!remove 指令", "刪除自訂指令"),
+    ("!畫 內容", "用 StabilityAI 產生圖片"),
+    ("!畫2 內容", "用 StabilityAI 產生圖片(第二模型)"),
+    ("!xai畫 內容", "用 xai 產生圖片"),
+    ("!改風格 內容", "兩張圖進行風格轉換"),
+    ("!改圖 內容", "單張圖進行內容修改"),
+    ("!動起來", "將圖片轉為影片"),
+    ("!clearai", "清除 AI 聊天紀錄"),
+    ("!lookai", "查看 AI 聊天紀錄"),
+    ("!help 或 !指令", "顯示所有可用指令"),
+]
 
 def register_handlers(app, config, db):
     

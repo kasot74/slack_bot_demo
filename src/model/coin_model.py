@@ -2,6 +2,11 @@ import re
 from datetime import datetime
 from pymongo import MongoClient
 
+COMMANDS_HELP = [
+    ("!簽到", "每日簽到，獲得 100 幣"),
+    ("!查幣", "查詢你目前擁有的幣"),
+    ("!給幣 <@user> 數量", "轉帳幣給其他人"),
+]
 
 def record_coin_change(coin_collection, user_id, amount, change_type, related_user=None):
     """紀錄幣更動，方便其他功能呼叫"""
