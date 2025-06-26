@@ -12,8 +12,8 @@ db = con_db(config)
 app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_SECRET'])
 
 
+register_coin_handlers(app, config, db)
 register_handlers(app, config, db)
-
 # 啟動 SocketModeHandler
 if __name__ == "__main__":    
     SocketModeHandler(app, config['SLACK_APP_TOKEN']).start()    
