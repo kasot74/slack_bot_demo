@@ -328,3 +328,58 @@ def register_coin_handlers(app, config, db):
             pool_collection.update_one({"date": today}, {"$set": {"amount": 1000}})
         else:
             say(f"<@{user_id}> 很可惜沒中獎，今日獎金池已累積 {jackpot} 幣！\n(你花越多，中獎機率越高，投注300枚 最高30%)")
+
+    @app.message(re.compile(r"^!拉霸(?:\s+(\d+))?$"))
+    def slot_machine(message, say):
+        coin_collection = db.user_coins
+        user_id = message['user']
+        # 解析下注金額
+        match = re.match(r"^!拉霸(?:\s+(\d+))?$", message['text'])
+        bet = int(match.group(1)) if match and match.group(1) else 10
+        if bet < 10:
+            say(f"<@{user_id}>，最低下注 10 枚烏薩奇幣！")
+            return
+        # 查詢用戶現有幣
+        total = coin_collection.aggregate([
+            {"$match": {"user_id": user_id}},
+            {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
+        ])
+        total = list(total)
+        coins = total[0]["sum"] if total else 0
+        if coins < bet:
+            say(f"<@{user_id}>，你的烏薩奇幣不足，無法下注 {bet} 枚！")
+            return
+        # 扣除下注金額
+        record_coin_change(coin_collection, user_id, -bet, "slot_machine", related_user=None)
+
+        # 拉霸圖案與賠率設定
+        symbols = ["🍒", "🍋", "🔔", "⭐", "💎"]
+        payout = {
+            "🍒🍒🍒": bet * 5,
+            "🍋🍋🍋": bet * 8,
+            "🔔🔔🔔": bet * 15,
+            "⭐⭐⭐": bet * 30,
+            "💎💎💎": bet * 100
+        }
+
+        # 隨機產生三格
+        result = [random.choice(symbols) for _ in range(3)]
+        result_str = "".join(result)
+
+        # 判斷是否中獎
+        win_amount = payout.get(result_str, 0)
+        if win_amount > 0:
+            record_coin_change(coin_collection, user_id, win_amount, "slot_machine_win")
+            msg = f"<@{user_id}> 🎰 拉霸結果：{' '.join(result)}\n恭喜中獎！獲得 {win_amount} 枚烏薩奇幣！"
+        else:
+            msg = f"<@{user_id}> 🎰 拉霸結果：{' '.join(result)}\n可惜沒中獎，再接再厲！"
+
+        # 查詢最新剩餘金額
+        total = coin_collection.aggregate([
+            {"$match": {"user_id": user_id}},
+            {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
+        ])
+        total = list(total)
+        coins = total[0]["sum"] if total else 0
+        msg += f"\n你目前剩餘 {coins} 枚烏薩奇幣。"
+        say(msg)
