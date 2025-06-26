@@ -1,19 +1,24 @@
 import re
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from pymongo import MongoClient
 
 COMMANDS_HELP = [
     ("!簽到", "每日簽到，獲得 100 幣"),
     ("!金幣排行", "top 3 金幣排行榜"),
+    ("!窮鬼排行", "top 3 窮鬼排行榜"),
     ("!查幣", "查詢你目前擁有的幣"),
     ("!給幣 <@user> 數量", "轉帳幣給其他人"),
+    ("!窮鬼", "沒錢時可領取 50 幣救急（僅當餘額為0時可領）"),
     ("!轉盤 [金額]", 
      "花費 10 幣以上參加轉盤抽獎，壓越多中大獎機率越高。\n"
      "獎項與機率（下注10時）：\n"
      "再接再厲33.7%、10幣11.2%、20幣16.9%、50幣6.7%、100幣3.4%、1000幣1.1%、謝謝參加22.5%、對折1.1%。\n"
      "下注越多，50幣/100幣/1000幣機率會提升。"),
-    ("!窮鬼", "沒錢時可領取 50 幣救急（僅當餘額為0時可領）")    
+    ("!抽獎 [金額]", 
+     "花費 10 幣以上參加每日獎金池抽獎，花越多中獎機率越高，獎金池每日自動累積。\n"
+     "中獎機率：每 10 幣 1%，最高 30%。"),
+    ("!抽獎排行", "top 3 抽中獎金池次數排行榜"),
 ]
 
 def record_coin_change(coin_collection, user_id, amount, change_type, related_user=None):
@@ -224,3 +229,78 @@ def register_coin_handlers(app, config, db):
             count = entry["count"]
             msg += f"{idx}. <@{user_id}>：{count} 次\n"
         say(msg)        
+
+    @app.message(re.compile(r"^!抽獎排行$"))
+    def lottery_leaderboard(message, say):
+        coin_collection = db.user_coins
+        # 聚合查詢所有用戶 lottery_win 次數，排序取前三
+        leaderboard = coin_collection.aggregate([
+            {"$match": {"type": "lottery_win"}},
+            {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 3}
+        ])
+        leaderboard = list(leaderboard)
+        if not leaderboard:
+            say("目前沒有抽獎中獎紀錄。")
+            return
+        msg = "*抽獎中獎排行榜（前 3 名，抽中獎金池次數）*\n"
+        for idx, entry in enumerate(leaderboard, 1):
+            user_id = entry["_id"]
+            count = entry["count"]
+            msg += f"{idx}. <@{user_id}>：{count} 次\n"
+        say(msg)
+
+    @app.message(re.compile(r"^!抽獎(?:\s+(\d+))?$"))
+    def lottery(message, say):
+        coin_collection = db.user_coins
+        pool_collection = db.lottery_pool  # 新增一個 collection 儲存獎金池
+        user_id = message['user']
+        # 解析下注金額
+        match = re.match(r"^!抽獎(?:\s+(\d+))?$", message['text'])
+        bet = int(match.group(1)) if match and match.group(1) else 10
+        if bet < 10:
+            say(f"<@{user_id}>，最低下注 10 枚烏薩奇幣！")
+            return
+        # 查詢用戶現有幣
+        total = coin_collection.aggregate([
+            {"$match": {"user_id": user_id}},
+            {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
+        ])
+        total = list(total)
+        coins = total[0]["sum"] if total else 0
+        if coins < bet:
+            say(f"<@{user_id}>，你的烏薩奇幣不足，無法下注 {bet} 枚！")
+            return
+        # 扣除下注金額
+        record_coin_change(coin_collection, user_id, -bet, "lottery", related_user=None)
+
+        # 取得今日獎金池
+        today = datetime.now().strftime("%Y-%m-%d")
+        pool = pool_collection.find_one({"date": today})
+        if not pool:
+            # 若今天第一次抽，獎金池設為昨日獎金池+預設每日增加額
+            yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+            y_pool = pool_collection.find_one({"date": yesterday})
+            base = y_pool["amount"] if y_pool else 1000
+            pool_collection.insert_one({"date": today, "amount": base + 500})  # 每日自動增加1000
+            pool = pool_collection.find_one({"date": today})
+
+        # 把本次下注金額加進獎金池
+        pool_collection.update_one({"date": today}, {"$inc": {"amount": bet}})
+        pool = pool_collection.find_one({"date": today})
+        jackpot = pool["amount"]
+
+        # 計算中獎機率（例如：每下注10幣有1%機率，最多50%）
+        win_rate = min(bet // 10, 30)
+        import random
+        is_win = random.randint(1, 100) <= win_rate
+
+        if is_win:
+            # 中獎，發放獎金池
+            record_coin_change(coin_collection, user_id, jackpot, "lottery_win")
+            say(f"🎉 <@{user_id}> 恭喜你以 {bet} 幣抽中今日獎金池 {jackpot} 幣！")
+            # 重設獎金池
+            pool_collection.update_one({"date": today}, {"$set": {"amount": 1000}})
+        else:
+            say(f"<@{user_id}> 很可惜沒中獎，今日獎金池已累積 {jackpot} 幣！\n(你花越多，中獎機率越高，投注300枚 最高30%)")        
