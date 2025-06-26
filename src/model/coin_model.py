@@ -175,9 +175,12 @@ def register_coin_handlers(app, config, db):
         ])
         total = list(total)
         coins = total[0]["sum"] if total else 0
+        # 查詢已用幾次窮鬼
+        used_count = coin_collection.count_documents({"user_id": user_id, "type": "poor_bonus"})
         if coins == 0:
-            record_coin_change(coin_collection, user_id, 10, "poor_bonus")
-            say(f"<@{user_id}>，你太窮了，發給你 50 枚烏薩奇幣救急！")
+            record_coin_change(coin_collection, user_id, 50, "poor_bonus")
+            used_count += 1
+            say(f"<@{user_id}>，你太窮了，發給你 50 枚烏薩奇幣救急！你已經使用 !窮鬼 {used_count} 次。")
         else:
             say(f"<@{user_id}>，你還有 {coins} 枚烏薩奇幣，暫時不能領救濟金喔！")
 
