@@ -3,7 +3,7 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 from .handlers import register_handlers
 from .model.coin_model import register_coin_handlers
 from .model.member_monitor import register_member_handlers
-
+from .model.stock_model import register_stock_handlers
 from .utilities import read_config
 from .database import con_db
 import os
@@ -19,6 +19,9 @@ register_coin_handlers(app, config, db)
 
 # 註冊成員打招呼模組
 register_member_handlers(app, config, db)
+
+# 股票模組
+register_stock_handlers(app, config, db)
 
 # 註冊其他處理器
 register_handlers(app, config, db)

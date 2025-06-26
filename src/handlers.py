@@ -33,9 +33,7 @@ from .AI_Service.xai import generate_search_summary as generate_search_summary
 
 
 from .stability_model import get_image,get_image2,change_style,change_image,image_to_video
-# stock_model
-from .stock import get_stock_info
-from .stock import get_historical_data
+
 
 
 
@@ -89,53 +87,8 @@ def register_handlers(app, config, db):
             say(f"{summary}", thread_ts=message['ts'])
         except Exception as e:
             say(f"非預期性問題 {e}")
+         
 
-    # !pk role1 role2
-    @app.message(re.compile(r"^!pk\s+(\S+)\s+(\S+)", re.DOTALL))
-    def handle_aipk_messages(message, say):
-        match = re.match(r"^!pk\s+(\S+)\s+(\S+)", message['text'], re.DOTALL)
-        if match:
-            role1 = match.group(1).strip()
-            role2 = match.group(2).strip()
-            thread_ts = message['ts']                        
-            answer = "請開始"
-            # 使用不同 AI 模型生成問答內容
-            for i in range(3):                
-                answer = role_generate_summary_claude(role2,role1,answer ,thread_ts)
-                say(text=f"*{role2}:* {answer}", thread_ts=thread_ts)
-                
-                answer = role_generate_summary_xai(role1,role2,answer ,thread_ts)
-                say(text=f"*{role1}:* {answer}", thread_ts=thread_ts)                
-
-    # !查股    
-    @app.message(re.compile(r"^!查股\s+(.+)$"))
-    def search_slock(message, say):
-        msg_text = re.match(r"^!查股\s+(.+)$", message['text']).group(1).strip()
-        say(get_stock_info(msg_text))
-
-    # !技術分析    
-    @app.message(re.compile(r"^!技術分析\s+(.+)$"))
-    def analyze_slock(message, say):
-        msg_text = re.match(r"^!技術分析\s+(.+)$", message['text']).group(1).strip()
-        now_data = get_stock_info(msg_text)
-        his_data = []        
-        today = datetime.now()        
-        for i in range(6):
-            first_day_of_month = (today.replace(day=1) - timedelta(days=i*30)).strftime('%Y%m01')
-            his_data.append(get_historical_data(msg_text,first_day_of_month))        
-        say(analyze_stock_xai(his_data,now_data), thread_ts=message['ts'])
-
-    # !進出點分析
-    @app.message(re.compile(r"^!進出點分析\s+(.+)$"))
-    def analyze_slock_point(message, say):
-        msg_text = re.match(r"^!進出點分析\s+(.+)$", message['text']).group(1).strip()
-        now_data = get_stock_info(msg_text)
-        his_data = []        
-        today = datetime.now()        
-        for i in range(3):
-            first_day_of_month = (today.replace(day=1) - timedelta(days=i*30)).strftime('%Y%m01')
-            his_data.append(get_historical_data(msg_text,first_day_of_month))        
-        say(analyze_stock_inoutpoint_xai(his_data,now_data), thread_ts=message['ts'])
 
     # !熬雞湯    
     @app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
