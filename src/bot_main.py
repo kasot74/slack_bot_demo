@@ -14,6 +14,7 @@ from .model.stock_model import COMMANDS_HELP as STOCK_COMMANDS
 from .utilities import read_config
 from .database import con_db
 import os
+import re
 
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')

@@ -6,6 +6,7 @@ COMMANDS_HELP = [
     ("!簽到", "每日簽到，獲得 100 幣"),
     ("!查幣", "查詢你目前擁有的幣"),
     ("!給幣 <@user> 數量", "轉帳幣給其他人"),
+    ("!轉盤", "花費 10 幣參加轉盤抽獎")
 ]
 
 def record_coin_change(coin_collection, user_id, amount, change_type, related_user=None):
@@ -81,3 +82,46 @@ def register_coin_handlers(app, config, db):
         # 增加 to_user
         record_coin_change(coin_collection, to_user, amount, "transfer_in", related_user=from_user)
         say(f"<@{from_user}> 已成功轉帳 {amount} 幣給 <@{to_user}>！")
+
+
+    wheel_options = [
+        "再接再厲", "恭喜獲得 20 幣", "恭喜獲得 50 幣", "恭喜獲得 100 幣", "失敗你的烏薩奇幣已歸零QQ"
+    ]
+
+    @app.message(re.compile(r"^!轉盤$"))
+    def spin_wheel(message, say):
+        coin_collection = db.user_coins
+        user_id = message['user']
+        # 查詢用戶現有幣
+        total = coin_collection.aggregate([
+            {"$match": {"user_id": user_id}},
+            {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
+        ])
+        total = list(total)
+        coins = total[0]["sum"] if total else 0
+        if coins < 10:
+            say(f"<@{user_id}>，需10枚烏薩奇幣，不足無法參加轉盤！")
+            return
+        # 扣除 10 幣
+        record_coin_change(coin_collection, user_id, -10, "spin_wheel")
+        # 抽獎
+        result = random.choice(wheel_options)
+        say(f"<@{user_id}> 轉盤結果：{result}")
+        # 若抽到加幣獎項，發放獎勵
+        if "20 幣" in result:
+            record_coin_change(coin_collection, user_id, 20, "spin_wheel_reward")
+        elif "50 幣" in result:
+            record_coin_change(coin_collection, user_id, 50, "spin_wheel_reward")
+        elif "100 幣" in result:
+            record_coin_change(coin_collection, user_id, 100, "spin_wheel_reward")
+        elif "失敗你的烏薩奇幣已歸零QQ" in result:
+            # 查詢目前剩餘幣
+            total = coin_collection.aggregate([
+                {"$match": {"user_id": user_id}},
+                {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
+            ])
+            total = list(total)
+            coins = total[0]["sum"] if total else 0
+            if coins > 0:
+                record_coin_change(coin_collection, user_id, -coins, "spin_wheel_zero")
+                
