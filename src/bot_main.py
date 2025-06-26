@@ -1,6 +1,7 @@
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from .handlers import register_handlers
+from .coin_model import register_coin_handlers
 from .utilities import read_config
 from .database import con_db
 import os
