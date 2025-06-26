@@ -203,3 +203,24 @@ def register_coin_handlers(app, config, db):
             coins = entry["sum"]
             msg += f"{idx}. <@{user_id}>：{coins} 枚\n"
         say(msg)
+
+    @app.message(re.compile(r"^!窮鬼排行$"))
+    def poor_leaderboard(message, say):
+        coin_collection = db.user_coins
+        # 聚合查詢所有用戶 poor_bonus 次數，排序取前三
+        leaderboard = coin_collection.aggregate([
+            {"$match": {"type": "poor_bonus"}},
+            {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 3}
+        ])
+        leaderboard = list(leaderboard)
+        if not leaderboard:
+            say("目前沒有窮鬼紀錄。")
+            return
+        msg = "*窮鬼排行榜（前 3 名，使用 !窮鬼 救濟次數）*\n"
+        for idx, entry in enumerate(leaderboard, 1):
+            user_id = entry["_id"]
+            count = entry["count"]
+            msg += f"{idx}. <@{user_id}>：{count} 次\n"
+        say(msg)        
