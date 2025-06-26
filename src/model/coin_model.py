@@ -127,8 +127,7 @@ def register_coin_handlers(app, config, db):
         record_coin_change(coin_collection, user_id, -bet, "spin_wheel", related_user=None)
         # 動態設定機率
         population, weights = weighted_wheel_options(bet)
-        result = random.choices(population, weights=weights, k=1)[0]
-        say(f"<@{user_id}> 轉盤結果：{result}")
+        result = random.choices(population, weights=weights, k=1)[0]        
         # 發獎
         if "10 幣" in result:
             record_coin_change(coin_collection, user_id, 10, "spin_wheel_reward")
@@ -148,6 +147,14 @@ def register_coin_handlers(app, config, db):
             coins = total[0]["sum"] if total else 0
             if coins > 0:
                 record_coin_change(coin_collection, user_id, -coins, "spin_wheel_zero")
+        # 查詢最新剩餘金額
+        total = coin_collection.aggregate([
+            {"$match": {"user_id": user_id}},
+            {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
+        ])
+        total = list(total)
+        coins = total[0]["sum"] if total else 0
+        say(f"<@{user_id}> 轉盤結果：{result}\n你目前剩餘 {coins} 枚烏薩奇幣。")
 
 
     @app.message(re.compile(r"^!窮鬼$"))
