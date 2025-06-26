@@ -170,7 +170,7 @@ def register_handlers(app, config, db):
         monitor.stop_event.set()
         say("問候功能已關閉！")    
 
-    register_coin_handlers(app, db)
+    #register_coin_handlers(app, db)
 
     # user_info
     @app.message(re.compile(r"!me$"))
