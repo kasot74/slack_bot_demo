@@ -5,7 +5,7 @@ import threading
 from datetime import datetime
 from pymongo import MongoClient
 from slack_sdk import WebClient
-from .AI_Service.xai import create_greet as xai_create_greet  # 根據你的專案結構調整
+from ..AI_Service.xai  import create_greet as xai_create_greet  # 根據你的專案結構調整
 
 class MemberMonitor:
     def __init__(self, bot_token,channel_id):
