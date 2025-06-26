@@ -7,7 +7,8 @@ COMMANDS_HELP = [
     ("!簽到", "每日簽到，獲得 100 幣"),
     ("!查幣", "查詢你目前擁有的幣"),
     ("!給幣 <@user> 數量", "轉帳幣給其他人"),
-    ("!轉盤", "花費 10 幣參加轉盤抽獎")
+    ("!轉盤", "花費 10 幣參加轉盤抽獎"),
+    ("!窮鬼", "沒錢時可領取 10 幣救急"),
 ]
 
 def record_coin_change(coin_collection, user_id, amount, change_type, related_user=None):
@@ -127,4 +128,21 @@ def register_coin_handlers(app, config, db):
             coins = total[0]["sum"] if total else 0
             if coins > 0:
                 record_coin_change(coin_collection, user_id, -coins, "spin_wheel_zero")
-                
+
+
+    @app.message(re.compile(r"^!窮鬼$"))
+    def poor_user(message, say):
+        coin_collection = db.user_coins
+        user_id = message['user']
+        # 查詢用戶現有幣
+        total = coin_collection.aggregate([
+            {"$match": {"user_id": user_id}},
+            {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
+        ])
+        total = list(total)
+        coins = total[0]["sum"] if total else 0
+        if coins == 0:
+            record_coin_change(coin_collection, user_id, 10, "poor_bonus")
+            say(f"<@{user_id}>，你太窮了，發給你 10 枚烏薩奇幣救急！")
+        else:
+            say(f"<@{user_id}>，你還有 {coins} 枚烏薩奇幣，暫時不能領救濟金喔！")
