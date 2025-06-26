@@ -86,7 +86,7 @@ def register_coin_handlers(app, config, db):
 
 
     wheel_options = [
-        "再接再厲", "恭喜獲得 20 幣", "恭喜獲得 50 幣", "恭喜獲得 100 幣", "失敗你的烏薩奇幣已歸零QQ"
+        "再接再厲", "恭喜獲得 10 幣", "恭喜獲得 20 幣", "恭喜獲得 50 幣", "恭喜獲得 100 幣", "謝謝參加"
     ]
 
     @app.message(re.compile(r"^!轉盤$"))
@@ -109,7 +109,9 @@ def register_coin_handlers(app, config, db):
         result = random.choice(wheel_options)
         say(f"<@{user_id}> 轉盤結果：{result}")
         # 若抽到加幣獎項，發放獎勵
-        if "20 幣" in result:
+        if "10 幣" in result:
+            record_coin_change(coin_collection, user_id, 10, "spin_wheel_reward")
+        elif "20 幣" in result:
             record_coin_change(coin_collection, user_id, 20, "spin_wheel_reward")
         elif "50 幣" in result:
             record_coin_change(coin_collection, user_id, 50, "spin_wheel_reward")
