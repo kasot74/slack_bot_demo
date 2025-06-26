@@ -7,10 +7,14 @@ COMMANDS_HELP = [
     ("!簽到", "每日簽到，獲得 100 幣"),
     ("!查幣", "查詢你目前擁有的幣"),
     ("!給幣 <@user> 數量", "轉帳幣給其他人"),
-    ("!轉盤 [金額]", "花費 10 幣以上參加轉盤抽獎，壓越多中大獎機率越高。"
-     " 機率範例（下注10）：再接再厲33.7%、10幣22.5%、20幣11.2%、50幣5.6%、100幣2.2%、謝謝參加22.5%、歸零2.2%。"
-     " 下注越多，50幣/100幣機率會提升。"),
-    ("!窮鬼", "沒錢時可領取 10 幣救急（僅當餘額為0時可領）"),
+    ("!轉盤 [金額]", 
+     "花費 10 幣以上參加轉盤抽獎，壓越多中大獎機率越高。\n"
+     "獎項與機率（下注10時）：\n"
+     "再接再厲33.7%、10幣11.2%、20幣16.9%、50幣6.7%、100幣3.4%、1000幣1.1%、謝謝參加22.5%、歸零1.1%。\n"
+     "下注越多，50幣/100幣/1000幣機率會提升。"),
+    ("!窮鬼", "沒錢時可領取 50 幣救急（僅當餘額為0時可領）"),
+    ("!金幣排行", "top 3 金幣排行榜"),
+    
 ]
 
 def record_coin_change(coin_collection, user_id, amount, change_type, related_user=None):
@@ -92,12 +96,13 @@ def register_coin_handlers(app, config, db):
         # 基本獎項與權重
         options = [
             ("再接再厲", 30),
-            ("恭喜獲得 10 幣", 20),
-            ("恭喜獲得 20 幣", 10),
-            ("恭喜獲得 50 幣", 5 + bet // 20),   # 壓越多，機率越高
-            ("恭喜獲得 100 幣", 1 + bet // 10),  # 壓越多，機率越高
+            ("恭喜獲得 10 幣", 10),
+            ("恭喜獲得 20 幣", 15),
+            ("恭喜獲得 50 幣", 5 + bet // 10),   # 壓越多，機率越高
+            ("恭喜獲得 100 幣", 2 + bet // 5),  # 壓越多，機率越高
+            ("恭喜獲得 1000 幣", 1 + bet // 10),  # 壓越多，機率越高
             ("謝謝參加", 20),
-            ("失敗你的烏薩奇幣已歸零QQ", 2)
+            (" :pepe_cry: 烏薩奇幣已對折", 1)
         ]
         population = [item[0] for item in options]
         weights = [item[1] for item in options]
@@ -129,7 +134,9 @@ def register_coin_handlers(app, config, db):
         population, weights = weighted_wheel_options(bet)
         result = random.choices(population, weights=weights, k=1)[0]        
         # 發獎
-        if "10 幣" in result:
+        if "1000 幣" in result:
+            record_coin_change(coin_collection, user_id, 1000, "spin_wheel_reward")
+        elif "10 幣" in result:
             record_coin_change(coin_collection, user_id, 10, "spin_wheel_reward")
         elif "20 幣" in result:
             record_coin_change(coin_collection, user_id, 20, "spin_wheel_reward")
@@ -137,8 +144,8 @@ def register_coin_handlers(app, config, db):
             record_coin_change(coin_collection, user_id, 50, "spin_wheel_reward")
         elif "100 幣" in result:
             record_coin_change(coin_collection, user_id, 100, "spin_wheel_reward")
-        elif "歸零" in result:
-            # 歸零
+        elif "對折" in result:
+            # 對折
             total = coin_collection.aggregate([
                 {"$match": {"user_id": user_id}},
                 {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
@@ -146,7 +153,8 @@ def register_coin_handlers(app, config, db):
             total = list(total)
             coins = total[0]["sum"] if total else 0
             if coins > 0:
-                record_coin_change(coin_collection, user_id, -coins, "spin_wheel_zero")
+                half = coins // 2
+                record_coin_change(coin_collection, user_id, -half, "spin_wheel_half")
         # 查詢最新剩餘金額
         total = coin_collection.aggregate([
             {"$match": {"user_id": user_id}},
@@ -170,6 +178,26 @@ def register_coin_handlers(app, config, db):
         coins = total[0]["sum"] if total else 0
         if coins == 0:
             record_coin_change(coin_collection, user_id, 10, "poor_bonus")
-            say(f"<@{user_id}>，你太窮了，發給你 10 枚烏薩奇幣救急！")
+            say(f"<@{user_id}>，你太窮了，發給你 50 枚烏薩奇幣救急！")
         else:
             say(f"<@{user_id}>，你還有 {coins} 枚烏薩奇幣，暫時不能領救濟金喔！")
+
+    @app.message(re.compile(r"^!金幣排行$"))
+    def coin_leaderboard(message, say):
+        coin_collection = db.user_coins
+        # 聚合查詢所有用戶總金幣，排序取前三
+        leaderboard = coin_collection.aggregate([
+            {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}},
+            {"$sort": {"sum": -1}},
+            {"$limit": 3}
+        ])
+        leaderboard = list(leaderboard)
+        if not leaderboard:
+            say("目前沒有金幣紀錄。")
+            return
+        msg = "*烏薩奇幣排行榜（前 3 名）*\n"
+        for idx, entry in enumerate(leaderboard, 1):
+            user_id = entry["_id"]
+            coins = entry["sum"]
+            msg += f"{idx}. <@{user_id}>：{coins} 枚\n"
+        say(msg)
