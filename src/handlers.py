@@ -37,8 +37,6 @@ from .stability_model import get_image,get_image2,change_style,change_image,imag
 from .stock import get_stock_info
 from .stock import get_historical_data
 
-# coin_model
-from .model.coin_model import checkin, check_coins
 
 class MemberMonitor:
     def __init__(self, bot_token,channel_id):
