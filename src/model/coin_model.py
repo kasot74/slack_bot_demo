@@ -16,9 +16,10 @@ COMMANDS_HELP = [
      "再接再厲33.7%、10幣11.2%、20幣16.9%、50幣6.7%、100幣3.4%、1000幣1.1%、謝謝參加22.5%、對折1.1%。\n"
      "下注越多，50幣/100幣/1000幣機率會提升。"),
     ("!抽獎 [金額]", 
-     "花費 10 幣以上參加每日獎金池抽獎，花越多中獎機率越高，獎金池每日自動累積。\n"
+     "花費 10 幣以上參加每日獎金池抽獎，花越多中獎機率越高，獎金池每日自動增加500。\n"
      "中獎機率：每 10 幣 1%，最高 30%。"),
     ("!抽獎排行", "top 3 抽中獎金池次數排行榜"),
+    ("!獎金池", "查詢今日獎金池目前累積的金額")
 ]
 
 def record_coin_change(coin_collection, user_id, amount, change_type, related_user=None):
@@ -251,11 +252,35 @@ def register_coin_handlers(app, config, db):
             msg += f"{idx}. <@{user_id}>：{count} 次\n"
         say(msg)
 
+    @app.message(re.compile(r"^!獎金池$"))
+    def show_jackpot(message, say):
+        pool_collection = db.lottery_pool
+        coin_collection = db.user_coins
+        today = datetime.now().strftime("%Y-%m-%d")
+        pool = pool_collection.find_one({"date": today})
+        # 查詢今日是否已有人中獎
+        winner = coin_collection.find_one({"type": "lottery_win", "date": today})
+        if winner:
+            winner_id = winner["user_id"]
+            amount = pool["amount"] if pool else 1000
+            say(f"今日獎金池已被 <@{winner_id}> 抽中！目前獎金池重設為 {amount} 枚烏薩奇幣。")
+        else:
+            amount = pool["amount"] if pool else 1000
+            say(f"今日獎金池目前累積：{amount} 枚烏薩奇幣！")
+
     @app.message(re.compile(r"^!抽獎(?:\s+(\d+))?$"))
     def lottery(message, say):
         coin_collection = db.user_coins
-        pool_collection = db.lottery_pool  # 新增一個 collection 儲存獎金池
+        pool_collection = db.lottery_pool
         user_id = message['user']
+        # 取得今日日期
+        today = datetime.now().strftime("%Y-%m-%d")
+        # 查詢今天是否已有人中獎
+        winner = coin_collection.find_one({"type": "lottery_win", "date": today})
+        if winner:
+            say(f"今日已經有人中獎，中獎人是 <@{winner['user_id']}>，請明天再來挑戰！")
+            return
+
         # 解析下注金額
         match = re.match(r"^!抽獎(?:\s+(\d+))?$", message['text'])
         bet = int(match.group(1)) if match and match.group(1) else 10
@@ -276,14 +301,13 @@ def register_coin_handlers(app, config, db):
         record_coin_change(coin_collection, user_id, -bet, "lottery", related_user=None)
 
         # 取得今日獎金池
-        today = datetime.now().strftime("%Y-%m-%d")
         pool = pool_collection.find_one({"date": today})
         if not pool:
             # 若今天第一次抽，獎金池設為昨日獎金池+預設每日增加額
             yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
             y_pool = pool_collection.find_one({"date": yesterday})
             base = y_pool["amount"] if y_pool else 1000
-            pool_collection.insert_one({"date": today, "amount": base + 500})  # 每日自動增加1000
+            pool_collection.insert_one({"date": today, "amount": base + 500})  # 每日自動增加500
             pool = pool_collection.find_one({"date": today})
 
         # 把本次下注金額加進獎金池
@@ -291,7 +315,7 @@ def register_coin_handlers(app, config, db):
         pool = pool_collection.find_one({"date": today})
         jackpot = pool["amount"]
 
-        # 計算中獎機率（例如：每下注10幣有1%機率，最多50%）
+        # 計算中獎機率（每10幣1%，最高30%）
         win_rate = min(bet // 10, 30)
         import random
         is_win = random.randint(1, 100) <= win_rate
@@ -303,4 +327,4 @@ def register_coin_handlers(app, config, db):
             # 重設獎金池
             pool_collection.update_one({"date": today}, {"$set": {"amount": 1000}})
         else:
-            say(f"<@{user_id}> 很可惜沒中獎，今日獎金池已累積 {jackpot} 幣！\n(你花越多，中獎機率越高，投注300枚 最高30%)")        
+            say(f"<@{user_id}> 很可惜沒中獎，今日獎金池已累積 {jackpot} 幣！\n(你花越多，中獎機率越高，投注300枚 最高30%)")
