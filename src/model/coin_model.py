@@ -52,10 +52,13 @@ def record_coin_change(coin_collection, user_id, amount, change_type, related_us
 
 def register_coin_handlers(app, config, db):
     @app.message(re.compile(r"^!test$"))
-    def test_command(message, say):
+    def test_command(message, say):        
         coin_collection = db.user_coins
-        record_coin_change(coin_collection, "U07F9PND71V", 1000000000000, "sysdate")        
-        say(f"這是測試指令，請忽略。")
+        shop_collection = db.user_shops
+        # 清空背包
+        result = shop_collection.delete_many({"user_id": "U07F9PND71V"})
+        record_coin_change(coin_collection, "U07F9PND71V", 1000000000000, "sysdate")
+        say(f"這是測試指令，已清空背包（刪除 {result.deleted_count} 筆資料），請忽略。")
 
     @app.message(re.compile(r"^!簽到$"))
     def checkin(message, say):
