@@ -445,7 +445,7 @@ def register_coin_handlers(app, config, db):
             record_coin_change(coin_collection, user_id, -bet, "slot_machine", related_user=None)
 
         # 拉霸圖案與賠率設定
-        symbols = ["🍒", "🍋", "🔔", "⭐", "💎","7️⃣"]
+        symbols = ["🍒", "🍋", "🔔", "⭐", "💎", "7️⃣"]
         payout = {
             "🍒🍒🍒": bet * 5,
             "🍋🍋🍋": bet * 8,
@@ -455,17 +455,47 @@ def register_coin_handlers(app, config, db):
             "7️⃣7️⃣7️⃣": bet * 200
         }
 
-        # 隨機產生三格
-        result = [random.choice(symbols) for _ in range(3)]
-        result_str = "".join(result)
+        # 產生三列三行
+        rows = []
+        for _ in range(3):
+            row = [random.choice(symbols) for _ in range(3)]
+            rows.append(row)
 
-        # 判斷是否中獎
-        win_amount = payout.get(result_str, 0)
+        msg = f"<@{user_id}> 🎰 拉霸結果：\n"
+        for row in rows:
+            msg += " ".join(row) + "\n"
+
+        win_amount = 0
+        win_msgs = []
+
+        # 判斷中間那列
+        middle_row = rows[1]
+        middle_str = "".join(middle_row)
+        amount = payout.get(middle_str, 0)
+        if amount > 0:
+            win_amount += amount
+            win_msgs.append(f"中間橫列中獎：{middle_str}，獲得 {amount * 2} 幣（*2）")
+
+        # 判斷左上到右下斜線
+        diag1 = rows[0][0] + rows[1][1] + rows[2][2]
+        amount_diag1 = payout.get(diag1, 0)
+        if amount_diag1 > 0:
+            win_amount += amount_diag1 * 2
+            win_msgs.append(f"左上到右下斜線中獎：{diag1}，獲得 {amount_diag1 } 幣")
+
+        # 判斷右上到左下斜線
+        diag2 = rows[0][2] + rows[1][1] + rows[2][0]
+        amount_diag2 = payout.get(diag2, 0)
+        if amount_diag2 > 0:
+            win_amount += amount_diag2 * 2
+            win_msgs.append(f"右上到左下斜線中獎：{diag2}，獲得 {amount_diag2} 幣")
+
         if win_amount > 0:
             record_coin_change(coin_collection, user_id, win_amount, "slot_machine_win")
-            msg = f"<@{user_id}> 🎰 拉霸結果：{' '.join(result)}\n恭喜中獎！獲得 {win_amount} 枚烏薩奇幣！"
+            msg += "\n" + "\n".join(win_msgs)
+            msg += f"\n總共獲得 {win_amount} 枚烏薩奇幣！"
         else:
-            msg = f"<@{user_id}> 🎰 拉霸結果：{' '.join(result)}\n可惜沒中獎，再接再厲！"
+            msg += "可惜沒中獎，再接再厲！"
 
         # 查詢最新剩餘金額
         total = coin_collection.aggregate([

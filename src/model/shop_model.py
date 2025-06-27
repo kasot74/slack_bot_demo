@@ -43,6 +43,22 @@ SHOP_ITEMS = [
         "desc": "持有時簽到金額倍增",
         "expire_days": 3,
         "effect": {"sign_in_bonus": 2}  # 2倍
+    },
+    {
+        "id": 6,
+        "name": "拉霸🍒連鎖",
+        "price": 200,
+        "desc": "將拉霸中的🍒改為7️⃣",
+        "expire_days": 3,
+        "effect": {"slot1": True}  # 2倍
+    },
+    {
+        "id": 7,
+        "name": "拉霸🍋連鎖",
+        "price": 200,
+        "desc": "將拉霸中的🍋改為7️⃣",
+        "expire_days": 3,
+        "effect": {"slot2": True}  # 2倍
     }
 ]
 
