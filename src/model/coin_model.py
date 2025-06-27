@@ -444,6 +444,12 @@ def register_coin_handlers(app, config, db):
             # 扣除下注金額
             record_coin_change(coin_collection, user_id, -bet, "slot_machine", related_user=None)
 
+        # 查詢背包是否有拉霸🍒連鎖或拉霸🍋連鎖
+        slot1_items = get_valid_items(user_id, db, effect_key="slot1")
+        slot2_items = get_valid_items(user_id, db, effect_key="slot2")
+        has_slot1 = bool(slot1_items)
+        has_slot2 = bool(slot2_items)
+
         # 拉霸圖案與賠率設定
         symbols = ["🍒", "🍋", "🔔", "⭐", "💎", "7️⃣"]
         payout = {
@@ -459,6 +465,12 @@ def register_coin_handlers(app, config, db):
         rows = []
         for _ in range(3):
             row = [random.choice(symbols) for _ in range(3)]
+            # 物品效果：將🍒改為7️⃣
+            if has_slot1:
+                row = ["7️⃣" if s == "🍒" else s for s in row]
+            # 物品效果：將🍋改為7️⃣
+            if has_slot2:
+                row = ["7️⃣" if s == "🍋" else s for s in row]
             rows.append(row)
 
         msg = f"<@{user_id}> 🎰 拉霸結果：\n"
@@ -474,20 +486,20 @@ def register_coin_handlers(app, config, db):
         amount = payout.get(middle_str, 0)
         if amount > 0:
             win_amount += amount
-            win_msgs.append(f"中間橫列中獎：{middle_str}，獲得 {amount * 2} 幣（*2）")
+            win_msgs.append(f"中間橫列中獎：{middle_str}，獲得 {amount} 幣")
 
         # 判斷左上到右下斜線
         diag1 = rows[0][0] + rows[1][1] + rows[2][2]
         amount_diag1 = payout.get(diag1, 0)
         if amount_diag1 > 0:
-            win_amount += amount_diag1 * 2
-            win_msgs.append(f"左上到右下斜線中獎：{diag1}，獲得 {amount_diag1 } 幣")
+            win_amount += amount_diag1
+            win_msgs.append(f"左上到右下斜線中獎：{diag1}，獲得 {amount_diag1} 幣")
 
         # 判斷右上到左下斜線
         diag2 = rows[0][2] + rows[1][1] + rows[2][0]
         amount_diag2 = payout.get(diag2, 0)
         if amount_diag2 > 0:
-            win_amount += amount_diag2 * 2
+            win_amount += amount_diag2
             win_msgs.append(f"右上到左下斜線中獎：{diag2}，獲得 {amount_diag2} 幣")
 
         if win_amount > 0:

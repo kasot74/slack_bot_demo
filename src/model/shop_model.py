@@ -50,7 +50,7 @@ SHOP_ITEMS = [
         "price": 200,
         "desc": "將拉霸中的🍒改為7️⃣",
         "expire_days": 3,
-        "effect": {"slot1": True}  # 2倍
+        "effect": {"slot1": True}  
     },
     {
         "id": 7,
@@ -58,7 +58,7 @@ SHOP_ITEMS = [
         "price": 200,
         "desc": "將拉霸中的🍋改為7️⃣",
         "expire_days": 3,
-        "effect": {"slot2": True}  # 2倍
+        "effect": {"slot2": True}  
     }
 ]
 
