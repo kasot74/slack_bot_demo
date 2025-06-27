@@ -32,9 +32,9 @@ def shop_list_handler(message, say):
     msg += "購買請輸入：!購買 商品編號"
     say(msg)
 
-def shop_buy_handler(message, say, db, record_coin_change):
-    coin_collection = db['user_coins']
-    shop_collection = db['user_shop']
+def shop_buy_handler(message, say, db):
+    coin_collection = db.user_coins
+    shop_collection = db.user_shops
     user_id = message['user']
     match = re.match(r"^!購買\s+(\d+)$", message['text'])
     if not match:
@@ -73,7 +73,7 @@ def shop_buy_handler(message, say, db, record_coin_change):
     say(msg)
 
 def shop_bag_handler(message, say, db):
-    shop_collection = db['user_shop']
+    shop_collection = db.user_shops
     user_id = message['user']
     now = datetime.now()
     items = list(shop_collection.find({"user_id": user_id}))
@@ -95,14 +95,14 @@ def shop_bag_handler(message, say, db):
     say(msg)
 
 # 綁定到 app
-def register_shop_handlers(app, db, record_coin_change):
+def register_shop_handlers(app, config, db):
     @app.message(re.compile(r"^!商店$"))
     def _(message, say):
         shop_list_handler(message, say)
 
     @app.message(re.compile(r"^!購買\s+(\d+)$"))
     def _(message, say):
-        shop_buy_handler(message, say, db, record_coin_change)
+        shop_buy_handler(message, say, db)
 
     @app.message(re.compile(r"^!背包$"))
     def _(message, say):
