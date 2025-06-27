@@ -32,8 +32,8 @@ SHOP_ITEMS = [
         "id": 4,
         "name": "黃金口袋",
         "price": 500000,
-        "desc": "持有時執行任何消耗烏薩奇幣的動作都不會扣幣（效期1天）",
-        "expire_days": 1,
+        "desc": "持有時執行任何消耗烏薩奇幣的動作都不會扣幣（效期3天）",
+        "expire_days": 3,
         "effect": {"free_cost": True}
     },
     {
@@ -52,24 +52,6 @@ COMMANDS_HELP = [
     ("!背包", "查看自己的購買背包")
 ]
 
-def get_valid_items(user_id, db, effect_key=None):
-    """
-    取得使用者背包中尚未過期且未使用的有效物品。
-    可選擇只取出含特定效果的物品（effect_key）。
-    """
-    shop_collection = db.user_shops
-    now = datetime.now()
-    query = {
-        "user_id": user_id,
-        "$or": [
-            {"expire_at": None},
-            {"expire_at": {"$gt": now}}
-        ]
-    }
-    if effect_key:
-        query[f"effect.{effect_key}"] = {"$exists": True}
-    items = list(shop_collection.find(query))
-    return items
 
 def get_shop_item(item_id):
     return next((i for i in SHOP_ITEMS if i["id"] == item_id), None)

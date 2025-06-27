@@ -2,7 +2,6 @@ import re
 import random
 from datetime import datetime, timedelta
 from pymongo import MongoClient
-from .shop_model import get_valid_items
 
 COMMANDS_HELP = [
     ("!簽到", "每日簽到，獲得 100 幣"),
@@ -48,6 +47,26 @@ def record_coin_change(coin_collection, user_id, amount, change_type, related_us
             record["from_user"] = related_user
     coin_collection.insert_one(record)
 
+def get_valid_items(user_id, db, effect_key=None):
+    """
+    取得使用者背包中尚未過期且未使用的有效物品。
+    可選擇只取出含特定效果的物品（effect_key）。
+    """
+    shop_collection = db.user_shops
+    now = datetime.now()
+    query = {
+        "user_id": user_id,
+        "$or": [
+            {"expire_at": None},
+            {"expire_at": {"$gt": now}}
+        ]
+    }
+    if effect_key:
+        query[f"effect.{effect_key}"] = {"$exists": True}
+    items = list(shop_collection.find(query))
+    return items
+
+def register_coin_handlers(app, config, db):
     @app.message(re.compile(r"^!簽到$"))
     def checkin(message, say):
         coin_collection = db.user_coins   
