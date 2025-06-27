@@ -195,12 +195,13 @@ def register_coin_handlers(app, config, db):
             record_coin_change(coin_collection, user_id, -bet, "spin_wheel", related_user=None)
         # 動態設定機率
         population, weights = weighted_wheel_options(bet)
-
-        #提升大獎（1000幣）其權重        
         idx_1000 = population.index("恭喜獲得 1000 幣")
-        weights[idx_1000] = int(weights[idx_1000] * (1 + spin_bonus))
-
-        result = random.choices(population, weights=weights, k=1)[0]        
+        if spin_bonus >= 1:
+            # 100% 中大獎
+            result = "恭喜獲得 1000 幣"
+        else:
+            weights[idx_1000] = int(weights[idx_1000] * (1 + spin_bonus))
+            result = random.choices(population, weights=weights, k=1)[0]     
         # 發獎
         if "1000 幣" in result:
             record_coin_change(coin_collection, user_id, 1000, "spin_wheel_reward")
