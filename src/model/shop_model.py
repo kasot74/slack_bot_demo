@@ -39,7 +39,7 @@ SHOP_ITEMS = [
     {
         "id": 5,
         "name": "簽到好寶寶",
-        "price": 2000,
+        "price": 50,
         "desc": "持有時簽到金額倍增（效期3天）",
         "expire_days": 3,
         "effect": {"sign_in_bonus": 2}  # 2倍
