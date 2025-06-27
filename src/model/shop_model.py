@@ -33,8 +33,8 @@ def shop_list_handler(message, say):
     say(msg)
 
 def shop_buy_handler(message, say, db, record_coin_change):
-    coin_collection = db.user_coins
-    shop_collection = db.user_shop
+    coin_collection = db['user_coins']
+    shop_collection = db['user_shop']
     user_id = message['user']
     match = re.match(r"^!購買\s+(\d+)$", message['text'])
     if not match:
@@ -73,7 +73,7 @@ def shop_buy_handler(message, say, db, record_coin_change):
     say(msg)
 
 def shop_bag_handler(message, say, db):
-    shop_collection = db.user_shop
+    shop_collection = db['user_shop']
     user_id = message['user']
     now = datetime.now()
     items = list(shop_collection.find({"user_id": user_id}))
