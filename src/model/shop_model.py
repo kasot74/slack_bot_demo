@@ -31,8 +31,8 @@ SHOP_ITEMS = [
     {
         "id": 4,
         "name": "黃金口袋",
-        "price": 500000,
-        "desc": "持有時執行任何消耗烏薩奇幣的動作都不會扣幣",
+        "price": 50000,
+        "desc": "持有時執行任何消耗烏薩奇幣的動作時有50%的機率不會扣幣",
         "expire_days": 3,
         "effect": {"free_cost": True}
     },

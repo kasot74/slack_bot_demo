@@ -159,11 +159,16 @@ def register_coin_handlers(app, config, db):
         if bet < 10:
             say(f"<@{user_id}>，最低下注 10 枚烏薩奇幣！")
             return
-
+        
         # 查詢背包是否有有效黃金口袋
         free_cost_items = get_valid_items(user_id, db, effect_key="free_cost")
-        is_free = any(item["effect"].get("free_cost") for item in free_cost_items)
-
+        is_free = False
+        if free_cost_items:
+            # 50% 機率觸發不扣幣
+            if random.random() < 0.5:
+                say(f"<@{user_id}>，你觸發了黃金口袋，這次不扣除烏薩奇幣！")
+                is_free = True
+                
         # 查詢背包是否有有效幸運符
         spin_bonus_items = get_valid_items(user_id, db, effect_key="spin_bonus")
         spin_bonus = sum(item["effect"].get("spin_bonus", 0) for item in spin_bonus_items)
@@ -340,7 +345,12 @@ def register_coin_handlers(app, config, db):
             return
         # 查詢背包是否有有效黃金口袋
         free_cost_items = get_valid_items(user_id, db, effect_key="free_cost")
-        is_free = any(item["effect"].get("free_cost") for item in free_cost_items)
+        is_free = False
+        if free_cost_items:
+            # 50% 機率觸發不扣幣
+            if random.random() < 0.5:
+                say(f"<@{user_id}>，你觸發了黃金口袋，這次不扣除烏薩奇幣！")
+                is_free = True
 
         # 查詢背包是否有籤王
         lottery_bonus_items = get_valid_items(user_id, db, effect_key="lottery_bonus")
@@ -402,9 +412,16 @@ def register_coin_handlers(app, config, db):
         if bet < 10:
             say(f"<@{user_id}>，最低下注 10 枚烏薩奇幣！")
             return
+            
         # 查詢背包是否有有效黃金口袋
         free_cost_items = get_valid_items(user_id, db, effect_key="free_cost")
-        is_free = any(item["effect"].get("free_cost") for item in free_cost_items)
+        is_free = False
+        if free_cost_items:
+            # 50% 機率觸發不扣幣
+            if random.random() < 0.5:
+                say(f"<@{user_id}>，你觸發了黃金口袋，這次不扣除烏薩奇幣！")
+                is_free = True
+
         if not is_free:
             # 查詢用戶現有幣
             total = coin_collection.aggregate([
