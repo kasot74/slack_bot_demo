@@ -6,27 +6,27 @@ from .coin_model import record_coin_change
 SHOP_ITEMS = [
     {
         "id": 1,
-        "name": "幸運符(未實裝效果)",
-        "price": 1000,
-        "desc": "增加轉盤中大獎率5%（效期1天）",
+        "name": "幸運符",
+        "price": 5000,
+        "desc": "增加轉盤中大獎率5% 可疊加（效期1天）",
         "expire_days": 1,
         "effect": {"spin_bonus": 0.05}
     },
     {
         "id": 2,
         "name": "有錢人勳章",
-        "price": 1000000,
+        "price": 100000000,
         "desc": "擁有它證明你是有錢人，無任何效果",
         "expire_days": None,
         "effect": {}
     },
     {
         "id": 3,
-        "name": "籤王(未實裝效果)",
-        "price": 500000,
-        "desc": "增加抽籤中獎率10%（效期1周）",
+        "name": "籤王",
+        "price": 10000,
+        "desc": "增加抽籤中獎率5% 可疊加（效期1周）",
         "expire_days": 7,
-        "effect": {"spin_bonus": 0.1}
+        "effect": {"lottery_bonus": 0.05}
     },
     {
         "id": 4,

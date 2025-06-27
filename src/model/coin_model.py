@@ -162,6 +162,11 @@ def register_coin_handlers(app, config, db):
         # 查詢背包是否有有效黃金口袋
         free_cost_items = get_valid_items(user_id, db, effect_key="free_cost")
         is_free = any(item["effect"].get("free_cost") for item in free_cost_items)
+
+        # 查詢背包是否有有效幸運符
+        spin_bonus_items = get_valid_items(user_id, db, effect_key="spin_bonus")
+        spin_bonus = sum(item["effect"].get("spin_bonus", 0) for item in spin_bonus_items)
+
         if not is_free:
             # 查詢用戶現有幣
             total = coin_collection.aggregate([
@@ -177,6 +182,11 @@ def register_coin_handlers(app, config, db):
             record_coin_change(coin_collection, user_id, -bet, "spin_wheel", related_user=None)
         # 動態設定機率
         population, weights = weighted_wheel_options(bet)
+
+        #提升大獎（1000幣）其權重        
+        idx_1000 = population.index("恭喜獲得 1000 幣")
+        weights[idx_1000] = int(weights[idx_1000] * (1 + spin_bonus))
+
         result = random.choices(population, weights=weights, k=1)[0]        
         # 發獎
         if "1000 幣" in result:
@@ -330,6 +340,11 @@ def register_coin_handlers(app, config, db):
         # 查詢背包是否有有效黃金口袋
         free_cost_items = get_valid_items(user_id, db, effect_key="free_cost")
         is_free = any(item["effect"].get("free_cost") for item in free_cost_items)
+
+        # 查詢背包是否有籤王
+        lottery_bonus_items = get_valid_items(user_id, db, effect_key="lottery_bonus")
+        lottery_bonus = sum(item["effect"].get("lottery_bonus", 0) for item in spin_bonus_items)        
+
         if not is_free:
             # 查詢用戶現有幣
             total = coin_collection.aggregate([
@@ -361,7 +376,10 @@ def register_coin_handlers(app, config, db):
 
         # 計算中獎機率（每10幣1%，最高30%）
         win_rate = min(bet // 10, 30)
-        import random
+        if lottery_bonus > 0:
+            win_rate += int(lottery_bonus * 100)
+        win_rate = min(win_rate, 100)   
+        
         is_win = random.randint(1, 100) <= win_rate
 
         if is_win:
