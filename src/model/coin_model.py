@@ -444,10 +444,14 @@ def register_coin_handlers(app, config, db):
             # 扣除下注金額
             record_coin_change(coin_collection, user_id, -bet, "slot_machine", related_user=None)
 
-        # 查詢背包是否有拉霸🍒連鎖或拉霸🍋連鎖        
-        has_slot1 = bool(get_valid_items(user_id, db, effect_key="slot1"))
-        has_slot2 = bool(get_valid_items(user_id, db, effect_key="slot2"))
-        has_slot3 = bool(get_valid_items(user_id, db, effect_key="slot3"))
+        # 查詢背包是否有拉霸🍒連鎖或拉霸🍋連鎖
+        slot1_items = get_valid_items(user_id, db, effect_key="slot1")
+        slot2_items = get_valid_items(user_id, db, effect_key="slot2")
+        slot3_items = get_valid_items(user_id, db, effect_key="slot3")
+        has_slot1 = bool(slot1_items)
+        has_slot2 = bool(slot2_items)
+        has_slot3 = bool(slot3_items)
+
         # 拉霸輪帶設定（每一輪一個順序表）
         reel = [
             ["🍒", "🍋", "🔔", "⭐", "💎", "7️⃣", "🍒", "🍋", "🔔", "⭐", "💎", "7️⃣"],
@@ -494,22 +498,29 @@ def register_coin_handlers(app, config, db):
         win_amount = 0
         win_msgs = []
 
-        # 判斷中間那列
-        middle_row = rows[1]
-        middle_str = "".join(middle_row)
-        amount = payout.get(middle_str, 0)
-        if amount > 0:
-            win_amount += amount
-            win_msgs.append(f"中間橫列中獎：{middle_str}，獲得 {amount} 幣")
+        # 所有橫列
+        for i, row in enumerate(rows):
+            row_str = "".join(row)
+            amount = payout.get(row_str, 0)
+            if amount > 0:
+                win_amount += amount
+                win_msgs.append(f"第{i+1}橫列中獎：{row_str}，獲得 {amount} 幣")
 
-        # 判斷左上到右下斜線
+        # 所有直行
+        for col in range(3):
+            col_str = rows[0][col] + rows[1][col] + rows[2][col]
+            amount = payout.get(col_str, 0)
+            if amount > 0:
+                win_amount += amount
+                win_msgs.append(f"第{col+1}直行中獎：{col_str}，獲得 {amount} 幣")
+
+        # 兩條斜線
         diag1 = rows[0][0] + rows[1][1] + rows[2][2]
         amount_diag1 = payout.get(diag1, 0)
         if amount_diag1 > 0:
             win_amount += amount_diag1
             win_msgs.append(f"左上到右下斜線中獎：{diag1}，獲得 {amount_diag1} 幣")
 
-        # 判斷右上到左下斜線
         diag2 = rows[0][2] + rows[1][1] + rows[2][0]
         amount_diag2 = payout.get(diag2, 0)
         if amount_diag2 > 0:
