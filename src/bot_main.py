@@ -5,11 +5,13 @@ from .handlers import register_handlers
 from .model.coin_model import register_coin_handlers
 from .model.member_monitor import register_member_handlers
 from .model.stock_model import register_stock_handlers
+from .model.shop_model import register_shop_handlers
 
 from .handlers import COMMANDS_HELP as HANDLER_COMMANDS
 from .model.coin_model import COMMANDS_HELP as COIN_COMMANDS
 from .model.member_monitor import COMMANDS_HELP as MEMBER_COMMANDS
 from .model.stock_model import COMMANDS_HELP as STOCK_COMMANDS
+from .model.shop_model import COMMANDS_HELP as SHOP_COMMANDS
 
 from .utilities import read_config
 from .database import con_db
@@ -23,7 +25,7 @@ db = con_db(config)
 app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_SECRET'])
 
 
-ALL_COMMANDS = COIN_COMMANDS + MEMBER_COMMANDS + HANDLER_COMMANDS + STOCK_COMMANDS
+ALL_COMMANDS = COIN_COMMANDS + MEMBER_COMMANDS + HANDLER_COMMANDS + STOCK_COMMANDS + SHOP_COMMANDS
 
 def get_all_commands_text():
     help_text = "*可用指令列表：*\n"
@@ -39,7 +41,8 @@ register_coin_handlers(app, config, db)
 
 # 註冊成員打招呼模組
 register_member_handlers(app, config, db)
-
+# 商店模組
+register_shop_handlers(app, config, db)
 # 股票模組
 register_stock_handlers(app, config, db)
 
