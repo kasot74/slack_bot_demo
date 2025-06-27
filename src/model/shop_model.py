@@ -43,6 +43,14 @@ SHOP_ITEMS = [
         "desc": "持有時簽到金額倍增",
         "expire_days": 3,
         "effect": {"sign_in_bonus": 2}  # 2倍
+    },
+    {
+        "id": 6,
+        "name": "",
+        "price": 50,
+        "desc": "持有時簽到金額倍增",
+        "expire_days": 3,
+        "effect": {"sign_in_bonus": 2}  # 2倍
     }
 ]
 

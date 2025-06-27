@@ -83,8 +83,8 @@ def register_coin_handlers(app, config, db):
         shop_items = get_valid_items(user_id, db, effect_key="sign_in_bonus")
         bonus = 1
         if shop_items:
-            # 取最大倍數（可依需求調整）
-            bonus = max(item["effect"].get("sign_in_bonus", 1) for item in shop_items)
+            say(f"<@{user_id}>，你有簽到好寶寶，簽到金額將會倍增！")            
+            bonus = 2
         amount = 100 * bonus
 
         # 新增簽到記錄並加幣
