@@ -102,7 +102,8 @@ def shop_buy_handler(message, say, db):
         "item_name": item["name"],
         "price": item["price"],
         "timestamp": datetime.now(),
-        "expire_at": expire_at
+        "expire_at": expire_at,
+        "effect": item["effect"]
     })
     msg = f"<@{user_id}>，成功購買 {item['name']}！"
     if expire_at:
