@@ -2,6 +2,7 @@ import re
 import random
 from datetime import datetime, timedelta
 from pymongo import MongoClient
+from .shop_model import get_valid_items
 
 COMMANDS_HELP = [
     ("!簽到", "每日簽到，獲得 100 幣"),
@@ -47,7 +48,6 @@ def record_coin_change(coin_collection, user_id, amount, change_type, related_us
             record["from_user"] = related_user
     coin_collection.insert_one(record)
 
-def register_coin_handlers(app, config, db):
     @app.message(re.compile(r"^!簽到$"))
     def checkin(message, say):
         coin_collection = db.user_coins   
@@ -59,9 +59,17 @@ def register_coin_handlers(app, config, db):
             say(f"<@{user_id}>，你今天已經簽到過囉！")
             return
 
+        # 查詢背包是否有有效簽到好寶寶
+        shop_items = get_valid_items(user_id, db, effect_key="sign_in_bonus")
+        bonus = 1
+        if shop_items:
+            # 取最大倍數（可依需求調整）
+            bonus = max(item["effect"].get("sign_in_bonus", 1) for item in shop_items)
+        amount = 100 * bonus
+
         # 新增簽到記錄並加幣
-        record_coin_change(coin_collection, user_id, 100, "checkin")
-        say(f"<@{user_id}>，簽到成功！獲得 100 烏薩奇幣 🎉")
+        record_coin_change(coin_collection, user_id, amount, "checkin")
+        say(f"<@{user_id}>，簽到成功！獲得 {amount} 烏薩奇幣 🎉")
 
     @app.message(re.compile(r"^!查幣$"))
     def check_coins(message, say):
@@ -131,18 +139,23 @@ def register_coin_handlers(app, config, db):
         if bet < 10:
             say(f"<@{user_id}>，最低下注 10 枚烏薩奇幣！")
             return
-        # 查詢用戶現有幣
-        total = coin_collection.aggregate([
-            {"$match": {"user_id": user_id}},
-            {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
-        ])
-        total = list(total)
-        coins = total[0]["sum"] if total else 0
-        if coins < bet:
-            say(f"<@{user_id}>，你的烏薩奇幣不足，無法下注 {bet} 枚！")
-            return
-        # 扣除下注金額
-        record_coin_change(coin_collection, user_id, -bet, "spin_wheel", related_user=None)
+
+        # 查詢背包是否有有效黃金口袋
+        free_cost_items = get_valid_items(user_id, db, effect_key="free_cost")
+        is_free = any(item["effect"].get("free_cost") for item in free_cost_items)
+        if not is_free:
+            # 查詢用戶現有幣
+            total = coin_collection.aggregate([
+                {"$match": {"user_id": user_id}},
+                {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
+            ])
+            total = list(total)
+            coins = total[0]["sum"] if total else 0
+            if coins < bet:
+                say(f"<@{user_id}>，你的烏薩奇幣不足，無法下注 {bet} 枚！")
+                return
+            # 扣除下注金額
+            record_coin_change(coin_collection, user_id, -bet, "spin_wheel", related_user=None)
         # 動態設定機率
         population, weights = weighted_wheel_options(bet)
         result = random.choices(population, weights=weights, k=1)[0]        
@@ -295,18 +308,22 @@ def register_coin_handlers(app, config, db):
         if bet < 10:
             say(f"<@{user_id}>，最低下注 10 枚烏薩奇幣！")
             return
-        # 查詢用戶現有幣
-        total = coin_collection.aggregate([
-            {"$match": {"user_id": user_id}},
-            {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
-        ])
-        total = list(total)
-        coins = total[0]["sum"] if total else 0
-        if coins < bet:
-            say(f"<@{user_id}>，你的烏薩奇幣不足，無法下注 {bet} 枚！")
-            return
-        # 扣除下注金額
-        record_coin_change(coin_collection, user_id, -bet, "lottery", related_user=None)
+        # 查詢背包是否有有效黃金口袋
+        free_cost_items = get_valid_items(user_id, db, effect_key="free_cost")
+        is_free = any(item["effect"].get("free_cost") for item in free_cost_items)
+        if not is_free:
+            # 查詢用戶現有幣
+            total = coin_collection.aggregate([
+                {"$match": {"user_id": user_id}},
+                {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
+            ])
+            total = list(total)
+            coins = total[0]["sum"] if total else 0
+            if coins < bet:
+                say(f"<@{user_id}>，你的烏薩奇幣不足，無法下注 {bet} 枚！")
+                return
+            # 扣除下注金額
+            record_coin_change(coin_collection, user_id, -bet, "lottery", related_user=None)
 
         # 取得今日獎金池
         pool = pool_collection.find_one({"date": today})
@@ -347,18 +364,22 @@ def register_coin_handlers(app, config, db):
         if bet < 10:
             say(f"<@{user_id}>，最低下注 10 枚烏薩奇幣！")
             return
-        # 查詢用戶現有幣
-        total = coin_collection.aggregate([
-            {"$match": {"user_id": user_id}},
-            {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
-        ])
-        total = list(total)
-        coins = total[0]["sum"] if total else 0
-        if coins < bet:
-            say(f"<@{user_id}>，你的烏薩奇幣不足，無法下注 {bet} 枚！")
-            return
-        # 扣除下注金額
-        record_coin_change(coin_collection, user_id, -bet, "slot_machine", related_user=None)
+        # 查詢背包是否有有效黃金口袋
+        free_cost_items = get_valid_items(user_id, db, effect_key="free_cost")
+        is_free = any(item["effect"].get("free_cost") for item in free_cost_items)
+        if not is_free:
+            # 查詢用戶現有幣
+            total = coin_collection.aggregate([
+                {"$match": {"user_id": user_id}},
+                {"$group": {"_id": "$user_id", "sum": {"$sum": "$coins"}}}
+            ])
+            total = list(total)
+            coins = total[0]["sum"] if total else 0
+            if coins < bet:
+                say(f"<@{user_id}>，你的烏薩奇幣不足，無法下注 {bet} 枚！")
+                return
+            # 扣除下注金額
+            record_coin_change(coin_collection, user_id, -bet, "slot_machine", related_user=None)
 
         # 拉霸圖案與賠率設定
         symbols = ["🍒", "🍋", "🔔", "⭐", "💎"]

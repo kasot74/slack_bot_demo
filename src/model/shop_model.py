@@ -4,10 +4,46 @@ from pymongo import MongoClient
 from .coin_model import record_coin_change
 # 商品清單，可依需求擴充
 SHOP_ITEMS = [
-    {"id": 1, "name": "幸運符", "price": 1000, "desc": "增加轉盤中大獎率5%", "expire_days": 1},
-    {"id": 2, "name": "有錢人勳章", "price": 1000000, "desc": "沒有功能只能證明你是有錢人", "expire_days": None},
-    {"id": 3, "name": "神秘禮包", "price": 200, "desc": "隨機獲得一份神秘獎勵", "expire_days": None},
-    {"id": 4, "name": "籤王", "price": 500000, "desc": "增加抽籤中獎率10%", "expire_days": None},
+    {
+        "id": 1,
+        "name": "幸運符(未實裝效果)",
+        "price": 1000,
+        "desc": "增加轉盤中大獎率5%（效期1天）",
+        "expire_days": 1,
+        "effect": {"spin_bonus": 0.05}
+    },
+    {
+        "id": 2,
+        "name": "有錢人勳章",
+        "price": 1000000,
+        "desc": "擁有它證明你是有錢人，無任何效果",
+        "expire_days": None,
+        "effect": {}
+    },
+    {
+        "id": 3,
+        "name": "籤王(未實裝效果)",
+        "price": 500000,
+        "desc": "增加抽籤中獎率10%（效期1周）",
+        "expire_days": 7,
+        "effect": {"spin_bonus": 0.1}
+    },
+    {
+        "id": 4,
+        "name": "黃金口袋",
+        "price": 500000,
+        "desc": "持有時執行任何消耗烏薩奇幣的動作都不會扣幣（效期1天）",
+        "expire_days": 1,
+        "effect": {"free_cost": True}
+    },
+    {
+        "id": 5,
+        "name": "簽到好寶寶",
+        "price": 2000,
+        "desc": "持有時簽到金額倍增（效期3天）",
+        "expire_days": 3,
+        "effect": {"sign_in_bonus": 2}  # 2倍
+    }
 ]
 
 COMMANDS_HELP = [
@@ -15,6 +51,25 @@ COMMANDS_HELP = [
     ("!購買 商品編號", "購買指定商品"),
     ("!背包", "查看自己的購買背包")
 ]
+
+def get_valid_items(user_id, db, effect_key=None):
+    """
+    取得使用者背包中尚未過期且未使用的有效物品。
+    可選擇只取出含特定效果的物品（effect_key）。
+    """
+    shop_collection = db.user_shops
+    now = datetime.now()
+    query = {
+        "user_id": user_id,
+        "$or": [
+            {"expire_at": None},
+            {"expire_at": {"$gt": now}}
+        ]
+    }
+    if effect_key:
+        query[f"effect.{effect_key}"] = {"$exists": True}
+    items = list(shop_collection.find(query))
+    return items
 
 def get_shop_item(item_id):
     return next((i for i in SHOP_ITEMS if i["id"] == item_id), None)
