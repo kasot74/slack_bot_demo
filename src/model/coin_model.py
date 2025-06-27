@@ -55,7 +55,7 @@ def register_coin_handlers(app, config, db):
     def test_command(message, say):
         user_id = message['user']
         shop_items = get_valid_items(user_id, db, effect_key="sign_in_bonus")
-        say("這是測試指令，請忽略。")
+        say(f"{shop_items} 這是測試指令，請忽略。")
     @app.message(re.compile(r"^!簽到$"))
     def checkin(message, say):
         coin_collection = db.user_coins   
