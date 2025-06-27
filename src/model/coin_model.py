@@ -420,7 +420,7 @@ def register_coin_handlers(app, config, db):
         if bet < 10:
             say(f"<@{user_id}>，最低下注 10 枚烏薩奇幣！")
             return
-            
+
         # 查詢背包是否有有效黃金口袋
         free_cost_items = get_valid_items(user_id, db, effect_key="free_cost")
         is_free = False
@@ -450,8 +450,32 @@ def register_coin_handlers(app, config, db):
         has_slot1 = bool(slot1_items)
         has_slot2 = bool(slot2_items)
 
-        # 拉霸圖案與賠率設定
-        symbols = ["🍒", "🍋", "🔔", "⭐", "💎", "7️⃣"]
+        # 拉霸輪帶設定（每一輪一個順序表）
+        reel = [
+            ["🍒", "🍋", "🔔", "⭐", "💎", "7️⃣", "🍒", "🍋", "🔔", "⭐", "💎", "7️⃣"],
+            ["🍋", "🍒", "🔔", "⭐", "7️⃣", "💎", "🍋", "🍒", "🔔", "⭐", "7️⃣", "💎"],
+            ["🔔", "🍋", "🍒", "⭐", "💎", "7️⃣", "🔔", "🍋", "🍒", "⭐", "💎", "7️⃣"]
+        ]
+        # 物品效果：將🍒改為7️⃣
+        if has_slot1:
+            for i in range(3):
+                reel[i] = ["7️⃣" if s == "🍒" else s for s in reel[i]]
+        # 物品效果：將🍋改為7️⃣
+        if has_slot2:
+            for i in range(3):
+                reel[i] = ["7️⃣" if s == "🍋" else s for s in reel[i]]
+
+        # 每輪隨機停一格，組成 3x3 結果
+        stops = [random.randint(0, len(reel[0]) - 1) for _ in range(3)]
+        rows = []
+        for row_idx in range(3):
+            row = []
+            for col in range(3):
+                # 輪帶環狀取值
+                symbol = reel[col][(stops[col] + row_idx) % len(reel[col])]
+                row.append(symbol)
+            rows.append(row)
+
         payout = {
             "🍒🍒🍒": bet * 5,
             "🍋🍋🍋": bet * 8,
@@ -460,18 +484,6 @@ def register_coin_handlers(app, config, db):
             "💎💎💎": bet * 100,
             "7️⃣7️⃣7️⃣": bet * 200
         }
-
-        # 產生三列三行
-        rows = []
-        for _ in range(3):
-            row = [random.choice(symbols) for _ in range(3)]
-            # 物品效果：將🍒改為7️⃣
-            if has_slot1:
-                row = ["7️⃣" if s == "🍒" else s for s in row]
-            # 物品效果：將🍋改為7️⃣
-            if has_slot2:
-                row = ["7️⃣" if s == "🍋" else s for s in row]
-            rows.append(row)
 
         msg = f"<@{user_id}> 🎰 拉霸結果：\n"
         for row in rows:
