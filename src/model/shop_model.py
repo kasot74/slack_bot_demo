@@ -8,7 +8,7 @@ SHOP_ITEMS = [
         "id": 1,
         "name": "幸運符",
         "price": 5000,
-        "desc": "增加轉盤中大獎率5% 可疊加（效期1天）",
+        "desc": "增加轉盤中大獎率5% 可疊加",
         "expire_days": 1,
         "effect": {"spin_bonus": 0.05}
     },
@@ -24,7 +24,7 @@ SHOP_ITEMS = [
         "id": 3,
         "name": "籤王",
         "price": 10000,
-        "desc": "增加抽籤中獎率5% 可疊加（效期1周）",
+        "desc": "增加抽籤中獎率5% 可疊加",
         "expire_days": 7,
         "effect": {"lottery_bonus": 0.05}
     },
@@ -32,7 +32,7 @@ SHOP_ITEMS = [
         "id": 4,
         "name": "黃金口袋",
         "price": 500000,
-        "desc": "持有時執行任何消耗烏薩奇幣的動作都不會扣幣（效期3天）",
+        "desc": "持有時執行任何消耗烏薩奇幣的動作都不會扣幣",
         "expire_days": 3,
         "effect": {"free_cost": True}
     },
@@ -40,7 +40,7 @@ SHOP_ITEMS = [
         "id": 5,
         "name": "簽到好寶寶",
         "price": 50,
-        "desc": "持有時簽到金額倍增（效期3天）",
+        "desc": "持有時簽到金額倍增",
         "expire_days": 3,
         "effect": {"sign_in_bonus": 2}  # 2倍
     }
