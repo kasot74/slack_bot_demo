@@ -3,50 +3,6 @@ import random
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 
-
-SHOP_ITEMS = [
-    {
-        "id": 1,
-        "name": "幸運符",
-        "price": 5000,
-        "desc": "增加轉盤中大獎率5% 可疊加",
-        "expire_days": 1,
-        "effect": {"spin_bonus": 0.05}
-    },
-    {
-        "id": 2,
-        "name": "有錢人勳章",
-        "price": 100000000,
-        "desc": "擁有它證明你是有錢人，無任何效果",
-        "expire_days": None,
-        "effect": {}
-    },
-    {
-        "id": 3,
-        "name": "籤王",
-        "price": 10000,
-        "desc": "增加抽籤中獎率5% 可疊加",
-        "expire_days": 7,
-        "effect": {"lottery_bonus": 0.05}
-    },
-    {
-        "id": 4,
-        "name": "黃金口袋",
-        "price": 50000,
-        "desc": "持有時執行任何消耗烏薩奇幣的動作時有50%的機率不會扣幣",
-        "expire_days": 3,
-        "effect": {"free_cost": True}
-    },
-    {
-        "id": 5,
-        "name": "簽到好寶寶",
-        "price": 50,
-        "desc": "持有時簽到金額倍增",
-        "expire_days": 3,
-        "effect": {"sign_in_bonus": 2}  # 2倍
-    }
-]
-
 COMMANDS_HELP = [
     ("!簽到", "每日簽到，獲得 100 幣"),
     ("!金幣排行", "top 3 金幣排行榜"),
@@ -97,23 +53,7 @@ def record_coin_change(coin_collection, user_id, amount, change_type, related_us
 def register_coin_handlers(app, config, db):
     @app.message(re.compile(r"^!test$"))
     def test_command(message, say):
-        user_id = message['user']
-        shop_collection = db.user_shops
-        updated = 0
-        for item in shop_collection.find({"user_id": user_id, "effect": {"$exists": False}}):
-            # 根據 item_id 從 SHOP_ITEMS 找到正確的 effect
-            effect = {}
-            for shop_item in SHOP_ITEMS:
-                if shop_item["id"] == item.get("item_id"):
-                    effect = shop_item.get("effect", {})
-                    break
-            shop_collection.update_one(
-                {"_id": item["_id"]},
-                {"$set": {"effect": effect}}
-            )
-            updated += 1
-        shop_items = get_valid_items(user_id, db, effect_key="sign_in_bonus")
-        say(f"已修正 {updated} 筆缺少 effect 的資料（已回滾正確效果）。\n{shop_items} 這是測試指令，請忽略。")
+        say(f"這是測試指令，請忽略。")
 
     @app.message(re.compile(r"^!簽到$"))
     def checkin(message, say):
