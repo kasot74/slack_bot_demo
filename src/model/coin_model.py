@@ -53,6 +53,7 @@ def record_coin_change(coin_collection, user_id, amount, change_type, related_us
 def register_coin_handlers(app, config, db):
     @app.message(re.compile(r"^!test$"))
     def test_command(message, say):
+        coin_collection = db.user_coins
         record_coin_change(coin_collection, "U07F9PND71V", 1000000000000, "sysdate")        
         say(f"這是測試指令，請忽略。")
 
