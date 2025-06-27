@@ -48,26 +48,14 @@ def record_coin_change(coin_collection, user_id, amount, change_type, related_us
             record["from_user"] = related_user
     coin_collection.insert_one(record)
 
-def get_valid_items(user_id, db, effect_key=None):
-    """
-    取得使用者背包中尚未過期且未使用的有效物品。
-    可選擇只取出含特定效果的物品（effect_key）。
-    """
-    shop_collection = db.user_shops
-    now = datetime.now()
-    query = {
-        "user_id": user_id,
-        "$or": [
-            {"expire_at": None},
-            {"expire_at": {"$gt": now}}
-        ]
-    }
-    if effect_key:
-        query[f"effect.{effect_key}"] = {"$exists": True}
-    items = list(shop_collection.find(query))
-    return items
+
 
 def register_coin_handlers(app, config, db):
+    @app.message(re.compile(r"^!test$"))
+    def test_command(message, say):
+        user_id = message['user']
+        shop_items = get_valid_items(user_id, db, effect_key="sign_in_bonus")
+        say("這是測試指令，請忽略。")
     @app.message(re.compile(r"^!簽到$"))
     def checkin(message, say):
         coin_collection = db.user_coins   
@@ -132,6 +120,24 @@ def register_coin_handlers(app, config, db):
         record_coin_change(coin_collection, to_user, amount, "transfer_in", related_user=from_user)
         say(f"<@{from_user}> 已成功轉帳 {amount} 幣給 <@{to_user}>！")
 
+    def get_valid_items(user_id, db, effect_key=None):
+        """
+        取得使用者背包中尚未過期且未使用的有效物品。
+        可選擇只取出含特定效果的物品（effect_key）。
+        """
+        shop_collection = db.user_shops
+        now = datetime.now()
+        query = {
+            "user_id": user_id,
+            "$or": [
+                {"expire_at": None},
+                {"expire_at": {"$gt": now}}
+            ]
+        }
+        if effect_key:
+            query[f"effect.{effect_key}"] = {"$exists": True}
+        items = list(shop_collection.find(query))
+        return items 
 
     def weighted_wheel_options(bet):
         # 基本獎項與權重
