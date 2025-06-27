@@ -179,7 +179,7 @@ def register_coin_handlers(app, config, db):
         # 查詢背包是否有有效幸運符
         spin_bonus_items = get_valid_items(user_id, db, effect_key="spin_bonus")
         spin_bonus = sum(item["effect"].get("spin_bonus", 0) for item in spin_bonus_items)
-
+        say(f"<@{user_id}>，你有 {len(spin_bonus_items)} 個幸運符，轉盤中大獎機率提升 {spin_bonus * 100}%！") if spin_bonus > 0 else None   
         if not is_free:
             # 查詢用戶現有幣
             total = coin_collection.aggregate([
