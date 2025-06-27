@@ -444,12 +444,10 @@ def register_coin_handlers(app, config, db):
             # 扣除下注金額
             record_coin_change(coin_collection, user_id, -bet, "slot_machine", related_user=None)
 
-        # 查詢背包是否有拉霸🍒連鎖或拉霸🍋連鎖
-        slot1_items = get_valid_items(user_id, db, effect_key="slot1")
-        slot2_items = get_valid_items(user_id, db, effect_key="slot2")
-        has_slot1 = bool(slot1_items)
-        has_slot2 = bool(slot2_items)
-
+        # 查詢背包是否有拉霸🍒連鎖或拉霸🍋連鎖        
+        has_slot1 = bool(get_valid_items(user_id, db, effect_key="slot1"))
+        has_slot2 = bool(get_valid_items(user_id, db, effect_key="slot2"))
+        has_slot3 = bool(get_valid_items(user_id, db, effect_key="slot3"))
         # 拉霸輪帶設定（每一輪一個順序表）
         reel = [
             ["🍒", "🍋", "🔔", "⭐", "💎", "7️⃣", "🍒", "🍋", "🔔", "⭐", "💎", "7️⃣"],
@@ -464,6 +462,10 @@ def register_coin_handlers(app, config, db):
         if has_slot2:
             for i in range(3):
                 reel[i] = ["7️⃣" if s == "🍋" else s for s in reel[i]]
+        # 物品效果：將🔔改為7️⃣
+        if has_slot3:
+            for i in range(3):
+                reel[i] = ["7️⃣" if s == "🔔" else s for s in reel[i]]                
 
         # 每輪隨機停一格，組成 3x3 結果
         stops = [random.randint(0, len(reel[0]) - 1) for _ in range(3)]
