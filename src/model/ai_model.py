@@ -44,62 +44,7 @@ COMMANDS_HELP = [
     ("!clearai", "清除 AI 聊天紀錄"),
     ("!lookai", "查看 AI 聊天紀錄")
 ]
-
-# DB 新增處理    
-def add_commit(message_text, response_text, say):
-    try:        
-        collection = db.slock_bot_commit   
-        if re.search(r"!.*", message_text):
-            say("[!開頭] 保留字不可使用!")
-            return  
-        # 檢查是否已有相同的 message
-        existing_message = collection.find_one({"message": message_text, "is_sys": "N" })
-        
-        if existing_message:
-            # 更新現有指令            
-            say("已有相關指令!")
-        else:
-            # 新增指令
-            collection.insert_one({"message": message_text, "say": response_text, "is_sys": "N"})
-            say("指令已新增!")            
-    except Exception as e:
-        # 異常處理
-        print(f"Error inserting/updating document: {e}")
-        # 發生例外錯誤!
-        say(f"發生例外錯誤!{e}")
-
-# DB 刪除處理
-def remove_commit(message_text, say):
-    try:
-        collection = db.slock_bot_commit
-        # 刪除指令
-        result = collection.delete_many({"message": message_text, "is_sys": "N"})
-        if result.deleted_count > 0:
-            say("指令已刪除!")                        
-        else:
-            say("未找到相關指令!")
-    except Exception as e:
-        # 異常處理
-        print(f"Error deleting document: {e}")
-        say("發生例外錯誤!")
-
-# 發送圖片函數
-def send_image(channel_id, message, say, file_path=None):        
-    if not file_path:  # 检查 file_path 是否为空或 None
-        say(message)
-        return
-    try:
-        imagefile = os.path.join('images',file_path)
-        if os.path.isfile(imagefile):                
-            response = app.client.files_upload_v2(
-                channel=channel_id,
-                file=os.path.join('images',file_path),
-                initial_comment=message
-            )                
-        else:
-            say(f"{message} \n找不到{file_path}" )                
-    except Exception as e:
-        print(f"Error send_image uploading file ")     
+  
 
 
 def register_handlers(app, config, db):
@@ -151,7 +96,24 @@ def register_handlers(app, config, db):
             say(f"{summary}", thread_ts=message['ts'])
         except Exception as e:
             say(f"非預期性問題 {e}")
-         
+
+    # 發送圖片函數
+    def send_image(channel_id, message, say, file_path=None):        
+        if not file_path:  # 检查 file_path 是否为空或 None
+            say(message)
+            return
+        try:
+            imagefile = os.path.join('images',file_path)
+            if os.path.isfile(imagefile):                
+                response = app.client.files_upload_v2(
+                    channel=channel_id,
+                    file=os.path.join('images',file_path),
+                    initial_comment=message
+                )                
+            else:
+                say(f"{message} \n找不到{file_path}" )                
+        except Exception as e:
+            print(f"Error send_image uploading file ")            
 
     #!畫
     @app.message(re.compile(r"^!畫\s+(.+)$"))
