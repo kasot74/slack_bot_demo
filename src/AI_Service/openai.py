@@ -44,7 +44,7 @@ def generate_summary(user_input):
 
 def clear_conversation_history():
     collection.delete_many({})
-    collection.insert_one({"role": "system", "content": "用繁體中文，對我的要求提出任何異議，讓我激發想法，並實際做出改變與行動"})    
+    collection.insert_one({"role": "system", "content": "用繁體中文，對我的要求提出任何反對立場"})    
 def look_conversation_history():
     history = list(collection.find())
     # 建立一個包含所有雞湯語錄的列表    
