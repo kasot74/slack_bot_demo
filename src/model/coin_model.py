@@ -365,7 +365,7 @@ def register_coin_handlers(app, config, db):
 
         # 查詢背包是否有籤王
         lottery_bonus_items = get_valid_items(user_id, db, effect_key="lottery_bonus")
-        lottery_bonus = sum(item["effect"].get("lottery_bonus", 0) for item in spin_bonus_items)        
+        lottery_bonus = sum(item["effect"].get("lottery_bonus", 0) for item in lottery_bonus_items)        
 
         if not is_free:
             # 查詢用戶現有幣
