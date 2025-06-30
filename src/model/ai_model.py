@@ -29,7 +29,7 @@ from ..AI_Service.xai import analyze_stock_inoutpoint as analyze_stock_inoutpoin
 from ..AI_Service.xai import create_image as xai_create_image
 from ..AI_Service.xai import create_greet as xai_create_greet
 from ..AI_Service.xai import generate_search_summary as generate_search_summary
-from ..stability_model import get_image,get_image2,change_style,change_image,image_to_video
+from .stability_model import get_image,get_image2,change_style,change_image,image_to_video
 
 COMMANDS_HELP = [
     ("!openai 內容", "詢問 GPT "),
