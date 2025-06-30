@@ -32,7 +32,6 @@ from .AI_Service.xai import create_greet as xai_create_greet
 from .AI_Service.xai import generate_search_summary as generate_search_summary
 
 
-from .stability_model import get_image,get_image2,change_style,change_image,image_to_video
 
 COMMANDS_HELP = [
     ("!熬雞湯 內容", "新增正能量雞湯語錄"),
