@@ -23,7 +23,7 @@ SHOP_ITEMS = [
     {
         "id": 3,
         "name": "籤王",
-        "price": 10000,
+        "price": 500,
         "desc": "增加抽獎中獎率5% 可疊加",
         "expire_days": 7,
         "effect": {"lottery_bonus": 0.05}

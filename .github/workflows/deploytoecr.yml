@@ -53,10 +53,10 @@ jobs:
           docker-compose up -d --force-recreate
 
     - name: Notify Slack
-      if: contains(github.event.head_commit.message, '[deploy]')
+      if: contains(github.event.head_commit.message, '[更新說明]')
       env:
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         GIT_COMMIT_MSG: ${{ github.event.head_commit.message }}
       run: |
         curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"烏薩奇更新完成！\n更新內容: $GIT_COMMIT_MSG\n"}" "$SLACK_WEBHOOK_URL"
+          --data "{\"text\":\"烏薩奇更新完成！\n更新內容: $GIT_COMMIT_MSG\n\"}" "$SLACK_WEBHOOK_URL"
