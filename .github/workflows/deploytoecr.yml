@@ -59,4 +59,4 @@ jobs:
         GIT_COMMIT_MSG: ${{ github.event.head_commit.message }}
       run: |
         curl -X POST -H 'Content-type: application/json' \
-          --data "{\"text\":\"烏薩奇更新完成！\n更新內容: $GIT_COMMIT_MSG\n\"}" "$SLACK_WEBHOOK_URL"
+          --data "{\"text\":\"更新完成！\n更新內容: $GIT_COMMIT_MSG\n\"}" "$SLACK_WEBHOOK_URL"
