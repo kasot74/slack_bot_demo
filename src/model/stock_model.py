@@ -3,7 +3,7 @@ import requests
 import time
 import json
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from pymongo import MongoClient
 from slack_sdk import WebClient
 from ..AI_Service.xai  import analyze_stock as analyze_stock_xai 

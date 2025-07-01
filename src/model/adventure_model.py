@@ -74,22 +74,44 @@ SCENES = {
     }
 }
 
-# 結局文字依照社畜值
+ENDING = {
+    "free": {
+        "score_range": (None, 1),
+        "text": "🕊️【自由人】你悟了！隔天辭職改行當塔羅師。"
+    },
+    "normal": {
+        "score_range": (2, 3),
+        "text": "😐【穩健社畜】你撐住了，也失去了甚麼。"
+    },
+    "senior": {
+        "score_range": (4, 5),
+        "text": "🥵【高階社畜】你的靈魂與工時等價交換，進入資深圈。"
+    },
+    "ghost": {
+        "score_range": (6, None),
+        "text": "👻【會議幽靈】你已被公司吸收成 Slack 精靈的一部分。"
+    }
+}
+
+def get_scenes_and_ending_by_ai():
+    
+    return SCENES , ENDING
+
 def get_ending(score):
-    if score <= 1:
-        return "🕊️【自由人】你悟了！隔天辭職改行當塔羅師。"
-    elif score <= 3:
-        return "😐【穩健社畜】你撐住了，也失去了甚麼。"
-    elif score <= 5:
-        return "🥵【高階社畜】你的靈魂與工時等價交換，進入資深圈。"
-    else:
-        return "👻【會議幽靈】你已被公司吸收成 Slack 精靈的一部分。"
+    for ending in ENDING.values():
+        min_score, max_score = ending["score_range"]
+        if (min_score is None or score >= min_score) and (max_score is None or score <= max_score):
+            return ending["text"]
+    return "開放結局"
 
 user_game_state = {}
 
 def register_adventure_handlers(app: App, config, db):
     @app.message("!冒險")
     def start_game(message, say):
+
+        SCENES,ENDING =get_scenes_and_ending_by_ai()
+
         user_id = message["user"]
         user_game_state[user_id] = {
             "scene": "start",
@@ -137,7 +159,7 @@ def register_adventure_handlers(app: App, config, db):
         # 是否為結局場景
         if not SCENES.get(next_scene):
             ending_text = get_ending(state["score"])
-            say(f"{response}\n\n🏁 遊戲結局：\n{ending_text}\n\n輸入 `!重來` 再體驗不同人生！")
+            say(f"{response}\n\n🏁 遊戲結局：\n{ending_text}\n\n輸入 `!重來` 再體驗不同冒險！")
             return
 
         # 下一關劇情
