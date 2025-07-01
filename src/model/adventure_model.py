@@ -11,61 +11,67 @@ COMMANDS_HELP = [
 SCENES = {
     "start": {
         "text": (
-            "🧑‍💼 你是阿明，工程師一枚，剛吃完早餐腸胃微妙。\n"
-            "Slack 上老闆傳來訊息：「10點要報告喔 🥰」\n"
-            "你現在該怎麼辦？\n"
-            "👉 A. 繼續裝死滑手機\n"
-            "👉 B. 開始亂做 KPI 報告\n"
-            "👉 C. 傳訊息求救 GPT"
+            "🧑‍💼 你是一名工程師，剛吃完早餐腸胃微妙。\n"
+            "老闆突然傳訊：「10點要報告喔🥰」\n"
+            "你該怎麼辦？\n👉 A. 裝死滑手機\n👉 B. 亂做 KPI\n👉 C. 傳訊 GPT"
         ),
         "choices": {
-            "A": {"next": "scene_ig", "score": 2, "text": "你看了一輪貓貓影片，老闆悄悄把你拖進會議…"},
-            "B": {"next": "scene_kpi", "score": 1, "text": "你用 Excel 隨機數字唬了一頁 KPI，還加了彩色圖表。"},
-            "C": {"next": "scene_gpt", "score": 0, "text": "GPT 說它太累，請你打給 Copilot 換個支援（真實）"}
+            "A": {"next": "scene_ig", "score": 2, "text": "你瘋狂滑貓貓影片…結果被老闆 tag 進會議"},
+            "B": {"next": "scene_kpi", "score": 1, "text": "你開 Excel 假資料全開，還加圖表裝專業"},
+            "C": {"next": "scene_gpt", "score": 0, "text": "GPT 說：『你也該學會獨立了』"}
         }
     },
     "scene_kpi": {
         "text": (
-            "你交出 KPI 報告，老闆竟然滿意，但資安部的眼神不太對勁…\n"
-            "接下來你要怎麼做？\n"
-            "👉 A. 裝病請假\n"
-            "👉 B. 承認錯誤主動檢討\n"
-            "👉 C. 把鍋甩給 AI"
+            "老闆對 KPI 滿意，隔壁資安部卻來盯你電腦。\n"
+            "你要：\n👉 A. 請病假潛逃\n👉 B. 寫 3000 字檢討文\n👉 C. 說報告是 GPT 寫的"
         ),
         "choices": {
-            "A": {"next": "ending_sick", "score": 1, "text": "你傳訊說你得了 Slack 過敏症，老闆親自敲門來看你…"},
-            "B": {"next": "ending_report", "score": 2, "text": "你寫了三千字檢討文，老闆要求你每天寫一篇…"},
-            "C": {"next": "ending_bot", "score": 3, "text": "你說報告是 GPT 寫的，結果它被升職，你原地失業。"}
-        }
-    },
-    "scene_ig": {
-        "text": (
-            "你刷 IG 被老闆發現，會議現場你正被全螢幕放映。\n"
-            "你要怎麼挽救？\n"
-            "👉 A. 假裝那是你同學的帳號\n"
-            "👉 B. 快速退出 Slack 並拔網路\n"
-            "👉 C. 微笑揮手說 Hi 👋"
-        ),
-        "choices": {
-            "A": {"next": "ending_shame", "score": 2, "text": "沒人相信你，還被截圖做成週會教材。"},
-            "B": {"next": "ending_offline", "score": 1, "text": "你斷網後 Slack 自動幫你請假一天，但也自動寄信給老闆…"},
-            "C": {"next": "ending_meme", "score": 0, "text": "你的微笑成為 Slack 表情貼圖，意外爆紅 🎉"}
+            "A": {"next": "scene_sick", "score": 1, "text": "你傳簡訊：『我發燒38.7°C』——老闆立刻來家訪"},
+            "B": {"next": "scene_report", "score": 2, "text": "你寫到凌晨三點，老闆留言『寫得像小說👍』"},
+            "C": {"next": "scene_bot", "score": 3, "text": "GPT 被你拉下水，它升職，你自動離職"}
         }
     },
     "scene_gpt": {
         "text": (
-            "GPT 說它不想上班，要你自己解決。\n"
-            "那你現在…？\n"
-            "👉 A. 開始寫報告（誠心）\n"
-            "👉 B. 把責任推回老闆（大膽）\n"
-            "👉 C. 去泡咖啡當沒事"
+            "GPT 把你推給 Copilot。\n你現在要：\n👉 A. 寫報告靠意志力\n👉 B. 泡咖啡當沒看到訊息\n👉 C. 開始訓練自己的 AI 替身"
         ),
         "choices": {
-            "A": {"next": "ending_ok", "score": 1, "text": "你邊聽 ASMR 邊做報告，效率意外不錯。"},
-            "B": {"next": "ending_fired", "score": 3, "text": "你直接 @ 老闆說：『你也沒交代清楚吧？』 你獲得自由。"},
-            "C": {"next": "ending_cafe", "score": 0, "text": "你轉身泡咖啡，老闆進來問你也給他一杯 ☕"}
+            "A": {"next": "ending_ok", "score": 1, "text": "你寫出一份『中庸之道的報告』，被稱為穩健派"},
+            "B": {"next": "ending_cafe", "score": 0, "text": "老闆來泡咖啡，順便叫你開會 ☕"},
+            "C": {"next": "ending_clone", "score": 3, "text": "你完成一個自動回 Slack 的機器人，自此沒人再找你開會…"}
         }
     },
+    "scene_ig": {
+        "text": (
+            "你被螢幕投影在會議大螢幕，畫面是你看『貓咪撞電風扇』。\n\n👉 A. 說是朋友帳號\n👉 B. 拔網路裝斷線\n👉 C. 微笑揮手：Hi 👋"
+        ),
+        "choices": {
+            "A": {"next": "scene_punish", "score": 2, "text": "老闆直接拿你照片做成週會海報"},
+            "B": {"next": "scene_punish", "score": 1, "text": "你斷網成功，但 Slack 自動請假信寄出"},
+            "C": {"next": "scene_punish", "score": 0, "text": "你表情包化，全公司都在用你頭像"}
+        }
+    },
+    "scene_punish": {
+        "text": (
+            "你現在已是 Slack 表情界的紅人。\n老闆邀你主持下週的部門全體會議。\n\n你要：\n👉 A. 認真準備簡報\n👉 B. 找 intern 頂替你\n👉 C. 開始訓練 GPT 模擬你上台"
+        ),
+        "choices": {
+            "A": {"next": "ending_star", "score": 2, "text": "會議主持超順，你成為部門團建負責人。Good Luck."},
+            "B": {"next": "ending_fired", "score": 3, "text": "實習生直接爆料你薪資＋迷因圖，全公司都知道"},
+            "C": {"next": "ending_ghost", "score": 4, "text": "你從此隱居 Slack 頻道，只剩 emoji 回覆 👻"}
+        }
+    },
+    "scene_report": {
+        "text": (
+            "老闆對你的檢討文滿意，給你新任務：再寫 10 份部門 KPI 提案 😵\n\n你要：\n👉 A. 把老闆也拉進共筆\n👉 B. 複製貼上舊的騙過去\n👉 C. 靜靜開啟 Copilot"
+        ),
+        "choices": {
+            "A": {"next": "ending_fusion", "score": 2, "text": "老闆開始修改你的文件，意外做出部門新 Slogan：『工作無限，人類無眠』"},
+            "B": {"next": "ending_loop", "score": 3, "text": "你在回圈中活了三週，開始分不清第幾版"},
+            "C": {"next": "ending_ghost", "score": 4, "text": "你從此只用 Copilot 工作，自身化為 Slack 雲端幽靈 👻"}
+        }
+    }
 }
 
 # 結局文字依照社畜值
