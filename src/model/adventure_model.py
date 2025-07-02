@@ -1,5 +1,6 @@
 from slack_bolt import App
 import re
+from ..AI_Service.xai import generate_summary
 
 COMMANDS_HELP = [
     ("!冒險", "開始文字遊戲"),
@@ -94,8 +95,38 @@ ENDING = {
 }
 
 def get_scenes_and_ending_by_ai():
-    
-    return SCENES , ENDING
+    """
+    使用 XAI 生成 SCENES 與 ENDING 內容
+    """
+    # 你可以根據需求設計 prompt，這裡給一個範例
+    scenes_prompt = (
+        "請幫我生成一個工程師愛情冒險的文字遊戲場景資料，"
+        "格式為 Python 字典，key 為場景 id，value 為 dict，"
+        "每個場景包含 'text'（劇情描述）與 'choices'（A/B/C 選項，"
+        "每個選項有 next、score、text）。請給 5 個場景，內容幽默。"
+    )
+    ending_prompt = (
+        "請幫我生成 4 種結局，格式為 Python 字典，"
+        "每個結局包含 'score_range'（tuple，最低分數, 最高分數），"
+        "與 'text'（結局描述，幽默一點）。"
+    )
+
+    # 取得 XAI 回覆
+    scenes_code = generate_summary(scenes_prompt)
+    ending_code = generate_summary(ending_prompt)
+
+    # 安全地將字串轉為 Python 物件
+    import ast
+    try:
+        SCENES = ast.literal_eval(scenes_code)
+    except Exception:
+        SCENES = {}
+    try:
+        ENDING = ast.literal_eval(ending_code)
+    except Exception:
+        ENDING = {}
+
+    return SCENES, ENDING
 
 def get_ending(score):
     for ending in ENDING.values():
