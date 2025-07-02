@@ -95,40 +95,7 @@ ENDING = {
     }
 }
 
-def get_scenes_and_ending_by_ai():
-    """
-    使用 XAI 生成 SCENES 與 ENDING 內容
-    """
-    # 你可以根據需求設計 prompt，這裡給一個範例
-    scenes_prompt = (
-        "請幫我生成一個工程師愛情冒險的文字遊戲場景資料，"
-        "格式為 Python 字典，key 為場景 id，value 為 dict，"
-        "每個場景包含 'text'（劇情描述）與 'choices'（A/B/C 選項，"
-        "每個選項有 next、score、text）。請給 5 個場景，內容幽默。"
-        "我會將你的輸出直接用於 Python 程式中，請確保格式正確  ast.literal_eval() 可以解析。"
-    )
-    ending_prompt = (
-        "請幫我生成 4 種結局，格式為 Python 字典，"
-        "每個結局包含 'score_range'（tuple，最低分數, 最高分數），"
-        "與 'text'（結局描述，幽默一點）。"
-        "我會將你的輸出直接用於 Python 程式中，請確保格式正確  ast.literal_eval() 可以解析。"
-    )
 
-    # 取得 XAI 回覆
-    scenes_code = generate_summary(scenes_prompt)
-    ending_code = generate_summary(ending_prompt)
-
-    # 安全地將字串轉為 Python 物件    
-    try:
-        SCENES = ast.literal_eval(scenes_code)
-    except Exception:
-        SCENES = {}
-    try:
-        ENDING = ast.literal_eval(ending_code)
-    except Exception:
-        ENDING = {}
-
-    return SCENES, ENDING
 
 def get_ending(score):
     for ending in ENDING.values():
@@ -140,10 +107,53 @@ def get_ending(score):
 user_game_state = {}
 
 def register_adventure_handlers(app: App, config, db):
-    @app.message("!冒險")
-    def start_game(message, say):
 
-        SCENES,ENDING =get_scenes_and_ending_by_ai()
+    def get_scenes_and_ending_by_ai(custom_topic="工程師社畜冒險"):
+        
+        say(f"正在用 AI 生成全新冒險劇情（主題：{custom_topic}），請稍候...")
+
+        # 動態生成 prompt
+        scenes_prompt = (
+            f"請幫我生成一個{custom_topic}的文字遊戲場景資料，"
+            "格式為 Python 字典，key 為場景 id，value 為 dict，"
+            "每個場景包含 'text'（劇情描述）與 'choices'（A/B/C 選項，"
+            "每個選項有 next、score、text）。請給 5 個場景，內容幽默。"
+            "我會將你的輸出直接用於 Python 程式中，請確保格式正確 ast.literal_eval() 可以解析。"
+        )
+        ending_prompt = (
+            f"請幫我生成 4 種{custom_topic}結局，格式為 Python 字典，"
+            "每個結局包含 'score_range'（tuple，最低分數, 最高分數），"
+            "與 'text'（結局描述，幽默一點）。"
+            "我會將你的輸出直接用於 Python 程式中，請確保格式正確 ast.literal_eval() 可以解析。"
+        )
+
+        # 取得 XAI 回覆
+        scenes_code = generate_summary(scenes_prompt)
+        ending_code = generate_summary(ending_prompt)
+        
+        try:
+            new_scenes = ast.literal_eval(scenes_code)
+        except Exception:
+            say("❌ 劇情生成失敗，請稍後再試或換個主題。")
+            return
+        try:
+            new_ending = ast.literal_eval(ending_code)
+        except Exception:
+            say("❌ 結局生成失敗，請稍後再試或換個主題。")
+            return
+
+        global SCENES, ENDING
+        SCENES = new_scenes
+        ENDING = new_ending
+        say("✅ 已用 AI 生成全新冒險劇情！輸入 `!冒險` 開始你的新旅程吧！")
+
+    @app.message(re.compile(r"^!重新生成冒險\s*(.*)$"))
+    def scenes_game(message, say, context):
+        # 取得使用者輸入的自訂主題（如有）
+        get_scenes_and_ending_by_ai(context["matches"][0].strip() if context["matches"] else "工程師社畜冒險")
+        
+    @app.message("!冒險")
+    def start_game(message, say):        
 
         user_id = message["user"]
         user_game_state[user_id] = {
