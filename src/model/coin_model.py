@@ -32,21 +32,43 @@ COMMANDS_HELP = [
 ]
 
 def record_coin_change(coin_collection, user_id, amount, change_type, related_user=None):
-    """紀錄幣更動，方便其他功能呼叫"""
-    record = {
-        "user_id": user_id,
-        "type": change_type,
-        "date": datetime.now().strftime("%Y-%m-%d"),
-        "coins": amount,
-        "timestamp": datetime.now()
-    }
-    if related_user:
-        # 轉帳時記錄對方
-        if change_type == "transfer_out":
-            record["to_user"] = related_user
-        elif change_type == "transfer_in":
-            record["from_user"] = related_user
-    coin_collection.insert_one(record)
+    """紀錄幣更動，金額超過 MongoDB 64-bit int 上限時自動分批寫入"""
+    MAX_INT64 = 9_223_372_036_854_775_807
+    min_int64 = -MAX_INT64
+
+    # 分批處理
+    while abs(amount) > MAX_INT64:
+        part = MAX_INT64 if amount > 0 else min_int64
+        record = {
+            "user_id": user_id,
+            "type": change_type,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "coins": part,
+            "timestamp": datetime.now()
+        }
+        if related_user:
+            if change_type == "transfer_out":
+                record["to_user"] = related_user
+            elif change_type == "transfer_in":
+                record["from_user"] = related_user
+        coin_collection.insert_one(record)
+        amount -= part
+
+    # 寫入剩餘部分
+    if amount != 0:
+        record = {
+            "user_id": user_id,
+            "type": change_type,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "coins": amount,
+            "timestamp": datetime.now()
+        }
+        if related_user:
+            if change_type == "transfer_out":
+                record["to_user"] = related_user
+            elif change_type == "transfer_in":
+                record["from_user"] = related_user
+        coin_collection.insert_one(record)
 
 
 

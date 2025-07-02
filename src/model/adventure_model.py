@@ -5,6 +5,7 @@ from ..AI_Service.xai import generate_summary
 
 COMMANDS_HELP = [
     ("!冒險", "開始文字遊戲"),
+    ("!重新生成冒險 [主題]", "用 AI 生成全新冒險劇情，預設主題為「工程師社畜冒險」"),
     ("!重來", "重新開始遊戲"),
     ("!選 A/B/C", "做出你的選擇，繼續劇情"),
 ]
