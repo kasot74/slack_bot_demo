@@ -109,7 +109,7 @@ user_game_state = {}
 
 def register_adventure_handlers(app: App, config, db):
 
-    def get_scenes_and_ending_by_ai(custom_topic="工程師社畜冒險"):
+    def get_scenes_and_ending_by_ai(say,custom_topic="工程師社畜冒險"):
         
         say(f"正在用 AI 生成全新冒險劇情（主題：{custom_topic}），請稍候...")
 
@@ -151,7 +151,7 @@ def register_adventure_handlers(app: App, config, db):
     @app.message(re.compile(r"^!重新生成冒險\s*(.*)$"))
     def scenes_game(message, say, context):
         # 取得使用者輸入的自訂主題（如有）
-        get_scenes_and_ending_by_ai(context["matches"][0].strip() if context["matches"] else "工程師社畜冒險")
+        get_scenes_and_ending_by_ai(say,context["matches"][0].strip() if context["matches"] else "工程師社畜冒險")
         
     @app.message("!冒險")
     def start_game(message, say):        
