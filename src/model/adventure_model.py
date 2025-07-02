@@ -119,7 +119,7 @@ def register_adventure_handlers(app: App, config, db):
             "格式為 Python 字典，key 為場景(請用 scene1,scene2 依序當場景的KEY) id，value 為 dict，"
             "範例格式  scene1: : {'text': '劇情描述並提供 A/B/C選項', 'choices': {'A': {'next': 'scene2', 'score': 10, 'text': '選項描述'}, 'B': {'next': 'scene3', 'score': 5, 'text': '選項描述'}, ...}}。"   
             "每個場景包含 'text'（劇情描述並 提供 A/B/C選項） 與 'choices'（A/B/C 選項結果，"
-            "每個選項有 next、score、text）。請給 12 個場景，且非必要不要讓場景透過選擇重複。如果選擇會導致結局，請在 'choices' 中包含 'next' 指向結局場景 end"
+            "每個選項有 next、score、text）。請給 12 個場景，且非必要不要讓場景透過選擇重複。如果選擇會導致結局，請在 'choices' 中包含 'next' 設定為 end不會再進入場景會進入結局判斷"
             "我會將你的輸出直接用於 Python 程式中，請確保格式正確 ast.literal_eval() 可以解析，內容與選項請適當使用換行符號換行 "
         )
         ending_prompt = (
