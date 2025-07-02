@@ -104,11 +104,13 @@ def get_scenes_and_ending_by_ai():
         "格式為 Python 字典，key 為場景 id，value 為 dict，"
         "每個場景包含 'text'（劇情描述）與 'choices'（A/B/C 選項，"
         "每個選項有 next、score、text）。請給 5 個場景，內容幽默。"
+        "我會將你的輸出直接用於 Python 程式中，請確保格式正確  ast.literal_eval() 可以解析。"
     )
     ending_prompt = (
         "請幫我生成 4 種結局，格式為 Python 字典，"
         "每個結局包含 'score_range'（tuple，最低分數, 最高分數），"
         "與 'text'（結局描述，幽默一點）。"
+        "我會將你的輸出直接用於 Python 程式中，請確保格式正確  ast.literal_eval() 可以解析。"
     )
 
     # 取得 XAI 回覆
