@@ -1,5 +1,6 @@
-from slack_bolt import App
 import re
+import ast
+from slack_bolt import App
 from ..AI_Service.xai import generate_summary
 
 COMMANDS_HELP = [
@@ -8,7 +9,7 @@ COMMANDS_HELP = [
     ("!選 A/B/C", "做出你的選擇，繼續劇情"),
 ]
 
-# 全部場景定義
+# #格式範例
 SCENES = {
     "start": {
         "text": (
@@ -74,7 +75,7 @@ SCENES = {
         }
     }
 }
-
+#格式範例
 ENDING = {
     "free": {
         "score_range": (None, 1),
@@ -117,8 +118,7 @@ def get_scenes_and_ending_by_ai():
     scenes_code = generate_summary(scenes_prompt)
     ending_code = generate_summary(ending_prompt)
 
-    # 安全地將字串轉為 Python 物件
-    import ast
+    # 安全地將字串轉為 Python 物件    
     try:
         SCENES = ast.literal_eval(scenes_code)
     except Exception:
@@ -147,17 +147,17 @@ def register_adventure_handlers(app: App, config, db):
 
         user_id = message["user"]
         user_game_state[user_id] = {
-            "scene": "start",
+            "scene": "scene1",
             "score": 0,
             "log": []
         }
-        say(SCENES["start"]["text"])
+        say(SCENES["scene1"]["text"])
 
     @app.message("!重來")
     def restart_game(message, say):
         user_id = message["user"]
         user_game_state[user_id] = {
-            "scene": "start",
+            "scene": "scene1",
             "score": 0,
             "log": []
         }
