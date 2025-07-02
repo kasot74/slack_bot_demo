@@ -119,13 +119,13 @@ def register_adventure_handlers(app: App, config, db):
             "格式為 Python 字典，key 為場景 id，value 為 dict，"
             "每個場景包含 'text'（劇情描述並 提供 A/B/C選項） 與 'choices'（A/B/C 選項結果，"
             "每個選項有 next、score、text）。請給 5 個場景，內容幽默。"
-            "我會將你的輸出直接用於 Python 程式中，請確保格式正確 ast.literal_eval() 可以解析。"
+            "我會將你的輸出直接用於 Python 程式中，請確保格式正確 ast.literal_eval() 可以解析，內容與選項請適當使用換行符號換行 "
         )
         ending_prompt = (
             f"請幫我生成 4 種{custom_topic}結局，格式為 Python 字典，"
             "每個結局包含 'score_range'（tuple，最低分數, 最高分數），"
             "與 'text'（結局描述，幽默一點）。"
-            "我會將你的輸出直接用於 Python 程式中，請確保格式正確 ast.literal_eval() 可以解析。"
+            "我會將你的輸出直接用於 Python 程式中，請確保格式正確 ast.literal_eval() 可以解析，內容請適當使用換行符號換行"
         )
 
         # 取得 XAI 回覆
