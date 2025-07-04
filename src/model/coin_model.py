@@ -32,34 +32,41 @@ COMMANDS_HELP = [
 ]
 
 def record_coin_change(coin_collection, user_id, amount, change_type, related_user=None):
-    """紀錄幣更動，金額超過 MongoDB 64-bit int 上限時自動分批寫入"""
+    """
+    將每日資料合併處理，若當日同類型紀錄已存在則合併金額，否則新增。
+    金額最大上限為 MAX_INT64，超過則只記錄到上限。
+    """
     MAX_INT64 = 9_223_372_036_854_775_807
-    min_int64 = -MAX_INT64
+    today = datetime.now().strftime("%Y-%m-%d")
+    # 限制單日單類型最大金額
+    amount = max(min(amount, MAX_INT64), -MAX_INT64)
 
-    # 分批處理
-    while abs(amount) > MAX_INT64:
-        part = MAX_INT64 if amount > 0 else min_int64
+    # 查找是否已有同日同類型紀錄
+    query = {
+        "user_id": user_id,
+        "type": change_type,
+        "date": today
+    }
+    if related_user:
+        if change_type == "transfer_out":
+            query["to_user"] = related_user
+        elif change_type == "transfer_in":
+            query["from_user"] = related_user
+
+    existing = coin_collection.find_one(query)
+    if existing:
+        # 合併金額，並限制最大上限
+        new_amount = existing["coins"] + amount
+        new_amount = max(min(new_amount, MAX_INT64), -MAX_INT64)
+        coin_collection.update_one(
+            {"_id": existing["_id"]},
+            {"$set": {"coins": new_amount, "timestamp": datetime.now()}}
+        )
+    else:
         record = {
             "user_id": user_id,
             "type": change_type,
-            "date": datetime.now().strftime("%Y-%m-%d"),
-            "coins": part,
-            "timestamp": datetime.now()
-        }
-        if related_user:
-            if change_type == "transfer_out":
-                record["to_user"] = related_user
-            elif change_type == "transfer_in":
-                record["from_user"] = related_user
-        coin_collection.insert_one(record)
-        amount -= part
-
-    # 寫入剩餘部分
-    if amount != 0:
-        record = {
-            "user_id": user_id,
-            "type": change_type,
-            "date": datetime.now().strftime("%Y-%m-%d"),
+            "date": today,
             "coins": amount,
             "timestamp": datetime.now()
         }
@@ -70,17 +77,61 @@ def record_coin_change(coin_collection, user_id, amount, change_type, related_us
                 record["from_user"] = related_user
         coin_collection.insert_one(record)
 
+def merge_old_coin_records(coin_collection):
+    """
+    將 user_coins 資料表中同一 user、type、date（與相關 user）重複的紀錄合併為一筆，金額相加（有上限），保留最新 timestamp。
+    適合資料量大時批次整理舊資料。
+    """
+    from pymongo import UpdateOne
+    MAX_INT64 = 9_223_372_036_854_775_807
 
+    # 聚合找出重複 key
+    pipeline = [
+        {
+            "$group": {
+                "_id": {
+                    "user_id": "$user_id",
+                    "type": "$type",
+                    "date": "$date",
+                    "to_user": "$to_user",
+                    "from_user": "$from_user"
+                },
+                "ids": {"$push": "$_id"},
+                "total": {"$sum": "$coins"},
+                "latest": {"$max": "$timestamp"}
+            }
+        },
+        {"$match": {"ids.1": {"$exists": True}}}  # 只找有重複的
+    ]
+    duplicates = list(coin_collection.aggregate(pipeline))
+
+    requests = []
+    for doc in duplicates:
+        ids = doc["ids"]
+        keep_id = ids[0]
+        remove_ids = ids[1:]
+        # 合併金額時加上上限限制
+        merged_amount = max(min(doc["total"], MAX_INT64), -MAX_INT64)
+        requests.append(
+            UpdateOne(
+                {"_id": keep_id},
+                {"$set": {"coins": merged_amount, "timestamp": doc["latest"]}}
+            )
+        )
+        # 刪除多餘的
+        coin_collection.delete_many({"_id": {"$in": remove_ids}})
+    if requests:
+        coin_collection.bulk_write(requests)
+    return len(duplicates)
 
 def register_coin_handlers(app, config, db):
     @app.message(re.compile(r"^!test$"))
     def test_command(message, say):        
         coin_collection = db.user_coins
         shop_collection = db.user_shops
-        # 清空背包
-        result = shop_collection.delete_many({"user_id": "U07F9PND71V"})
-        record_coin_change(coin_collection, "U07F9PND71V", 1000000000000, "sysdate")
-        say(f"這是測試指令，已清空背包（刪除 {result.deleted_count} 筆資料），請忽略。")
+        say(f"合併舊資料中...")
+        merge_old_coin_records(coin_collection)        
+        say(f"合併完成")
 
     @app.message(re.compile(r"^!簽到$"))
     def checkin(message, say):
