@@ -36,17 +36,17 @@ def convert_to_openai_format(collection_name):
     ]
     return formatted_messages
 
-def generate_summary(user_input):
-        
+def generate_summary(user_input, collection_name="ai_his"):
+    collection_his = ai_db[collection_name] 
     user_message = {"role": "user", "content": user_input}
-    collection.insert_one(user_message)
-    conversation_history = convert_to_openai_format("ai_his")        
+    collection_his.insert_one(user_message)
+    conversation_history = convert_to_openai_format(collection_name)        
     response = XAI_clice.chat.completions.create(
         messages=conversation_history,
         model=model_target        
     )
     assistant_message = response.choices[0].message.content
-    collection.insert_one({"role": "assistant", "content": assistant_message})
+    collection_his.insert_one({"role": "assistant", "content": assistant_message})
 
     return assistant_message
 

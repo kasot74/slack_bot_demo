@@ -130,8 +130,8 @@ def register_adventure_handlers(app: App, config, db):
         )
 
         # 取得 XAI 回覆
-        scenes_code = generate_summary(scenes_prompt)
-        ending_code = generate_summary(ending_prompt)
+        scenes_code = generate_summary(scenes_prompt,"scenes_his")
+        ending_code = generate_summary(ending_prompt,"scenes_his")
         
         try:
             new_scenes = ast.literal_eval(scenes_code)
