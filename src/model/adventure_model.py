@@ -8,6 +8,7 @@ COMMANDS_HELP = [
     ("!重新生成冒險 [主題]", "用 AI 生成全新冒險劇情，預設主題為「工程師社畜冒險」"),
     ("!重來", "重新開始遊戲"),
     ("!選 A/B/C", "做出你的選擇，繼續劇情"),
+    ("!劇透", "顯示所有結局分支與分數區間")    
 ]
 
 # #格式範例
@@ -210,3 +211,18 @@ def register_adventure_handlers(app: App, config, db):
         # 下一關劇情
         next_text = SCENES[next_scene]["text"]
         say(f"{response}\n\n📘 接下來...\n{next_text}")
+
+    @app.message("!劇透")
+    def show_all_endings(message, say):
+        """顯示所有結局分數區間與描述"""
+        lines = ["🎯 全結局分支一覽："]
+        for key, ending in ENDING.items():
+            min_score, max_score = ending["score_range"]
+            if min_score is None:
+                score_str = f"≤ {max_score}"
+            elif max_score is None:
+                score_str = f"≥ {min_score}"
+            else:
+                score_str = f"{min_score} ~ {max_score}"
+            lines.append(f"【{key}】分數：{score_str}\n{ending['text']}")
+        say("\n\n".join(lines))
