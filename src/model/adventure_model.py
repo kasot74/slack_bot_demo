@@ -108,6 +108,31 @@ def get_ending(score):
 
 user_game_state = {}
 
+def save_user_state(db, user_id, state):
+    """將使用者進度存入 MongoDB"""
+    collection = db[f"{user_id}_adventure_state"]
+    collection.update_one(
+        {"user_id": user_id},
+        {"$set": {"state": state, "updated_at": datetime.now()}},
+        upsert=True
+    )
+
+def load_user_state(db, user_id):
+    """從 MongoDB 載入使用者進度"""
+    collection = db[f"{user_id}_adventure_state"]
+    doc = collection.find_one({"user_id": user_id})
+    return doc["state"] if doc else None
+
+def render_scene(scene):
+    """組合劇情描述與選項內容"""
+    text = scene.get("text", "")
+    choices = scene.get("choices", {})
+    if choices:
+        options = "\n".join([f"👉 {k}. {v['text']}" for k, v in choices.items()])
+        text = f"{text}\n\n{options}"
+    return text
+
+
 def register_adventure_handlers(app: App, config, db):
 
     def get_scenes_and_ending_by_ai(say, custom_topic="工程師社畜冒險", user_id=None):
