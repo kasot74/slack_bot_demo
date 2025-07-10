@@ -110,29 +110,32 @@ user_game_state = {}
 
 def register_adventure_handlers(app: App, config, db):
 
-    def get_scenes_and_ending_by_ai(say,custom_topic="工程師社畜冒險"):
-        
+    def get_scenes_and_ending_by_ai(say, custom_topic="工程師社畜冒險", user_id=None):
         say(f"正在用 AI 生成全新冒險劇情（主題：{custom_topic}），請稍候...")
 
         # 動態生成 prompt
         scenes_prompt = (
             f"請幫我生成一個{custom_topic}的文字遊戲場景資料，"
-            "格式為 Python 字典，key 為場景(請用 scene1,scene2 依序當場景的KEY) id，value 為 dict，"
-            "範例格式  scene1: : {'text': '劇情描述並提供 A/B/C選項', 'choices': {'A': {'next': 'scene2', 'score': 10, 'text': '選項描述'}, 'B': {'next': 'scene3', 'score': 5, 'text': '選項描述'}, ...}}。"   
-            "每個場景包含 'text'（劇情描述並 提供 A/B/C選項） 與 'choices'（A/B/C 選項結果，"
-            "每個選項有 next、score、text）。請給 12 個場景，且非必要不要讓場景透過選擇重複。如果選擇會導致結局，請在 'choices' 中包含 'next' 設定為 end不會再進入場景會進入結局判斷"
+            "格式為 Python 字典，key 為場景(請用 scene1,scene2 依序當場景的KEY) id，value 為 dict"
+            "範例格式  scene1: : {'text': '劇情描述並提供 A/B/C選項', 'choices': {'A': {'next': 'scene2', 'score': 10, 'text': '選項描述'}, 'B': {'next': 'scene3', 'score': 5, 'text': '選項描述'}, ...}}"
+            "每個場景包含 'text'（劇情描述並 提供 A/B/C選項） 與 'choices'（A/B/C 選項結果"
+            "每個選項有 next、score、text）。請給 20 個場景，且要讓場景透過選擇重複。如果選擇會導致結局，請在 'choices' 中包含 'next' 設定為 end不會再進入場景會進入結局判斷"
+            "請適度讓選擇後的後果不容易預測，並且每個選項的得分範圍要有意義與有所對應"
             "我會將你的輸出直接用於 Python 程式中，請確保格式正確 ast.literal_eval() 可以解析，內容與選項請適當使用換行符號換行 "
         )
         ending_prompt = (
             f"請根據剛剛提供給我的資料，幫我生成 4 種{custom_topic}結局，格式為 Python 字典，且所有得分範圍都要有意義與有所對應，"
             "每個結局包含 'score_range'（tuple，最低分數, 最高分數），"
-            "與 'text'（格式是 [結局名稱] [結局描述] ）。"            
+            "與 'text'（格式是 [結局名稱] [結局描述] ）。"
             "我會將你的輸出直接用於 Python 程式中，請確保格式正確 ast.literal_eval() 可以解析，內容請適當使用換行符號換行"
         )
 
+        # 依 user_id 動態指定 collection
+        collection_name = f"{user_id}_scenes_his" if user_id else "scenes_his"
+
         # 取得 XAI 回覆
-        scenes_code = generate_summary(scenes_prompt,"scenes_his")
-        ending_code = generate_summary(ending_prompt,"scenes_his")
+        scenes_code = generate_summary(scenes_prompt, collection_name)
+        ending_code = generate_summary(ending_prompt, collection_name)
         
         try:
             new_scenes = ast.literal_eval(scenes_code)
@@ -152,36 +155,44 @@ def register_adventure_handlers(app: App, config, db):
 
     @app.message(re.compile(r"^!重新生成冒險\s*(.*)$"))
     def scenes_game(message, say, context):
-        # 取得使用者輸入的自訂主題（如有）
-        get_scenes_and_ending_by_ai(say,context["matches"][0].strip() if context["matches"] else "工程師社畜冒險")
-        
-    @app.message("!冒險")
-    def start_game(message, say):        
-
         user_id = message["user"]
-        user_game_state[user_id] = {
-            "scene": "scene1",
-            "score": 0,
-            "log": []
-        }
-        say(SCENES["scene1"]["text"])
+        custom_topic = context["matches"][0].strip() if context["matches"] else "工程師社畜冒險"
+        get_scenes_and_ending_by_ai(say, custom_topic, user_id)
+
+    @app.message("!冒險")
+    def start_game(message, say):
+        user_id = message["user"]
+        # 嘗試從DB載入進度，若無則新開
+        state = load_user_state(db, user_id)
+        if not state:
+            state = {
+                "scene": "scene1",
+                "score": 0,
+                "log": []
+            }
+        user_game_state[user_id] = state
+        save_user_state(db, user_id, state)
+        scene = SCENES.get(state["scene"], SCENES["scene1"])
+        say(render_scene(scene))
 
     @app.message("!重來")
     def restart_game(message, say):
         user_id = message["user"]
-        user_game_state[user_id] = {
+        state = {
             "scene": "scene1",
             "score": 0,
             "log": []
         }
+        user_game_state[user_id] = state
+        save_user_state(db, user_id, state)
         say("🔁 時間回朔！遊戲重置囉～輸入 `!冒險` 再試一次！")
 
     @app.message(re.compile(r"^!選\s+([ABCabc])$"))
     def choose_option(message, say, context):
         user_id = message["user"]
         choice = context["matches"][0].upper()
-        state = user_game_state.get(user_id)
-
+        # 先從記憶體取，沒有就從DB載
+        state = user_game_state.get(user_id) or load_user_state(db, user_id)
         if not state:
             say("請先輸入 `!冒險` 開始遊戲～")
             return
@@ -201,6 +212,8 @@ def register_adventure_handlers(app: App, config, db):
         state["score"] += add_score
         state["log"].append((scene_id, choice))
         state["scene"] = next_scene
+        user_game_state[user_id] = state
+        save_user_state(db, user_id, state)
 
         # 是否為結局場景
         if not SCENES.get(next_scene):
@@ -209,7 +222,7 @@ def register_adventure_handlers(app: App, config, db):
             return
 
         # 下一關劇情
-        next_text = SCENES[next_scene]["text"]
+        next_text = render_scene(SCENES[next_scene])
         say(f"{response}\n\n📘 接下來...\n{next_text}")
 
     @app.message("!劇透")
