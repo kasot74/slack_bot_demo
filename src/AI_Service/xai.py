@@ -50,10 +50,11 @@ def generate_summary(user_input, collection_name="ai_his"):
 
     return assistant_message
 
-def clear_conversation_history():
-    collection.delete_many({})
-    collection.insert_one({"role": "system", "content": "請用繁體中文回答"})    
-                 
+def clear_conversation_history(collection_name="ai_his",system_message="請用繁體中文回答"):
+    collection_history = ai_db[collection_name]
+    collection_history.delete_many({})
+    collection_history.insert_one({"role": "system", "content": system_message})    
+
 #角色扮演用回應
 def role_generate_response(role1, role2,user_input,ts):
     aimodel = "XAI"
