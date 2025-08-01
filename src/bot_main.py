@@ -21,6 +21,11 @@ from .utilities import read_config
 from .database import con_db
 import os
 import re
+import gc
+import threading
+import time
+import sys
+import psutil
 
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
@@ -182,7 +187,7 @@ register_handlers(app, config, db)
 
 # 啟動 SocketModeHandler
 if __name__ == "__main__":    
-    
+
     # 啟動資源監控
     cleaner.start_monitoring()
     SocketModeHandler(app, config['SLACK_APP_TOKEN']).start()    
