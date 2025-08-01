@@ -153,6 +153,7 @@ def register_adventure_handlers(app: App, config, db):
             f"請根據剛剛提供給我的資料，幫我生成 4 種{custom_topic}結局，格式為 Python 字典，且所有得分範圍都要有意義與有所對應，"
             "每個結局包含 'score_range'（tuple，最低分數, 最高分數），"
             "與 'text'（格式是 [結局名稱] [結局描述] ）。"
+            "注意：請使用具體數字而非 float('inf')，例如用 -999999 代替負無窮，999999 代替正無窮。"
             "我會將你的輸出直接用於 Python 程式中，請確保格式正確 ast.literal_eval() 可以解析，內容請適當使用換行符號換行"
         )
 
