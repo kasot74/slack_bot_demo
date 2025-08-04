@@ -136,65 +136,6 @@ def change_style(image_input,style_image,text):
     else:
         return f"修改風格失敗! {str(response.json())}", None
 
-def image_to_video(image_input):
-    if not isinstance(image_input, BytesIO):
-        return "無效的圖片輸入類型，請提供 BytesIO 圖片資料", None
-    r_image = resize_image(image_input)  # 確保圖片大小符合 API 要求
-    save_dir = os.path.join("images", "images_to_videos")
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-
-    try:
-        response = requests.post(
-            "https://api.stability.ai/v2beta/image-to-video",
-            headers={
-                "authorization": f"Bearer {api_key}",
-            },
-            files={"image": r_image},
-            data={
-                "seed": 0,
-                "cfg_scale": 3.5,  # 控制生成的多樣性
-                "motion_bucket_id": 200,  # 選擇的運動桶 ID
-            },
-        )
-    except Exception as e:
-        return f"image_to_video 請求失敗：{e}", None
-    finally:
-        r_image.close()
-        image_input.close()  # 確保圖片檔案被正確關閉
-
-    if response.status_code != 200:
-        return f"發送失敗: {response.status_code} - {response.text}", None
-
-    generation_id = response.json().get('id')
-    if not generation_id:
-        return "無法取得 generation ID", None
-
-    # 嘗試輪詢結果
-    for attempt in range(10):
-        get_response = requests.get(
-            f"https://api.stability.ai/v2beta/image-to-video/result/{generation_id}",
-            headers={
-                "accept": "video/*",
-                "authorization": f"Bearer {api_key}",
-            },
-        )
-
-        if get_response.status_code == 200:
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"video_{generation_id}_{timestamp}.mp4"
-            filepath = os.path.join(save_dir, filename)
-            file_path = os.path.join("images_to_videos", filename)            
-            with open(filepath, 'wb') as f:
-                f.write(get_response.content)
-            return "影片成功儲存", file_path
-
-        elif get_response.status_code == 202:
-            time.sleep(5)  # 等待後重試
-        else:
-            return f"取得影片失敗: {get_response.status_code}", None
-
-    return "影片生成超時或失敗", None
 
 #挑整圖片大小 為API可接受的大小
 def resize_image(image_input, target_size=(1024, 576)):

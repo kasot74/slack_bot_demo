@@ -29,7 +29,7 @@ from ..AI_Service.xai import create_image as xai_create_image
 from ..AI_Service.xai import create_greet as xai_create_greet
 from ..AI_Service.xai import generate_search_summary as generate_search_summary
 from ..AI_Service.xai import clear_conversation_history as ai_clear_conversation_history
-from .stability_model import get_image,get_image2,change_style,change_image,image_to_video
+from .stability_model import get_image,get_image2,change_style,change_image
 
 
 COMMANDS_HELP = [
@@ -38,8 +38,7 @@ COMMANDS_HELP = [
     ("!xai 內容", "詢問 grok4"),
     ("!X 內容", "詢問 grok4(不受約束版本)"),
     ("!xai查 [web|x|news] 查詢內容", "AI 搜尋摘要"),
-    ("!畫 內容", "用 StabilityAI 產生圖片"),
-    ("!畫2 內容", "用 StabilityAI 產生圖片(第二模型)"),
+    ("!畫 內容", "用 StabilityAI 產生圖片"),    
     ("!xai畫 內容", "用 xai 產生圖片"),
     ("!改風格 內容", "兩張圖進行風格轉換"),
     ("!改圖 內容", "單張圖進行內容修改"),
@@ -197,41 +196,7 @@ def register_handlers(app, config, db):
 
         # 如果沒有上傳足夠的檔案，提示用戶
         say("請上傳兩個圖檔以進行風格修改！ 第一張是修改原圖，第二張是風格參考圖！")
-
-    #!動起來
-    @app.message(re.compile(r"^!動起來.*"))    
-    def image_video(message, say):
-        channel = message['channel']        
-        # 檢查是否有上傳的圖檔
-        if 'files' in message and len(message['files']) >= 1:
-            file_info_1 = message['files'][0]  # 第一個檔案                        
-
-            # 確保檔案是圖像格式
-            if file_info_1['mimetype'].startswith('image/') :
-                try:
-                    
-                    response_1 = requests.get(
-                        file_info_1['url_private'],
-                        headers={"Authorization": f"Bearer {config['SLACK_BOT_TOKEN']}"}
-                    )
-                    response_1.raise_for_status()                    
-                       
-                    say_text, file_name = image_to_video(BytesIO(response_1.content))
-                    send_image(channel, say_text, say, file_name)
-                    return
-                except requests.exceptions.RequestException as e:
-                    say(f"無法下載圖檔：{e}")
-                    return
-                except Exception as e:
-                    say(f"無法處理上傳的圖檔：{e}")
-                    return
-            else:
-                say("上傳的檔案中有非圖像格式的檔案！")
-                return
-
-        # 如果沒有上傳足夠的檔案，提示用戶
-        say("請上傳1個圖檔以進行修改！")        
-
+    
     #!clearai
     @app.message(re.compile(r"^!clearai$"))
     def clearai(message, say):
