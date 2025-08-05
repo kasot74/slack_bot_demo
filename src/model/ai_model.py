@@ -29,6 +29,10 @@ from ..AI_Service.xai import create_image as xai_create_image
 from ..AI_Service.xai import create_greet as xai_create_greet
 from ..AI_Service.xai import generate_search_summary as generate_search_summary
 from ..AI_Service.xai import clear_conversation_history as ai_clear_conversation_history
+
+# gemini imports
+from ..AI_Service.gemini import generate_summary as generate_summary_gemini
+
 from .stability_model import get_image,get_image2,change_style,change_image
 
 
@@ -37,6 +41,7 @@ COMMANDS_HELP = [
     ("!claude 內容", "詢問 Claude "),
     ("!xai 內容", "詢問 grok4"),
     ("!X 內容", "詢問 grok4(不受約束版本)"),
+    ("!gemini 內容", "詢問 gemini"),
     ("!xai查 [web|x|news] 查詢內容", "AI 搜尋摘要"),
     ("!畫 內容", "用 StabilityAI 產生圖片"),    
     ("!xai畫 內容", "用 xai 產生圖片"),
@@ -83,6 +88,17 @@ def register_handlers(app, config, db):
             say(f"{summary}", thread_ts=message['ts'])            
         except Exception as e:        
             say(f"非預期性問題 {e}")                
+            
+    # Call gemini
+    @app.message(re.compile(r"!gemini\s+(.+)"))
+    def handle_summary_command(message, say):
+        user_input = message['text'].replace('!gemini', '').strip()    
+        # 調用 gemini API
+        try:        
+            summary = generate_summary_gemini(user_input)
+            say(f"{summary}", thread_ts=message['ts'])            
+        except Exception as e:        
+            say(f"非預期性問題 {e}")
 
     # Call XAI
     @app.message(re.compile(r"!X\s+(.+)"))
