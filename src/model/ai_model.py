@@ -32,6 +32,7 @@ from ..AI_Service.xai import clear_conversation_history as ai_clear_conversation
 
 # gemini imports
 from ..AI_Service.gemini import generate_summary as generate_summary_gemini
+from ..AI_Service.gemini import create_image as gemini_create_image
 
 from .stability_model import get_image,get_image2,change_style,change_image
 
@@ -43,7 +44,8 @@ COMMANDS_HELP = [
     ("!X 內容", "詢問 grok4(不受約束版本)"),
     ("!gemini 內容", "詢問 gemini"),
     ("!xai查 [web|x|news] 查詢內容", "AI 搜尋摘要"),
-    ("!畫 內容", "用 StabilityAI 產生圖片"),    
+    ("!畫 內容", "用 StabilityAI 產生圖片"),
+    ("!gemini畫 內容", "用 gemini 產生圖片"),
     ("!xai畫 內容", "用 xai 產生圖片"),
     ("!改風格 內容", "兩張圖進行風格轉換"),
     ("!改圖 內容", "單張圖進行內容修改"),
@@ -150,6 +152,14 @@ def register_handlers(app, config, db):
         channel = message['channel']
         msg_text = re.match(r"^!畫\s+(.+)$", message['text']).group(1).strip()
         say_text, file_name = get_image(msg_text)                        
+        send_image(channel, say_text, say, file_name)
+    
+    #!gemini畫
+    @app.message(re.compile(r"^!gemini畫\s+(.+)$"))
+    def create_image(message, say):        
+        channel = message['channel']
+        msg_text = re.match(r"^!gemini畫\s+(.+)$", message['text']).group(1).strip()
+        say_text, file_name = gemini_create_image(msg_text)                        
         send_image(channel, say_text, say, file_name)
 
     #!畫2

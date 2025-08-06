@@ -81,5 +81,75 @@ def generate_summary(user_input):
     except Exception as e:
         return f"生成失敗: {e}"
 
+def create_image(prompt):
+    """使用 Gemini 生成圖片"""
+    try:
+        # 確保圖片目錄存在
+        image_dir = os.path.join("images", "gemini_image")
+        if not os.path.exists(image_dir):
+            os.makedirs(image_dir)
+        
+        # 發送請求到 Gemini 圖片生成 API
+        url = f"{GEMINI_BASE_URL}/models/{IMAGE_MODEL}:generateContent"
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": GEMINI_API_KEY
+        }
+        
+        payload = {
+            "contents": [{
+                "parts": [
+                    {"text": prompt}
+                ]
+            }],
+            "generationConfig": {
+                "responseModalities": ["TEXT", "IMAGE"]
+            }
+        }
+        
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        
+        result = response.json()
+        
+        # 檢查回應中是否有圖片數據
+        if 'candidates' in result and len(result['candidates']) > 0:
+            candidate = result['candidates'][0]
+            
+            # 查找圖片數據
+            image_data = None
+            text_response = ""
+            
+            for part in candidate.get('content', {}).get('parts', []):
+                if 'inlineData' in part:
+                    image_data = part['inlineData']['data']
+                elif 'text' in part:
+                    text_response = part['text']
+            
+            if image_data:
+                # 解碼並儲存圖片
+                try:
+                    image_bytes = base64.b64decode(image_data)
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    filename = f"gemini_{timestamp}.png"
+                    filepath = os.path.join(image_dir, filename)
+                    
+                    with open(filepath, 'wb') as f:
+                        f.write(image_bytes)
+                    
+                    relative_path = os.path.join("gemini_image", filename)
+                    return f"✅ Gemini 圖片生成成功！\n{text_response if text_response else prompt}", relative_path
+                    
+                except Exception as decode_error:
+                    return f"❌ 圖片解碼失敗: {decode_error}", None
+            else:
+                return f"❌ 回應中沒有圖片數據\n回應內容: {text_response}", None
+        else:
+            return "❌ Gemini 圖片生成失敗：無有效回應", None
+            
+    except requests.exceptions.RequestException as e:
+        return f"❌ Gemini 圖片生成請求失敗: {e}", None
+    except Exception as e:
+        return f"❌ Gemini 圖片生成錯誤: {e}", None
 
 
