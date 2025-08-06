@@ -34,8 +34,6 @@ from ..AI_Service.xai import clear_conversation_history as ai_clear_conversation
 from ..AI_Service.gemini import generate_summary as generate_summary_gemini
 from ..AI_Service.gemini import create_image as gemini_create_image
 
-from .stability_model import get_image,get_image2,change_style,change_image
-
 
 COMMANDS_HELP = [
     ("!openai 內容", "詢問 GPT "),
@@ -44,11 +42,7 @@ COMMANDS_HELP = [
     ("!X 內容", "詢問 grok4(不受約束版本)"),
     ("!gemini 內容", "詢問 gemini"),
     ("!xai查 [web|x|news] 查詢內容", "AI 搜尋摘要"),
-    ("!畫 內容", "用 StabilityAI 產生圖片"),
-    ("!gemini畫 內容", "用 gemini 產生圖片"),
-    ("!xai畫 內容", "用 xai 產生圖片"),
-    ("!改風格 內容", "兩張圖進行風格轉換"),
-    ("!改圖 內容", "單張圖進行內容修改"),
+    ("!畫 內容", "用  gemini Imagen 產生圖片"),            
     ("!動起來", "將圖片轉為影片"),
     ("!clearai", "清除 AI 聊天紀錄"),
     ("!clearX", "清除 X 聊天紀錄"),
@@ -151,77 +145,8 @@ def register_handlers(app, config, db):
     def create_image(message, say):        
         channel = message['channel']
         msg_text = re.match(r"^!畫\s+(.+)$", message['text']).group(1).strip()
-        say_text, file_name = get_image(msg_text)                        
-        send_image(channel, say_text, say, file_name)
-    
-    #!gemini畫
-    @app.message(re.compile(r"^!gemini畫\s+(.+)$"))
-    def create_image(message, say):        
-        channel = message['channel']
-        msg_text = re.match(r"^!gemini畫\s+(.+)$", message['text']).group(1).strip()
         say_text, file_name = gemini_create_image(msg_text)                        
         send_image(channel, say_text, say, file_name)
-
-    #!畫2
-    @app.message(re.compile(r"^!畫2\s+(.+)$"))
-    def create_image(message, say):        
-        channel = message['channel']
-        msg_text = re.match(r"^!畫2\s+(.+)$", message['text']).group(1).strip()
-        say_text, file_name = get_image2(msg_text)                        
-        send_image(channel, say_text, say, file_name)
-        
-
-    #!xai畫
-    @app.message(re.compile(r"^!xai畫\s+(.+)$"))
-    def create_image(message, say):        
-        channel = message['channel']
-        msg_text = re.match(r"^!xai畫\s+(.+)$", message['text']).group(1).strip()
-        say_text, file_name = xai_create_image(msg_text)                        
-        send_image(channel, say_text, say, file_name)
-
-    #!改風格
-    @app.message(re.compile(r"^!改風格\s+(.+)$"))
-    def change_image_style(message, say):        
-        channel = message['channel']
-        msg_text = re.match(r"^!改風格\s+(.+)$", message['text']).group(1).strip()
-        # 檢查是否有上傳的圖檔
-        if 'files' in message and len(message['files']) >= 2:
-            file_info_1 = message['files'][0]  # 第一個檔案
-            file_info_2 = message['files'][1]  # 第二個檔案
-
-            # 確保兩個檔案都是圖像格式
-            if file_info_1['mimetype'].startswith('image/') and file_info_2['mimetype'].startswith('image/'):
-                try:
-                    # 下載第一個圖檔
-                    response_1 = requests.get(
-                        file_info_1['url_private'],
-                        headers={"Authorization": f"Bearer {config['SLACK_BOT_TOKEN']}"}
-                    )
-                    response_1.raise_for_status()
-
-                    # 下載第二個圖檔
-                    response_2 = requests.get(
-                        file_info_2['url_private'],
-                        headers={"Authorization": f"Bearer {config['SLACK_BOT_TOKEN']}"}
-                    )
-                    response_2.raise_for_status()
-
-                    # 將兩個圖檔傳遞給 change_style 函數
-                    say_text, file_name = change_style(BytesIO(response_1.content), BytesIO(response_2.content),msg_text)
-                    send_image(channel, say_text, say, file_name)
-                    return
-                except requests.exceptions.RequestException as e:
-                    say(f"無法下載圖檔：{e}")
-                    return
-                except Exception as e:
-                    say(f"無法處理上傳的圖檔：{e}")
-                    return
-            else:
-                say("上傳的檔案中有非圖像格式的檔案！")
-                return
-
-        # 如果沒有上傳足夠的檔案，提示用戶
-        say("請上傳兩個圖檔以進行風格修改！ 第一張是修改原圖，第二張是風格參考圖！")
     
     #!clearai
     @app.message(re.compile(r"^!clearai$"))

@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 from ..utilities import read_config
 from ..database import con_db
-
+from ..AI_Service.openai import painting
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
 ai_db = con_db(config)
@@ -85,6 +85,46 @@ def generate_summary(user_input):
     except Exception as e:
         return f"生成失敗: {e}"
 
+def painting(text):
+    """使用 Gemini 將中文描述轉換為英文圖片提示詞"""
+    try:
+        url = f"{GEMINI_BASE_URL}/models/{DEFAULT_MODEL}:generateContent"
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": GEMINI_API_KEY
+        }
+        
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": f"你是翻譯官，幫我將文字描述翻譯為英文用來提供給 AI 繪圖用。請將以下中文描述轉換為詳細的英文圖片提示詞：'{text}'"
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "maxOutputTokens": 300,
+                "temperature": 0.3  # 較低的溫度確保翻譯準確性
+            }
+        }
+        
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        
+        result = response.json()
+        
+        if 'candidates' in result and len(result['candidates']) > 0:
+            translated_text = result['candidates'][0]['content']['parts'][0]['text']
+            return translated_text.strip()
+        else:
+            return text  # 如果翻譯失敗，返回原文
+            
+    except Exception as e:
+        print(f"Gemini 翻譯失敗: {e}")
+        return text  # 翻譯失敗時返回原文
+
 def create_image(prompt):
     """使用 Imagen 4.0 生成圖片"""
     try:
@@ -92,7 +132,7 @@ def create_image(prompt):
         image_dir = os.path.join("images", "gemini_image")
         if not os.path.exists(image_dir):
             os.makedirs(image_dir)
-        
+        prompt = painting(prompt)  # 確保 prompt 是經過處理的
         # 發送請求到 Imagen API
         url = f"{GEMINI_BASE_URL}/models/imagen-4.0-generate-preview-06-06:predict"
         headers = {
@@ -107,7 +147,8 @@ def create_image(prompt):
                 }
             ],
             "parameters": {
-                "sampleCount": 1  # 生成1張圖片，可調整為1-4
+                "sampleCount": 1,  # 生成1張圖片，可調整為1-4
+                "personGeneration": "allow_all"  #"dont_allow", "allow_adult", "allow_all"
             }
         }
         
