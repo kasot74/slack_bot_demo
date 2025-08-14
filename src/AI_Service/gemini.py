@@ -216,7 +216,7 @@ def create_video(prompt, negative_prompt="", max_wait_time=300):
         
         # 開始生成影片
         operation = client.models.generate_videos(
-            model="veo-3.0-generate-preview",
+            model="veo-3.0-generate-001",
             prompt=processed_prompt,
             config=config,
         )
