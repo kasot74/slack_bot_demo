@@ -4,6 +4,8 @@ import base64
 import os
 import time
 from datetime import datetime
+from google import genai
+from google.genai import types
 from ..utilities import read_config
 from ..database import con_db
 from ..AI_Service.openai import painting
@@ -194,7 +196,7 @@ def create_image(prompt):
         return f"❌ Imagen 圖片生成錯誤: {e}", None
 
 def create_video(prompt, negative_prompt="", max_wait_time=300):
-    """使用 Veo 3.0 生成影片"""
+    """使用 Google Genai 客戶端生成影片"""
     try:
         # 確保影片目錄存在
         video_dir = os.path.join("images", "gemini_video")
@@ -204,70 +206,58 @@ def create_video(prompt, negative_prompt="", max_wait_time=300):
         # 使用 painting 函數處理提示詞
         processed_prompt = painting(prompt)
         
-        # 啟動影片生成
-        url = f"{GEMINI_BASE_URL}/models/veo-3.0-generate-preview:generateVideos"
-        headers = {
-            "Content-Type": "application/json",
-            "x-goog-api-key": GEMINI_API_KEY
-        }
+        # 初始化 Google Genai 客戶端
+        client = genai.Client(api_key=GEMINI_API_KEY)
         
-        payload = {
-            "prompt": processed_prompt,
-            "config": {
-                "negative_prompt": negative_prompt if negative_prompt else ""
-            }
-        }
+        # 配置影片生成參數
+        config = types.GenerateVideosConfig()
+        if negative_prompt:
+            config.negative_prompt = negative_prompt
         
-        # 啟動生成任務
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()
+        # 開始生成影片
+        operation = client.models.generate_videos(
+            model="veo-3.0-generate-preview",
+            prompt=processed_prompt,
+            config=config,
+        )
         
-        result = response.json()
+        print(f"🎬 影片生成已啟動，操作 ID: {operation.name}")
         
-        if 'name' not in result:
-            return f"❌ 影片生成啟動失敗：{result}", None
-        
-        operation_name = result['name']
-        print(f"🎬 影片生成已啟動，操作 ID: {operation_name}")
-        
-        # 輪詢等待生成完成
+        # 等待影片生成完成
         start_time = time.time()
-        while time.time() - start_time < max_wait_time:
-            # 檢查操作狀態
-            status_url = f"{GEMINI_BASE_URL}/operations/{operation_name}"
-            status_response = requests.get(status_url, headers=headers)
-            
-            if status_response.status_code == 200:
-                status_result = status_response.json()
-                
-                # 檢查是否完成
-                if status_result.get('done', False):
-                    if 'result' in status_result and 'generated_videos' in status_result['result']:
-                        # 獲取生成的影片
-                        generated_videos = status_result['result']['generated_videos']
-                        if len(generated_videos) > 0:
-                            video_info = generated_videos[0]
-                            video_file_name = video_info.get('video', {}).get('name', '')
-                            
-                            if video_file_name:
-                                # 下載影片
-                                return download_video_file(video_file_name, video_dir, processed_prompt)
-                            else:
-                                return f"❌ 無法獲取影片檔案資訊：{video_info}", None
-                        else:
-                            return "❌ 沒有生成任何影片", None
-                    else:
-                        error_msg = status_result.get('error', '未知錯誤')
-                        return f"❌ 影片生成失敗：{error_msg}", None
-                else:
-                    # 還在生成中，等待
-                    print(f"⏳ 影片生成中... ({int(time.time() - start_time)}秒)")
-                    time.sleep(20)
-            else:
-                print(f"⚠️ 狀態檢查失敗: {status_response.status_code}")
-                time.sleep(20)
+        while not operation.done and (time.time() - start_time) < max_wait_time:
+            print(f"⏳ 影片生成中... ({int(time.time() - start_time)}秒)")
+            time.sleep(20)
+            operation = client.operations.get(operation)
         
-        return f"⏰ 影片生成超時 ({max_wait_time}秒)，請稍後再試", None
+        if not operation.done:
+            return f"⏰ 影片生成超時 ({max_wait_time}秒)，請稍後再試", None
+        
+        if operation.result and operation.result.generated_videos:
+            generated_video = operation.result.generated_videos[0]
+            
+            # 下載影片檔案
+            video_file = client.files.download(file=generated_video.video)
+            
+            # 儲存影片
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"veo3_{timestamp}.mp4"
+            filepath = os.path.join(video_dir, filename)
+            
+            # 儲存影片檔案
+            with open(filepath, 'wb') as f:
+                f.write(video_file)
+            
+            relative_path = os.path.join("gemini_video", filename)
+            return f"✅ Veo 3.0 影片生成成功！\n提示詞: {processed_prompt}", relative_path
+        else:
+            error_msg = getattr(operation, 'error', '未知錯誤')
+            return f"❌ 影片生成失敗：{error_msg}", None
+            
+    except requests.exceptions.RequestException as e:
+        return f"❌ Veo 影片生成請求失敗: {e}", None
+    except Exception as e:
+        return f"❌ Veo 影片生成錯誤: {e}", None
         
     except requests.exceptions.RequestException as e:
         return f"❌ Veo 影片生成請求失敗: {e}", None
