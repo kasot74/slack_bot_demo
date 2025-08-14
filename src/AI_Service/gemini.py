@@ -2,6 +2,7 @@ import requests
 import json
 import base64
 import os
+import time
 from datetime import datetime
 from ..utilities import read_config
 from ..database import con_db
@@ -192,4 +193,110 @@ def create_image(prompt):
     except Exception as e:
         return f"❌ Imagen 圖片生成錯誤: {e}", None
 
+def create_video(prompt, negative_prompt="", max_wait_time=300):
+    """使用 Veo 3.0 生成影片"""
+    try:
+        # 確保影片目錄存在
+        video_dir = os.path.join("images", "gemini_video")
+        if not os.path.exists(video_dir):
+            os.makedirs(video_dir)
+        
+        # 使用 painting 函數處理提示詞
+        processed_prompt = painting(prompt)
+        
+        # 啟動影片生成
+        url = f"{GEMINI_BASE_URL}/models/veo-3.0-generate-preview:generateVideos"
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": GEMINI_API_KEY
+        }
+        
+        payload = {
+            "prompt": processed_prompt,
+            "config": {
+                "negative_prompt": negative_prompt if negative_prompt else ""
+            }
+        }
+        
+        # 啟動生成任務
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        
+        result = response.json()
+        
+        if 'name' not in result:
+            return f"❌ 影片生成啟動失敗：{result}", None
+        
+        operation_name = result['name']
+        print(f"🎬 影片生成已啟動，操作 ID: {operation_name}")
+        
+        # 輪詢等待生成完成
+        start_time = time.time()
+        while time.time() - start_time < max_wait_time:
+            # 檢查操作狀態
+            status_url = f"{GEMINI_BASE_URL}/operations/{operation_name}"
+            status_response = requests.get(status_url, headers=headers)
+            
+            if status_response.status_code == 200:
+                status_result = status_response.json()
+                
+                # 檢查是否完成
+                if status_result.get('done', False):
+                    if 'result' in status_result and 'generated_videos' in status_result['result']:
+                        # 獲取生成的影片
+                        generated_videos = status_result['result']['generated_videos']
+                        if len(generated_videos) > 0:
+                            video_info = generated_videos[0]
+                            video_file_name = video_info.get('video', {}).get('name', '')
+                            
+                            if video_file_name:
+                                # 下載影片
+                                return download_video_file(video_file_name, video_dir, processed_prompt)
+                            else:
+                                return f"❌ 無法獲取影片檔案資訊：{video_info}", None
+                        else:
+                            return "❌ 沒有生成任何影片", None
+                    else:
+                        error_msg = status_result.get('error', '未知錯誤')
+                        return f"❌ 影片生成失敗：{error_msg}", None
+                else:
+                    # 還在生成中，等待
+                    print(f"⏳ 影片生成中... ({int(time.time() - start_time)}秒)")
+                    time.sleep(20)
+            else:
+                print(f"⚠️ 狀態檢查失敗: {status_response.status_code}")
+                time.sleep(20)
+        
+        return f"⏰ 影片生成超時 ({max_wait_time}秒)，請稍後再試", None
+        
+    except requests.exceptions.RequestException as e:
+        return f"❌ Veo 影片生成請求失敗: {e}", None
+    except Exception as e:
+        return f"❌ Veo 影片生成錯誤: {e}", None
+
+def download_video_file(file_name, video_dir, prompt):
+    """下載生成的影片檔案"""
+    try:
+        # 下載影片
+        download_url = f"{GEMINI_BASE_URL}/files/{file_name}"
+        headers = {
+            "x-goog-api-key": GEMINI_API_KEY
+        }
+        
+        download_response = requests.get(download_url, headers=headers)
+        download_response.raise_for_status()
+        
+        # 儲存影片
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"veo3_{timestamp}.mp4"
+        filepath = os.path.join(video_dir, filename)
+        
+        with open(filepath, 'wb') as f:
+            f.write(download_response.content)
+        
+        relative_path = os.path.join("gemini_video", filename)
+        return f"✅ Veo 3.0 影片生成成功！\n提示詞: {prompt}", relative_path
+        
+    except Exception as e:
+        return f"❌ 影片下載失敗: {e}", None
 
