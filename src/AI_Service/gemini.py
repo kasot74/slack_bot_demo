@@ -102,7 +102,7 @@ def painting(text):
                 {
                     "parts": [
                         {
-                            "text": f"你是翻譯官，幫我將文字描述翻譯為英文用來提供給 AI 生成用。請將以下中文描述轉換為英文提示詞不需要太多其他建議：'{text}'"
+                            "text": f"你是翻譯官，幫我將文字描述翻譯為英文用來提供給 AI 生成用。請將以下中文描述轉換為英文提示詞給我不需要太多其他建議：'{text}'"
                         }
                     ]
                 }
@@ -311,7 +311,7 @@ def edit_image_from_bytes(image_bytes, text_prompt, original_filename="uploaded"
         
         # 生成內容
         response = client.models.generate_content(
-            model="gemini-2.5-flash-preview-image-generation",
+            model="gemini-2.0-flash-preview-image-generation",
             #model="imagen-4.0-generate-preview-06-06:predict",  
             contents=[processed_prompt, image],
             config=types.GenerateContentConfig(
