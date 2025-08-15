@@ -34,6 +34,7 @@ from ..AI_Service.xai import clear_conversation_history as ai_clear_conversation
 from ..AI_Service.gemini import generate_summary as generate_summary_gemini
 from ..AI_Service.gemini import create_image as gemini_create_image
 from ..AI_Service.gemini import create_video as gemini_create_video
+from ..AI_Service.gemini import edit_image_from_bytes as gemini_edit_image
 
 
 COMMANDS_HELP = [
@@ -44,7 +45,8 @@ COMMANDS_HELP = [
     ("!gemini 內容", "詢問 gemini"),
     ("!xai查 [web|x|news] 查詢內容", "AI 搜尋摘要"),
     ("!畫 內容", "用 Gemini Imagen 產生圖片"),
-    ("!影片 內容", "用 Gemini Veo 3.0 生成影片"),                
+    ("!影片 內容", "用 Gemini Veo 3.0 生成影片"),
+    ("!改圖 內容", "用 Gemini 進行圖片編輯"),
     ("!clearai", "清除 AI 聊天紀錄")
     
 ]
@@ -187,6 +189,52 @@ def register_handlers(app, config, db):
         except Exception as e:
             say(f"影片生成失敗：{e}")
     
+    # !改圖
+    @app.event("message")
+    def handle_edit_image(event, say):
+        # 檢查是否包含改圖指令和檔案
+        if 'text' in event and event['text'].startswith('!改圖') and 'files' in event:
+            channel = event['channel']
+            
+            # 提取改圖描述
+            text_prompt = event['text'].replace('!改圖', '').strip()
+            if not text_prompt:
+                say("請提供改圖描述，例如：!改圖 在我旁邊添加一隻可愛的羊駝")
+                return
+            
+            # 先回應用戶，告知改圖進行中
+            say("🎨 開始改圖，請稍候...")
+            
+            try:
+                # 處理上傳的圖片
+                file_info = event['files'][0]
+                file_url = file_info['url_private']
+                file_name = file_info['name']
+                
+                # 下載圖片
+                headers = {'Authorization': f'Bearer {config["SLACK_BOT_TOKEN"]}'}
+                response = requests.get(file_url, headers=headers)
+                
+                if response.status_code == 200:
+                    image_bytes = response.content
+                    
+                    # 調用 Gemini 改圖功能
+                    result_text, file_path = gemini_edit_image(image_bytes, text_prompt, file_name)
+                    
+                    if file_path:
+                        send_image(channel, result_text, say, file_path)
+                    else:
+                        say(result_text)  # 顯示錯誤訊息
+                else:
+                    say("❌ 無法下載圖片檔案")
+                    
+            except Exception as e:
+                say(f"❌ 改圖失敗：{e}")
+        
+        # 檢查是否只有改圖指令但沒有檔案
+        elif 'text' in event and event['text'].startswith('!改圖') and 'files' not in event:
+            say("請上傳圖片檔案並加上改圖描述，例如：\n上傳圖片 + `!改圖 在我旁邊添加一隻可愛的羊駝`")
+
     #!clearai
     @app.message(re.compile(r"^!clearai$"))
     def clearai(message, say):

@@ -290,3 +290,65 @@ def download_video_file(file_name, video_dir, prompt):
     except Exception as e:
         return f"❌ 影片下載失敗: {e}", None
 
+def edit_image_from_bytes(image_bytes, text_prompt, original_filename="uploaded"):
+    """從位元組數據改圖"""
+    try:
+        # 確保圖片目錄存在
+        image_dir = os.path.join("images", "gemini_image")
+        if not os.path.exists(image_dir):
+            os.makedirs(image_dir)
+        
+        # 從位元組載入圖片
+        from PIL import Image
+        from io import BytesIO
+        image = Image.open(BytesIO(image_bytes))
+        
+        # 初始化 Google Genai 客戶端
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        
+        # 處理提示詞
+        processed_prompt = painting(text_prompt)
+        
+        # 生成內容
+        response = client.models.generate_content(
+            #model="gemini-2.0-flash-preview-image-generation",
+            model="imagen-4.0-generate-preview-06-06:predict",  
+            contents=[processed_prompt, image],
+            config=types.GenerateContentConfig(
+                response_modalities=['TEXT', 'IMAGE']
+            )
+        )
+        
+        # 處理回應
+        generated_text = ""
+        generated_image = None
+        
+        for part in response.candidates[0].content.parts:
+            if part.text is not None:
+                generated_text += part.text
+            elif part.inline_data is not None:
+                generated_image = Image.open(BytesIO(part.inline_data.data))
+        
+        if generated_image:
+            # 儲存生成的圖片
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"gemini_edit_{timestamp}.png"
+            filepath = os.path.join(image_dir, filename)
+            
+            generated_image.save(filepath)
+            
+            relative_path = os.path.join("gemini_image", filename)
+            
+            result_text = f"✅ Gemini 改圖成功！\n"
+            result_text += f"原始檔案: {original_filename}\n"
+            result_text += f"原始提示: {text_prompt}\n"
+            result_text += f"處理提示: {processed_prompt}\n"
+            if generated_text:
+                result_text += f"AI 回應: {generated_text}\n"
+            
+            return result_text, relative_path
+        else:
+            return f"❌ 改圖失敗：未生成圖片\nAI 回應: {generated_text}", None
+            
+    except Exception as e:
+        return f"❌ Gemini 改圖錯誤: {e}", None
