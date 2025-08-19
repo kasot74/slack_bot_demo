@@ -195,8 +195,8 @@ def create_image(prompt):
     except Exception as e:
         return f"❌ Imagen 圖片生成錯誤: {e}", None
 
-def create_video(prompt, negative_prompt="", max_wait_time=300):
-    """使用 Google Genai 客戶端生成影片"""
+def create_video(prompt, negative_prompt="", max_wait_time=300, image_path=None, image_bytes=None):
+    """使用 Google Genai 客戶端生成影片，支援圖片輸入"""
     try:
         # 確保影片目錄存在
         video_dir = os.path.join("images", "gemini_video")
@@ -209,15 +209,39 @@ def create_video(prompt, negative_prompt="", max_wait_time=300):
         # 初始化 Google Genai 客戶端
         client = genai.Client(api_key=GEMINI_API_KEY)
         
+        # 處理圖片輸入
+        image = None
+        if image_path and os.path.exists(image_path):
+            # 從檔案路徑載入圖片
+            import PIL.Image
+            image = PIL.Image.open(image_path)
+            print(f"📷 使用圖片檔案: {image_path}")
+        elif image_bytes:
+            # 從位元組載入圖片
+            import PIL.Image
+            from io import BytesIO
+            image = PIL.Image.open(BytesIO(image_bytes))
+            print("📷 使用上傳的圖片")
+        
         # 配置影片生成參數
         config = types.GenerateVideosConfig()
         if negative_prompt:
             config.negative_prompt = negative_prompt
         
+        # 準備輸入內容
+        if image:
+            # 有圖片輸入時，結合文字和圖片
+            inputs = [processed_prompt, image]
+            print(f"🎬 開始圖片到影片生成...")
+        else:
+            # 只有文字輸入
+            inputs = processed_prompt
+            print(f"🎬 開始文字到影片生成...")
+        
         # 開始生成影片
         operation = client.models.generate_videos(
             model="veo-3.0-generate-preview",
-            prompt=processed_prompt,
+            prompt=inputs,
             config=config,
         )
         
@@ -241,7 +265,8 @@ def create_video(prompt, negative_prompt="", max_wait_time=300):
             
             # 儲存影片
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"veo3_{timestamp}.mp4"
+            prefix = "veo3_img2vid" if image else "veo3_txt2vid"
+            filename = f"{prefix}_{timestamp}.mp4"
             filepath = os.path.join(video_dir, filename)
             
             # 儲存影片檔案
@@ -249,20 +274,28 @@ def create_video(prompt, negative_prompt="", max_wait_time=300):
                 f.write(video_file)
             
             relative_path = os.path.join("gemini_video", filename)
-            return f"✅ Veo 3.0 影片生成成功！\n提示詞: {processed_prompt}", relative_path
+            
+            result_text = f"✅ Veo 3.0 影片生成成功！\n"
+            result_text += f"類型: {'圖片轉影片' if image else '文字轉影片'}\n"
+            result_text += f"提示詞: {processed_prompt}\n"
+            if negative_prompt:
+                result_text += f"負面提示: {negative_prompt}\n"
+            
+            return result_text, relative_path
         else:
             error_msg = getattr(operation, 'error', '未知錯誤')
             return f"❌ 影片生成失敗：{error_msg}", None
             
-    except requests.exceptions.RequestException as e:
-        return f"❌ Veo 影片生成請求失敗: {e}", None
     except Exception as e:
         return f"❌ Veo 影片生成錯誤: {e}", None
-        
-    except requests.exceptions.RequestException as e:
-        return f"❌ Veo 影片生成請求失敗: {e}", None
-    except Exception as e:
-        return f"❌ Veo 影片生成錯誤: {e}", None
+
+def create_video_from_image(image_path, prompt, negative_prompt="", max_wait_time=300):
+    """從圖片生成影片的便利函數"""
+    return create_video(prompt, negative_prompt, max_wait_time, image_path=image_path)
+
+def create_video_from_bytes(image_bytes, prompt, negative_prompt="", max_wait_time=300):
+    """從圖片位元組生成影片的便利函數"""
+    return create_video(prompt, negative_prompt, max_wait_time, image_bytes=image_bytes)
 
 def download_video_file(file_name, video_dir, prompt):
     """下載生成的影片檔案"""

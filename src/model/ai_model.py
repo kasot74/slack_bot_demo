@@ -34,6 +34,8 @@ from ..AI_Service.xai import clear_conversation_history as ai_clear_conversation
 from ..AI_Service.gemini import generate_summary as generate_summary_gemini
 from ..AI_Service.gemini import create_image as gemini_create_image
 from ..AI_Service.gemini import create_video as gemini_create_video
+from ..AI_Service.gemini import create_video_from_bytes as gemini_create_video_from_bytes
+
 from ..AI_Service.gemini import edit_image_from_bytes as gemini_edit_image
 
 
@@ -169,25 +171,60 @@ def register_handlers(app, config, db):
         say_text, file_name = gemini_create_image(msg_text)                        
         send_image(channel, say_text, say, file_name)
 
-    #!影片
+    #!影片    
     @app.message(re.compile(r"^!影片\s+(.+)$"))
-    def create_video_handler(message, say):        
+    def create_video_handler(message, say):
         channel = message['channel']
-        msg_text = re.match(r"^!影片\s+(.+)$", message['text']).group(1).strip()
+        text_prompt = message['text'].replace('!影片', '').strip()
         
-        # 先回應用戶，告知影片生成中
-        say("🎬 開始生成影片，這可能需要幾分鐘時間，請稍候...")
+        # 檢查是否有檔案上傳
+        has_files = 'files' in message and len(message['files']) > 0
         
-        try:
-            # 調用 gemini_create_video，預設 5 分鐘超時
-            say_text, file_name = gemini_create_video(msg_text, "", 300)
+        if has_files:
+            # 有圖片 + 描述：圖片轉影片
+            say("🎬 開始從圖片生成影片，這可能需要幾分鐘時間，請稍候...")
             
-            if file_name:
-                send_video(channel, say_text, say, file_name)
-            else:
-                say(say_text)  # 顯示錯誤訊息
-        except Exception as e:
-            say(f"影片生成失敗：{e}")
+            try:
+                # 處理上傳的圖片
+                file_info = message['files'][0]
+                file_url = file_info['url_private']
+                file_name = file_info['name']
+                
+                # 下載圖片
+                headers = {'Authorization': f'Bearer {config["SLACK_BOT_TOKEN"]}'}
+                response = requests.get(file_url, headers=headers)
+                
+                if response.status_code == 200:
+                    image_bytes = response.content
+                    
+                    # 調用 Gemini 圖片轉影片功能
+                    result_text, file_path = gemini_create_video_from_bytes(image_bytes, text_prompt)
+                    
+                    if file_path:
+                        send_video(channel, result_text, say, file_path)
+                    else:
+                        say(result_text)  # 顯示錯誤訊息
+                else:
+                    say("❌ 無法下載圖片檔案")
+                    
+            except Exception as e:
+                say(f"❌ 圖片轉影片失敗：{e}")
+        
+        else:
+            # 只有描述：純文字轉影片
+            say("🎬 開始生成影片，這可能需要幾分鐘時間，請稍候...")
+            
+            try:
+                # 調用 Gemini 純文字轉影片功能
+                result_text, file_path = gemini_create_video(text_prompt)
+                
+                if file_path:
+                    send_video(channel, result_text, say, file_path)
+                else:
+                    say(result_text)  # 顯示錯誤訊息
+                    
+            except Exception as e:
+                say(f"❌ 影片生成失敗：{e}")
     
     # !改圖
     @app.event("message")
