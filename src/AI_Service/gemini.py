@@ -230,8 +230,8 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_path=None,
             
             # 創建符合 API 要求的圖片物件
             image = types.Image(
-                mime_type='image/jpeg',
-                data=base64.b64encode(image_bytes_data).decode('utf-8')
+                mimeType='image/jpeg',
+                bytesBase64Encoded=base64.b64encode(image_bytes_data).decode('utf-8')
             )
             print(f"📷 使用圖片檔案: {image_path}")
             
@@ -254,8 +254,8 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_path=None,
             
             # 創建符合 API 要求的圖片物件
             image = types.Image(
-                mime_type='image/jpeg',
-                data=base64.b64encode(processed_image_bytes).decode('utf-8')
+                mimeType='image/jpeg',
+                bytesBase64Encoded=base64.b64encode(processed_image_bytes).decode('utf-8')
             )
             print("📷 使用上傳的圖片")
         
