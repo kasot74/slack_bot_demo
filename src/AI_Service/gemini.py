@@ -228,91 +228,94 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_path=None,
         if negative_prompt:
             config.negative_prompt = negative_prompt
         
-        # 修正：根據是否有圖片輸入使用不同的生成方式
-        if image:
-            # 有圖片輸入時，使用 generate_content (圖片轉影片)
-            print(f"🎬 開始圖片到影片生成...")
-            
-            response = client.models.generate_content(
-                model="veo-3.0-generate-preview",
-                contents=[processed_prompt, image],
-                config=types.GenerateContentConfig(
-                    response_modalities=['VIDEO']
-                )
-            )
-            
-            # 處理圖片轉影片的回應
-            if response.candidates and len(response.candidates) > 0:
-                for part in response.candidates[0].content.parts:
-                    if part.inline_data is not None and part.inline_data.mime_type.startswith('video'):
-                        # 儲存影片
-                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                        filename = f"veo3_img2vid_{timestamp}.mp4"
-                        filepath = os.path.join(video_dir, filename)
-                        
-                        with open(filepath, 'wb') as f:
-                            f.write(part.inline_data.data)
-                        
-                        relative_path = os.path.join("gemini_video", filename)
-                        
-                        result_text = f"✅ Veo 3.0 圖片轉影片成功！\n"
-                        result_text += f"提示詞: {processed_prompt}\n"
-                        if negative_prompt:
-                            result_text += f"負面提示: {negative_prompt}\n"
-                        
-                        return result_text, relative_path
-            
-            return "❌ 圖片轉影片失敗：未生成影片", None
+        print(f"🎬 開始影片生成...")
         
-        else:
-            # 只有文字輸入時，使用 generate_videos (文字轉影片)
-            print(f"🎬 開始文字到影片生成...")
-            
-            # 開始生成影片 - 修正：prompt 應該是字串，不是列表
+        # 統一使用 generate_videos 方法，根據官方範例
+        if image:
+            # 有圖片輸入時，使用 image 參數
             operation = client.models.generate_videos(
                 model="veo-3.0-generate-preview",
-                prompt=processed_prompt,  # 修正：直接傳入字串
+                prompt=processed_prompt,
+                image=image,  # 修正：使用 image 參數
                 config=config,
             )
+            print(f"🎬 圖片轉影片生成已啟動，操作 ID: {operation.name}")
+        else:
+            # 純文字影片生成
+            operation = client.models.generate_videos(
+                model="veo-3.0-generate-preview",
+                prompt=processed_prompt,
+                config=config,
+            )
+            print(f"🎬 文字轉影片生成已啟動，操作 ID: {operation.name}")
+        
+        # 等待影片生成完成
+        start_time = time.time()
+        while not operation.done and (time.time() - start_time) < max_wait_time:
+            elapsed_time = int(time.time() - start_time)
+            print(f"⏳ 影片生成中... ({elapsed_time}秒)")
+            time.sleep(20)
+            operation = client.operations.get(operation)
+        
+        if not operation.done:
+            return f"⏰ 影片生成超時 ({max_wait_time}秒)，請稍後再試", None
+        
+        # 修正：使用 operation.response 而不是 operation.result
+        if hasattr(operation, 'response') and operation.response and operation.response.generated_videos:
+            generated_video = operation.response.generated_videos[0]
             
-            print(f"🎬 影片生成已啟動，操作 ID: {operation.name}")
+            # 下載影片檔案
+            video_file = client.files.download(file=generated_video.video)
             
-            # 等待影片生成完成
-            start_time = time.time()
-            while not operation.done and (time.time() - start_time) < max_wait_time:
-                print(f"⏳ 影片生成中... ({int(time.time() - start_time)}秒)")
-                time.sleep(20)
-                operation = client.operations.get(operation)
+            # 儲存影片
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            video_type = "img2vid" if image else "txt2vid"
+            filename = f"veo3_{video_type}_{timestamp}.mp4"
+            filepath = os.path.join(video_dir, filename)
             
-            if not operation.done:
-                return f"⏰ 影片生成超時 ({max_wait_time}秒)，請稍後再試", None
+            # 儲存影片檔案
+            with open(filepath, 'wb') as f:
+                f.write(video_file)
             
-            if operation.result and operation.result.generated_videos:
-                generated_video = operation.result.generated_videos[0]
-                
-                # 下載影片檔案
-                video_file = client.files.download(file=generated_video.video)
-                
-                # 儲存影片
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                filename = f"veo3_txt2vid_{timestamp}.mp4"
-                filepath = os.path.join(video_dir, filename)
-                
-                # 儲存影片檔案
-                with open(filepath, 'wb') as f:
-                    f.write(video_file)
-                
-                relative_path = os.path.join("gemini_video", filename)
-                
-                result_text = f"✅ Veo 3.0 文字轉影片成功！\n"
-                result_text += f"提示詞: {processed_prompt}\n"
-                if negative_prompt:
-                    result_text += f"負面提示: {negative_prompt}\n"
-                
-                return result_text, relative_path
-            else:
-                error_msg = getattr(operation, 'error', '未知錯誤')
-                return f"❌ 影片生成失敗：{error_msg}", None
+            relative_path = os.path.join("gemini_video", filename)
+            
+            result_text = f"✅ Veo 3.0 影片生成成功！\n"
+            result_text += f"類型: {'圖片轉影片' if image else '純文字轉影片'}\n"
+            result_text += f"提示詞: {processed_prompt}\n"
+            if negative_prompt:
+                result_text += f"負面提示: {negative_prompt}\n"
+            
+            return result_text, relative_path
+        
+        # 也檢查 operation.result (向後相容)
+        elif hasattr(operation, 'result') and operation.result and operation.result.generated_videos:
+            generated_video = operation.result.generated_videos[0]
+            
+            # 下載影片檔案
+            video_file = client.files.download(file=generated_video.video)
+            
+            # 儲存影片
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            video_type = "img2vid" if image else "txt2vid"
+            filename = f"veo3_{video_type}_{timestamp}.mp4"
+            filepath = os.path.join(video_dir, filename)
+            
+            # 儲存影片檔案
+            with open(filepath, 'wb') as f:
+                f.write(video_file)
+            
+            relative_path = os.path.join("gemini_video", filename)
+            
+            result_text = f"✅ Veo 3.0 影片生成成功！\n"
+            result_text += f"類型: {'圖片轉影片' if image else '純文字轉影片'}\n"
+            result_text += f"提示詞: {processed_prompt}\n"
+            if negative_prompt:
+                result_text += f"負面提示: {negative_prompt}\n"
+            
+            return result_text, relative_path
+        else:
+            error_msg = getattr(operation, 'error', '未知錯誤')
+            return f"❌ 影片生成失敗：{error_msg}", None
             
     except Exception as e:
         return f"❌ Veo 影片生成錯誤: {e}", None
