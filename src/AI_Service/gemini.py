@@ -195,7 +195,7 @@ def create_image(prompt):
     except Exception as e:
         return f"❌ Imagen 圖片生成錯誤: {e}", None
 
-def create_video(prompt, negative_prompt="", max_wait_time=300, image_path=None, image_bytes=None):
+def create_video(prompt, negative_prompt="", max_wait_time=300, image_bytes=None):
     """使用 Google Genai 客戶端生成影片，支援圖片輸入"""
     try:
         # 確保影片目錄存在
@@ -209,53 +209,13 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_path=None,
         # 初始化 Google Genai 客戶端
         client = genai.Client(api_key=GEMINI_API_KEY)
         
-        # 處理圖片輸入 - 修正圖片格式
+        # 處理圖片輸入 - 只處理 image_bytes
         image = None
-        if image_path and os.path.exists(image_path):
-            # 從檔案路徑載入圖片並轉換為正確格式
-            import PIL.Image
-            from io import BytesIO
-            import base64
-            
-            pil_image = PIL.Image.open(image_path)
-            
-            # 轉換為 RGB 格式（如果是 RGBA 或其他格式）
-            if pil_image.mode != 'RGB':
-                pil_image = pil_image.convert('RGB')
-            
-            # 轉換為 bytes
-            buffer = BytesIO()
-            pil_image.save(buffer, format='JPEG')
-            image_bytes_data = buffer.getvalue()
-            
-            # 創建符合 API 要求的圖片物件
-            image = types.Image(
-                mimeType='image/jpeg',
-                bytesBase64Encoded=base64.b64encode(image_bytes_data).decode('utf-8')
-            )
-            print(f"📷 使用圖片檔案: {image_path}")
-            
-        elif image_bytes:
+        if image_bytes:
             # 從位元組載入圖片並轉換為正確格式
-            import PIL.Image
-            from io import BytesIO
-            import base64
-            
-            pil_image = PIL.Image.open(BytesIO(image_bytes))
-            
-            # 轉換為 RGB 格式
-            if pil_image.mode != 'RGB':
-                pil_image = pil_image.convert('RGB')
-            
-            # 轉換為 JPEG bytes
-            buffer = BytesIO()
-            pil_image.save(buffer, format='JPEG')
-            processed_image_bytes = buffer.getvalue()
-            
-            # 創建符合 API 要求的圖片物件
-            image = types.Image(
-                mimeType='image/jpeg',
-                bytesBase64Encoded=base64.b64encode(processed_image_bytes).decode('utf-8')
+            image = types.Image.from_bytes(
+                data=image_bytes,
+                mime_type="image/jpeg"  
             )
             print("📷 使用上傳的圖片")
         
@@ -266,13 +226,13 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_path=None,
         
         print(f"🎬 開始影片生成...")
         
-        # 統一使用 generate_videos 方法，根據官方範例
+        # 統一使用 generate_videos 方法
         if image:
             # 有圖片輸入時，使用 image 參數
             operation = client.models.generate_videos(
                 model="veo-3.0-generate-preview",
                 prompt=processed_prompt,
-                image=image,  # 修正：使用 image 參數
+                image=image,
                 config=config,
             )
             print(f"🎬 圖片轉影片生成已啟動，操作 ID: {operation.name}")
@@ -296,7 +256,7 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_path=None,
         if not operation.done:
             return f"⏰ 影片生成超時 ({max_wait_time}秒)，請稍後再試", None
         
-        # 修正：使用 operation.response 而不是 operation.result
+        # 處理生成結果
         if hasattr(operation, 'response') and operation.response and operation.response.generated_videos:
             generated_video = operation.response.generated_videos[0]
             
@@ -355,10 +315,6 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_path=None,
             
     except Exception as e:
         return f"❌ Veo 影片生成錯誤: {e}", None
-
-def create_video_from_image(image_path, prompt, negative_prompt="", max_wait_time=300):
-    """從圖片生成影片的便利函數"""
-    return create_video(prompt, negative_prompt, max_wait_time, image_path=image_path)
 
 def create_video_from_bytes(image_bytes, prompt, negative_prompt="", max_wait_time=300):
     """從圖片位元組生成影片的便利函數"""
