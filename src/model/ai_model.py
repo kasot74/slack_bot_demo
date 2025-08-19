@@ -189,23 +189,13 @@ def register_handlers(app, config, db):
                 file_info = message['files'][0]
                 file_url = file_info['url_private']
                 file_name = file_info['name']
+                                                
+                result_text, file_path = gemini_create_video_from_bytes(file_url, text_prompt)
                 
-                # 下載圖片
-                headers = {'Authorization': f'Bearer {config["SLACK_BOT_TOKEN"]}'}
-                response = requests.get(file_url, headers=headers)
-                
-                if response.status_code == 200:
-                    image_bytes = response.content
-                    
-                    # 調用 Gemini 圖片轉影片功能
-                    result_text, file_path = gemini_create_video_from_bytes(image_bytes, text_prompt)
-                    
-                    if file_path:
-                        send_video(channel, result_text, say, file_path)
-                    else:
-                        say(result_text)  # 顯示錯誤訊息
+                if file_path:
+                    send_video(channel, result_text, say, file_path)
                 else:
-                    say("❌ 無法下載圖片檔案")
+                    say(result_text)  # 顯示錯誤訊息
                     
             except Exception as e:
                 say(f"❌ 圖片轉影片失敗：{e}")
@@ -248,14 +238,22 @@ def register_handlers(app, config, db):
                 file_url = file_info['url_private']
                 file_name = file_info['name']
                 
-                # 修改：直接傳入 file_url，不下載圖片
-                # 調用 Gemini 改圖功能
-                result_text, file_path = gemini_edit_image(file_url, text_prompt, file_name)
+                # 下載圖片
+                headers = {'Authorization': f'Bearer {config["SLACK_BOT_TOKEN"]}'}
+                response = requests.get(file_url, headers=headers)
                 
-                if file_path:
-                    send_image(channel, result_text, say, file_path)
+                if response.status_code == 200:
+                    image_bytes = response.content
+                    
+                    # 調用 Gemini 改圖功能
+                    result_text, file_path = gemini_edit_image(image_bytes, text_prompt, file_name)
+                    
+                    if file_path:
+                        send_image(channel, result_text, say, file_path)
+                    else:
+                        say(result_text)  # 顯示錯誤訊息
                 else:
-                    say(result_text)  # 顯示錯誤訊息
+                    say("❌ 無法下載圖片檔案")
                     
             except Exception as e:
                 say(f"❌ 改圖失敗：{e}")
