@@ -259,9 +259,7 @@ def register_handlers(app, config, db):
                     
             except Exception as e:
                 say(f"❌ 改圖失敗：{e}")
-                        
-                except Exception as e:
-                    say(f"❌ 改圖失敗：{e}")
+
         
         # 檢查是否只有改圖指令但沒有檔案
         elif 'text' in event and event['text'].startswith('!改圖') and 'files' not in event:
