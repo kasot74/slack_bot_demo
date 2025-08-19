@@ -209,18 +209,54 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_path=None,
         # 初始化 Google Genai 客戶端
         client = genai.Client(api_key=GEMINI_API_KEY)
         
-        # 處理圖片輸入
+        # 處理圖片輸入 - 修正圖片格式
         image = None
         if image_path and os.path.exists(image_path):
-            # 從檔案路徑載入圖片
-            import PIL.Image
-            image = PIL.Image.open(image_path)
-            print(f"📷 使用圖片檔案: {image_path}")
-        elif image_bytes:
-            # 從位元組載入圖片
+            # 從檔案路徑載入圖片並轉換為正確格式
             import PIL.Image
             from io import BytesIO
-            image = PIL.Image.open(BytesIO(image_bytes))
+            import base64
+            
+            pil_image = PIL.Image.open(image_path)
+            
+            # 轉換為 RGB 格式（如果是 RGBA 或其他格式）
+            if pil_image.mode != 'RGB':
+                pil_image = pil_image.convert('RGB')
+            
+            # 轉換為 bytes
+            buffer = BytesIO()
+            pil_image.save(buffer, format='JPEG')
+            image_bytes_data = buffer.getvalue()
+            
+            # 創建符合 API 要求的圖片物件
+            image = types.Image(
+                mime_type='image/jpeg',
+                data=base64.b64encode(image_bytes_data).decode('utf-8')
+            )
+            print(f"📷 使用圖片檔案: {image_path}")
+            
+        elif image_bytes:
+            # 從位元組載入圖片並轉換為正確格式
+            import PIL.Image
+            from io import BytesIO
+            import base64
+            
+            pil_image = PIL.Image.open(BytesIO(image_bytes))
+            
+            # 轉換為 RGB 格式
+            if pil_image.mode != 'RGB':
+                pil_image = pil_image.convert('RGB')
+            
+            # 轉換為 JPEG bytes
+            buffer = BytesIO()
+            pil_image.save(buffer, format='JPEG')
+            processed_image_bytes = buffer.getvalue()
+            
+            # 創建符合 API 要求的圖片物件
+            image = types.Image(
+                mime_type='image/jpeg',
+                data=base64.b64encode(processed_image_bytes).decode('utf-8')
+            )
             print("📷 使用上傳的圖片")
         
         # 配置影片生成參數
