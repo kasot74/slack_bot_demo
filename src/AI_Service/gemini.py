@@ -213,7 +213,7 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_url=None):
         image = None
         if image_url:
             # 從位元組載入圖片並轉換為正確格式
-            image = types.Image.from_url(image_url)                
+            image = types.Image.from_uri(image_url)                
             print("📷 使用上傳的圖片")
         
         # 配置影片生成參數
