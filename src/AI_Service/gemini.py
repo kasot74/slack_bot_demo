@@ -219,9 +219,10 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_bytes=None
                 raise ValueError("無法判斷圖片的 MIME 類型")
 
             mime_type = kind.mime  # 例如：image/jpeg 或 image/png
-            image_base64 = base64.b64encode(image_bytes).decode('utf-8')
             # 建立 GenAI 圖片物件
-            image = {  "bytesBase64Encoded": image_base64,  "mimeType": mime_type }
+            image = Image.open(BytesIO(image_bytes))
+            #image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+            #image = {  "bytesBase64Encoded": image_base64,  "mimeType": mime_type }
 
             print("📷 使用上傳的圖片")
         
