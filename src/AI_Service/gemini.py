@@ -3,6 +3,7 @@ import json
 import base64
 import os
 import time
+import filetype
 from datetime import datetime
 from google import genai
 from google.genai import types
@@ -195,7 +196,7 @@ def create_image(prompt):
     except Exception as e:
         return f"❌ Imagen 圖片生成錯誤: {e}", None
 
-def create_video(prompt, negative_prompt="", max_wait_time=300, image_url=None):
+def create_video(prompt, negative_prompt="", max_wait_time=300, image_bytes=None):
     """使用 Google Genai 客戶端生成影片，支援圖片輸入"""
     try:
         # 確保影片目錄存在
@@ -211,9 +212,16 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_url=None):
         
         # 處理圖片輸入 - 只處理 image_bytes
         image = None
-        if image_url:
-            # 從位元組載入圖片並轉換為正確格式
-            image = types.Image.from_file(image_url)                
+        if image_bytes:            
+            # 判斷 MIME 類型
+            kind = filetype.guess(image_bytes)
+            if not kind:
+                raise ValueError("無法判斷圖片的 MIME 類型")
+
+            mime_type = kind.mime  # 例如：image/jpeg 或 image/png
+
+            # 建立 GenAI 圖片物件
+            image = types.ContentPart.from_data(data=image_bytes, mime_type=mime_type)
             print("📷 使用上傳的圖片")
         
         # 配置影片生成參數
@@ -313,9 +321,9 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_url=None):
     except Exception as e:
         return f"❌ Veo 影片生成錯誤: {e}", None
 
-def create_video_from_bytes(image_url, prompt, negative_prompt="", max_wait_time=300):
+def create_video_from_bytes(image_bytes, prompt, negative_prompt="", max_wait_time=300):
     """從圖片位元組生成影片的便利函數"""
-    return create_video(prompt, negative_prompt, max_wait_time, image_url=image_url)
+    return create_video(prompt, negative_prompt, max_wait_time, image_bytes=image_bytes)
 
 def download_video_file(file_name, video_dir, prompt):
     """下載生成的影片檔案"""

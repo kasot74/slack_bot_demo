@@ -189,13 +189,23 @@ def register_handlers(app, config, db):
                 file_info = message['files'][0]
                 file_url = file_info['url_private']
                 file_name = file_info['name']
-                say(file_url)                               
-                result_text, file_path = gemini_create_video_from_bytes(file_url, text_prompt)
                 
-                if file_path:
-                    send_video(channel, result_text, say, file_path)
+                # 下載圖片
+                headers = {'Authorization': f'Bearer {config["SLACK_BOT_TOKEN"]}'}
+                response = requests.get(file_url, headers=headers)
+
+                if response.status_code == 200:
+                    image_bytes = response.content
+
+                    result_text, file_path = gemini_create_video_from_bytes(image_bytes, text_prompt)
+                    
+                    if file_path:
+                        send_video(channel, result_text, say, file_path)
+                    else:
+                        say(result_text)  # 顯示錯誤訊息
                 else:
-                    say(result_text)  # 顯示錯誤訊息
+                    say("❌ 無法下載圖片檔案")
+
                     
             except Exception as e:
                 say(f"❌ 圖片轉影片失敗：{e}")
