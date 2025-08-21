@@ -212,73 +212,39 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_bytes=None
         
         # 處理圖片輸入 - 只處理 image_bytes
         image = None
+        temp_image_path = None
         if image_bytes:            
-            # 判斷 MIME 類型
-            # 檢查 types.Image 的可用方法
-            available_methods = [method for method in dir(types.Image) if not method.startswith('_')]
-            print(f"🔍 types.Image 可用方法: {available_methods}")
-            
             try:
-                # 方法1: 嘗試使用 PIL Image 轉換
-                from PIL import Image as PILImage
-                from io import BytesIO
-                
-                print(f"🔄 嘗試使用 PIL Image...")
-                pil_image = PILImage.open(BytesIO(image_bytes))
-                
-                # 檢查是否有 from_pil 方法
-                if hasattr(types.Image, 'from_pil'):
-                    print(f"🔄 使用 types.Image.from_pil...")
-                    image = types.Image.from_pil(pil_image)
-                    print(f"✅ from_pil 成功")
-                    
-                # 或者嘗試直接使用 PIL Image
+                # 判斷 MIME 類型和副檔名
+                kind = filetype.guess(image_bytes)
+                if not kind:
+                    print("❌ 無法判斷圖片格式，使用預設 .jpg")
+                    file_extension = ".jpg"
                 else:
-                    print(f"🔄 直接使用 PIL Image 物件...")
-                    image = pil_image
-                    print(f"✅ 直接使用 PIL Image 成功")
-                    
-            except Exception as pil_error:
-                print(f"❌ PIL 方式失敗: {pil_error}")
+                    file_extension = f".{kind.extension}"
+                    print(f"🎨 檢測到圖片格式: {kind.mime}, 副檔名: {file_extension}")
                 
-                try:
-                    # 方法2: 嘗試 base64 方式
-                    print(f"🔄 嘗試 base64 方式...")
-                    
-                    # 判斷 MIME 類型
-                    kind = filetype.guess(image_bytes)
-                    mime_type = kind.mime if kind else "image/jpeg"
-                    print(f"🎨 檢測到圖片格式: {mime_type}")
-                    
-                    # 轉為 base64
-                    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-                    
-                    # 嘗試不同的創建方式
-                    if hasattr(types.Image, 'from_base64'):
-                        print(f"🔄 使用 from_base64...")
-                        image = types.Image.from_base64(image_base64, mime_type=mime_type)
-                        print(f"✅ from_base64 成功")
-                    
-                    elif hasattr(types, 'Part'):
-                        print(f"🔄 使用 types.Part...")
-                        image = types.Part.from_data(
-                            data=image_bytes,
-                            mime_type=mime_type
-                        )
-                        print(f"✅ types.Part 成功")
-                    
-                    else:
-                        # 最後的備用方案：使用字典格式
-                        print(f"🔄 使用字典格式...")
-                        image = {
-                            "mimeType": mime_type,
-                            "data": image_base64
-                        }
-                        print(f"✅ 字典格式成功")
-                        
-                except Exception as base64_error:
-                    print(f"❌ base64 方式也失敗: {base64_error}")
-                    return f"❌ 圖片處理失敗: {base64_error}", None
+                # 創建臨時檔案路徑
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                temp_filename = f"temp_image_{timestamp}{file_extension}"
+                temp_image_path = os.path.join(video_dir, temp_filename)
+                
+                # 儲存圖片到本機
+                print(f"💾 儲存圖片到: {temp_image_path}")
+                with open(temp_image_path, 'wb') as f:
+                    f.write(image_bytes)
+                
+                # 使用 types.Image.from_file 載入圖片
+                print(f"🔄 使用 types.Image.from_file 載入圖片...")
+                image = types.Image.from_file(temp_image_path)
+                print(f"✅ 圖片載入成功，類型: {type(image)}")
+                
+            except Exception as img_error:
+                print(f"❌ 圖片處理失敗: {img_error}")
+                # 清理臨時檔案
+                if temp_image_path and os.path.exists(temp_image_path):
+                    os.remove(temp_image_path)
+                return f"❌ 圖片處理失敗: {img_error}", None
         
         # 配置影片生成參數
         config = types.GenerateVideosConfig()
