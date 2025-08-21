@@ -236,7 +236,7 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_bytes=None
                 
                 # 使用 types.Image.from_file 載入圖片
                 print(f"🔄 使用 types.Image.from_file 載入圖片...")
-                image = types.Image.from_file(temp_image_path)
+                image = types.Image.from_file(location=temp_image_path)
                 print(f"✅ 圖片載入成功，類型: {type(image)}")
                 
             except Exception as img_error:
