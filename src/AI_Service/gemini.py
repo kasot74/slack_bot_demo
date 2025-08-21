@@ -214,17 +214,71 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_bytes=None
         image = None
         if image_bytes:            
             # 判斷 MIME 類型
-            kind = filetype.guess(image_bytes)
-            if not kind:
-                raise ValueError("無法判斷圖片的 MIME 類型")
-
-            mime_type = kind.mime  # 例如：image/jpeg 或 image/png
-            # 建立 GenAI 圖片物件
-            #image = Image.open(BytesIO(image_bytes))
-            #image_base64 = base64.b64encode(image_bytes).decode('utf-8')
-            #image = {  "bytesBase64Encoded": image_base64,  "mimeType": mime_type }
-            image = types.Image.from_bytes(image_bytes, mime_type=mime_type)
-            print("📷 使用上傳的圖片")
+            # 檢查 types.Image 的可用方法
+            available_methods = [method for method in dir(types.Image) if not method.startswith('_')]
+            print(f"🔍 types.Image 可用方法: {available_methods}")
+            
+            try:
+                # 方法1: 嘗試使用 PIL Image 轉換
+                from PIL import Image as PILImage
+                from io import BytesIO
+                
+                print(f"🔄 嘗試使用 PIL Image...")
+                pil_image = PILImage.open(BytesIO(image_bytes))
+                
+                # 檢查是否有 from_pil 方法
+                if hasattr(types.Image, 'from_pil'):
+                    print(f"🔄 使用 types.Image.from_pil...")
+                    image = types.Image.from_pil(pil_image)
+                    print(f"✅ from_pil 成功")
+                    
+                # 或者嘗試直接使用 PIL Image
+                else:
+                    print(f"🔄 直接使用 PIL Image 物件...")
+                    image = pil_image
+                    print(f"✅ 直接使用 PIL Image 成功")
+                    
+            except Exception as pil_error:
+                print(f"❌ PIL 方式失敗: {pil_error}")
+                
+                try:
+                    # 方法2: 嘗試 base64 方式
+                    print(f"🔄 嘗試 base64 方式...")
+                    
+                    # 判斷 MIME 類型
+                    kind = filetype.guess(image_bytes)
+                    mime_type = kind.mime if kind else "image/jpeg"
+                    print(f"🎨 檢測到圖片格式: {mime_type}")
+                    
+                    # 轉為 base64
+                    image_base64 = base64.b64encode(image_bytes).decode('utf-8')
+                    
+                    # 嘗試不同的創建方式
+                    if hasattr(types.Image, 'from_base64'):
+                        print(f"🔄 使用 from_base64...")
+                        image = types.Image.from_base64(image_base64, mime_type=mime_type)
+                        print(f"✅ from_base64 成功")
+                    
+                    elif hasattr(types, 'Part'):
+                        print(f"🔄 使用 types.Part...")
+                        image = types.Part.from_data(
+                            data=image_bytes,
+                            mime_type=mime_type
+                        )
+                        print(f"✅ types.Part 成功")
+                    
+                    else:
+                        # 最後的備用方案：使用字典格式
+                        print(f"🔄 使用字典格式...")
+                        image = {
+                            "mimeType": mime_type,
+                            "data": image_base64
+                        }
+                        print(f"✅ 字典格式成功")
+                        
+                except Exception as base64_error:
+                    print(f"❌ base64 方式也失敗: {base64_error}")
+                    return f"❌ 圖片處理失敗: {base64_error}", None
         
         # 配置影片生成參數
         config = types.GenerateVideosConfig()
