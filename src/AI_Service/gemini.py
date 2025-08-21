@@ -220,10 +220,10 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_bytes=None
 
             mime_type = kind.mime  # 例如：image/jpeg 或 image/png
             # 建立 GenAI 圖片物件
-            image = Image.open(BytesIO(image_bytes))
+            #image = Image.open(BytesIO(image_bytes))
             #image_base64 = base64.b64encode(image_bytes).decode('utf-8')
             #image = {  "bytesBase64Encoded": image_base64,  "mimeType": mime_type }
-
+            image = types.Image.from_bytes(image_bytes, mime_type=mime_type)
             print("📷 使用上傳的圖片")
         
         # 配置影片生成參數
