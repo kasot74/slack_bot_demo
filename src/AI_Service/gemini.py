@@ -221,7 +221,7 @@ def create_video(prompt, negative_prompt="", max_wait_time=300, image_bytes=None
             mime_type = kind.mime  # 例如：image/jpeg 或 image/png
 
             # 建立 GenAI 圖片物件
-            image =  types.Image.from_bytes(data=image_bytes )
+            image =  types.Image.from_bytes(image_bytes)
              
             print("📷 使用上傳的圖片")
         
