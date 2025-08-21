@@ -189,7 +189,7 @@ def register_handlers(app, config, db):
                 file_info = message['files'][0]
                 file_url = file_info['url_private']
                 file_name = file_info['name']
-                                                
+                say(file_url)                               
                 result_text, file_path = gemini_create_video_from_bytes(file_url, text_prompt)
                 
                 if file_path:
