@@ -136,63 +136,36 @@ def create_image(prompt):
         image_dir = os.path.join("images", "gemini_image")
         if not os.path.exists(image_dir):
             os.makedirs(image_dir)
+        
         prompt = painting(prompt)  # 確保 prompt 是經過處理的
-        # 發送請求到 Imagen API
-        url = f"{GEMINI_BASE_URL}/models/imagen-4.0-generate-001"
-        headers = {
-            "Content-Type": "application/json",
-            "x-goog-api-key": GEMINI_API_KEY
-        }
         
-        payload = {
-            "instances": [
-                {
-                    "prompt": prompt
-                }
-            ],
-            "parameters": {
-                "sampleCount": 1,  # 生成1張圖片，可調整為1-4
-                "personGeneration": "allow_all"  #"dont_allow", "allow_adult", "allow_all"
-            }
-        }
-        
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-        
-        result = response.json()
+        # 使用 SDK 發送請求到 Imagen API
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        response = client.models.generate_images(
+            model='imagen-4.0-generate-001',
+            prompt=prompt,
+            config=types.GenerateImagesConfig(
+                number_of_images=1,  # 生成1張圖片，可調整為1-4
+            )
+        )
         
         # 檢查回應中是否有圖片數據
-        if 'predictions' in result and len(result['predictions']) > 0:
-            prediction = result['predictions'][0]
+        if response.generated_images:
+            generated_image = response.generated_images[0]
             
-            # 查找圖片數據 - Imagen API 回傳格式
-            if 'bytesBase64Encoded' in prediction:
-                image_data = prediction['bytesBase64Encoded']
-                
-                # 解碼並儲存圖片
-                try:
-                    image_bytes = base64.b64decode(image_data)
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    filename = f"imagen_{timestamp}.png"
-                    filepath = os.path.join(image_dir, filename)
-                    
-                    with open(filepath, 'wb') as f:
-                        f.write(image_bytes)
-                    
-                    relative_path = os.path.join("gemini_image", filename)
-                    return f"✅ Imagen 圖片生成成功！\n提示詞: {prompt}", relative_path
-                    
-                except Exception as decode_error:
-                    return f"❌ 圖片解碼失敗: {decode_error}", None
-            else:
-                # 檢查其他可能的圖片數據欄位
-                available_keys = list(prediction.keys())
-                return f"❌ 找不到圖片數據\n可用欄位: {available_keys}\n回應內容: {prediction}", None
+            # 儲存圖片
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"imagen_{timestamp}.png"
+            filepath = os.path.join(image_dir, filename)
+            
+            with open(filepath, 'wb') as f:
+                f.write(generated_image.image_data)
+            
+            relative_path = os.path.join("gemini_image", filename)
+            return f"✅ Imagen 圖片生成成功！\n提示詞: {prompt}", relative_path
         else:
-            return f"❌ Imagen 圖片生成失敗：無有效回應\n完整回應: {result}", None
-            
-    except requests.exceptions.RequestException as e:
-        return f"❌ Imagen 圖片生成請求失敗: {e}", None
+            return f"❌ Imagen 圖片生成失敗：無有效回應", None
+        
     except Exception as e:
         return f"❌ Imagen 圖片生成錯誤: {e}", None
 
