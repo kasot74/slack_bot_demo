@@ -157,9 +157,13 @@ def create_image(prompt):
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"imagen_{timestamp}.png"
             filepath = os.path.join(image_dir, filename)
+            # 直接使用 Image 物件的 save 方法
+            generated_image.image.save(filepath)
             
-            with open(filepath, 'wb') as f:
-                f.write(generated_image.image_bytes)  # 修正屬性名稱為 'data'
+            # 方法2: 手動存取 image_bytes（替代方案）
+            # if generated_image.image.image_bytes:
+            #     with open(filepath, 'wb') as f:
+            #         f.write(generated_image.image.image_bytes)
             
             relative_path = os.path.join("gemini_image", filename)
             return f"✅ Imagen 圖片生成成功！\n提示詞: {prompt}", relative_path
