@@ -159,7 +159,7 @@ def create_image(prompt):
             filepath = os.path.join(image_dir, filename)
             
             with open(filepath, 'wb') as f:
-                f.write(generated_image.imageBytes)  # 修正屬性名稱為 'data'
+                f.write(generated_image.image_bytes)  # 修正屬性名稱為 'data'
             
             relative_path = os.path.join("gemini_image", filename)
             return f"✅ Imagen 圖片生成成功！\n提示詞: {prompt}", relative_path
