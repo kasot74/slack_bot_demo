@@ -138,7 +138,7 @@ def create_image(prompt):
             os.makedirs(image_dir)
         prompt = painting(prompt)  # 確保 prompt 是經過處理的
         # 發送請求到 Imagen API
-        url = f"{GEMINI_BASE_URL}/models/imagen-4.0-generate-preview-06-06:predict"
+        url = f"{GEMINI_BASE_URL}/models/imagen-4.0-generate-001"
         headers = {
             "Content-Type": "application/json",
             "x-goog-api-key": GEMINI_API_KEY
