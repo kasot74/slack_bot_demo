@@ -236,14 +236,14 @@ def register_handlers(app, config, db):
                 say(f"❌ 影片生成失敗：{e}")
     
     # !改圖
-    @app.event("message")
-    def handle_edit_image(event, say):
+    @app.message(re.compile(r"^!改圖\s+(.+)$"))
+    def handle_edit_image(message, say):
         # 檢查是否包含改圖指令和檔案
-        if 'text' in event and event['text'].startswith('!改圖') and 'files' in event:
-            channel = event['channel']
-            
+        if 'text' in message and message['text'].startswith('!改圖') and 'files' in message:
+            channel = message['channel']
+
             # 提取改圖描述
-            text_prompt = event['text'].replace('!改圖', '').strip()
+            text_prompt = message['text'].replace('!改圖', '').strip()
             if not text_prompt:
                 say("請提供改圖描述，例如：!改圖 在我旁邊添加一隻可愛的羊駝")
                 return
