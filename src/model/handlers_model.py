@@ -27,8 +27,7 @@ def register_handlers(app, config, db):
     
     # !曬卡
     @app.message(re.compile(r"^!曬卡.*"))
-    def show_card(message, say):
-        channel = message['channel']
+    def show_card(message, say):        
         try:            
             # 1%
             if random.random() < 0.01:

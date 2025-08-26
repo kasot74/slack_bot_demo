@@ -1,7 +1,7 @@
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-from .model.handlers_model import register_handlers
+from .model.handlers_model import register_handlers as base_register_handlers
 from .model.coin_model import register_coin_handlers
 from .model.member_monitor import register_member_handlers
 from .model.stock_model import register_stock_handlers
@@ -161,9 +161,9 @@ def manual_gc(message, say):
 ALL_COMMANDS += COIN_COMMANDS
 register_coin_handlers(app, config, db)
 
-# 註冊成員打招呼模組
-#ALL_COMMANDS += MEMBER_COMMANDS
-#register_member_handlers(app, config, db)
+# 註冊其他處理器
+ALL_COMMANDS += HANDLER_COMMANDS
+base_register_handlers(app, config, db)
 
 # 商店模組
 ALL_COMMANDS += SHOP_COMMANDS
@@ -181,9 +181,7 @@ register_ai_handlers(app, config, db)
 ALL_COMMANDS += ADVENTURE_COMMANDS
 register_adventure_handlers(app, config, db)
 
-# 註冊其他處理器
-ALL_COMMANDS += HANDLER_COMMANDS
-register_handlers(app, config, db)
+
 
 # 啟動 SocketModeHandler
 if __name__ == "__main__":    
