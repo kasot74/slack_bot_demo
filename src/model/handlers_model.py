@@ -197,6 +197,14 @@ def register_handlers(app, config, db):
         for doc in keyword_all:            
             message_text = doc.get('message')
             if re.search(re.escape(message_text), text):                            
-                file_path = os.path.join('slack_images',doc.get('file'))                
-                send_image(channel, doc['say'],say, file_path)            
+                # 檢查是否有 file 欄位
+                file_name = doc.get('file')
+                if file_name:
+                    # 有檔案，構建檔案路徑
+                    file_path = os.path.join('slack_images', file_name)
+                else:
+                    # 沒有檔案，設定為 None
+                    file_path = None
+                
+                send_image(channel, doc['say'], say, file_path)           
                 return
