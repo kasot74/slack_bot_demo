@@ -171,6 +171,15 @@ def register_handlers(app, config, db):
         say_text, file_name = gemini_create_image(msg_text)                        
         send_image(channel, say_text, say, file_name)
 
+    #!clearai
+    @app.message(re.compile(r"^!clearai$"))
+    def clearai(message, say):
+        try:            
+            ai_clear_conversation_history()
+            say("AI 聊天紀錄清除成功！")
+        except Exception as e:
+            say(f"AI 聊天紀錄清除錯誤！{e}")
+
     #!影片    
     @app.message(re.compile(r"^!影片\s+(.+)$"))
     def create_video_handler(message, say):
@@ -273,15 +282,5 @@ def register_handlers(app, config, db):
         elif 'text' in event and event['text'].startswith('!改圖') and 'files' not in event:
             say("請上傳圖片檔案並加上改圖描述，例如：\n上傳圖片 + `!改圖 在我旁邊添加一隻可愛的羊駝`")
 
-    #!clearai
-    @app.message(re.compile(r"^!clearai$"))
-    def clearai(message, say):
-        try:
-            # 獲取發送指令的使用者 ID
-            user_id = message['user']
-            ai_clear_conversation_history()
-            say("AI 聊天紀錄清除成功！")
-        except Exception as e:
-            say(f"AI 聊天紀錄清除錯誤！{e}")
             
 
