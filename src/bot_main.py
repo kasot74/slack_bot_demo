@@ -1,7 +1,7 @@
 from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 
-from .handlers import register_handlers
+from .handlers_model import register_handlers
 from .model.coin_model import register_coin_handlers
 from .model.member_monitor import register_member_handlers
 from .model.stock_model import register_stock_handlers
@@ -9,7 +9,7 @@ from .model.shop_model import register_shop_handlers
 from .model.ai_model import register_handlers as register_ai_handlers
 from .model.adventure_model import register_adventure_handlers
 
-from .handlers import COMMANDS_HELP as HANDLER_COMMANDS
+from .handlers_model import COMMANDS_HELP as HANDLER_COMMANDS
 from .model.coin_model import COMMANDS_HELP as COIN_COMMANDS
 from .model.member_monitor import COMMANDS_HELP as MEMBER_COMMANDS
 from .model.stock_model import COMMANDS_HELP as STOCK_COMMANDS
