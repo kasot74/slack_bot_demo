@@ -13,15 +13,10 @@ from slack_sdk import WebClient
 from math import comb
 from datetime import datetime, timedelta
 
-# xai imports
-from .AI_Service.xai import analyze_sentiment as analyze_sentiment_xai 
 
 
 
-COMMANDS_HELP = [
-    ("!熬雞湯 內容", "新增正能量雞湯語錄"),
-    ("!喝雞湯", "隨機獲得一則雞湯語錄"),
-    ("!雞湯菜單", "列出所有雞湯語錄"),    
+COMMANDS_HELP = [    
     ("!曬卡", "隨機曬卡趣味指令"),
     ("!add 指令 回覆", "新增自訂指令"),
     ("!show", "顯示所有自訂指令"),
@@ -31,54 +26,6 @@ COMMANDS_HELP = [
 
 def register_handlers(app, config, db):
     
-    # !熬雞湯    
-    @app.message(re.compile(r"^!熬雞湯\s+(.+)$"))
-    def new_philosophy_quotes(message, say):
-        collection = db.philosophy_quotes
-        msg_text = re.match(r"^!熬雞湯\s+(.+)$", message['text']).group(1).strip()
-        existing_message = collection.find_one({"quote": msg_text})
-        
-        if existing_message:
-            say("失敗! 已有此雞湯!")
-        else:
-            sentiment_result = analyze_sentiment_xai(msg_text)
-            if "正能量" in sentiment_result:
-                collection.insert_one({"quote": msg_text})
-                say("雞湯熬煮成功!")
-            else:
-                say("這雞湯有毒!")
-
-    # !喝雞湯
-    @app.message(re.compile(r"^!喝雞湯$"))
-    def get_philosophy_quotes(message, say):
-        collection = db.philosophy_quotes
-        quotes = list(collection.find())    
-        # 檢查是否有可用的語錄
-        if quotes:
-            # 隨機選擇一條語錄
-            selected_quote = random.choice(quotes)                        
-            quote_text = selected_quote.get("quote", "沒有找到雞湯語錄")
-            # 回應用戶
-            say(quote_text)
-        else:
-            say("目前沒有雞湯語錄可用，請稍後再試。")
-
-    # !雞湯菜單
-    @app.message(re.compile(r"^!雞湯菜單$"))
-    def get_all_philosophy_quotes(message, say):
-        collection = db.philosophy_quotes
-        quotes = list(collection.find())    
-        # 檢查是否有可用的語錄
-        if quotes:
-            # 建立一個包含所有雞湯語錄的列表
-            all_quotes = [f"{idx + 1}. {quote.get('quote', '沒有找到雞湯語錄')}" for idx, quote in enumerate(quotes)]
-            # 將列表轉換為單一字串，換行分隔
-            quotes_text = "\n".join(all_quotes)
-            # 回應用戶
-            say(f"以下是所有雞湯語錄:\n{quotes_text}")
-        else:
-            say("目前沒有雞湯語錄可用，請稍後再試。")
-
     # !曬卡
     @app.message(re.compile(r"^!曬卡.*"))
     def show_card(message, say):
