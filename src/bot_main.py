@@ -161,10 +161,6 @@ def manual_gc(message, say):
 ALL_COMMANDS += COIN_COMMANDS
 register_coin_handlers(app, config, db)
 
-# 註冊其他處理器
-ALL_COMMANDS += HANDLER_COMMANDS
-base_register_handlers(app, config, db)
-
 # 商店模組
 ALL_COMMANDS += SHOP_COMMANDS
 register_shop_handlers(app, config, db)
@@ -181,7 +177,9 @@ register_ai_handlers(app, config, db)
 ALL_COMMANDS += ADVENTURE_COMMANDS
 register_adventure_handlers(app, config, db)
 
-
+# 註冊其他處理器
+ALL_COMMANDS += HANDLER_COMMANDS
+base_register_handlers(app, config, db)
 
 # 啟動 SocketModeHandler
 if __name__ == "__main__":    
