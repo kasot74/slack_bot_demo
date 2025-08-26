@@ -33,7 +33,7 @@ db = con_db(config)
 # 初始化 Slack App
 app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_SECRET'])
 
-ALL_COMMANDS = []
+ALL_COMMANDS = [("!help 或 !指令", "顯示所有可用指令")]
 
 def get_all_commands_text():
     help_text = "*可用指令列表：*\n"

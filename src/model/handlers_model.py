@@ -20,8 +20,7 @@ COMMANDS_HELP = [
     ("!曬卡", "隨機曬卡趣味指令"),
     ("!add 指令 回覆", "新增自訂指令"),
     ("!show", "顯示所有自訂指令"),
-    ("!remove 指令", "刪除自訂指令"),
-    ("!help 或 !指令", "顯示所有可用指令"),
+    ("!remove 指令", "刪除自訂指令")
 ]
 
 def register_handlers(app, config, db):
