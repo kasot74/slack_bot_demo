@@ -351,7 +351,7 @@ def download_video_file(file_name, video_dir, prompt):
         return f"❌ 影片下載失敗: {e}", None
 
 def edit_image_from_bytes(image_bytes, text_prompt, original_filename="uploaded"):
-    """從位元組數據改圖"""
+    """從位元組數據改圖 - 使用 Imagen 3.0 編輯功能"""
     try:
         # 確保圖片目錄存在
         image_dir = os.path.join("images", "gemini_image")
@@ -369,46 +369,60 @@ def edit_image_from_bytes(image_bytes, text_prompt, original_filename="uploaded"
         # 處理提示詞
         processed_prompt = painting(text_prompt)
         
-        # 生成內容
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-preview-image-generation",
-            #model="imagen-4.0-generate-preview-06-06:predict",  
-            contents=[processed_prompt, image],
-            config=types.GenerateContentConfig(
-                response_modalities=['TEXT', 'IMAGE']
-            )
+        # 首先生成一張參考圖片（如果需要的話，也可以直接使用上傳的圖片）
+        raw_ref_image = types.RawReferenceImage(
+            reference_id=1,
+            reference_image=image,  # 使用上傳的圖片作為參考
         )
         
-        # 處理回應
-        generated_text = ""
-        generated_image = None
+        # 設定遮罩參考圖片 - 自動計算背景遮罩
+        mask_ref_image = types.MaskReferenceImage(
+            reference_id=2,
+            config=types.MaskReferenceConfig(
+                mask_mode='MASK_MODE_BACKGROUND',
+                mask_dilation=0,
+            ),
+        )
         
-        for part in response.candidates[0].content.parts:
-            if part.text is not None:
-                generated_text += part.text
-            elif part.inline_data is not None:
-                generated_image = Image.open(BytesIO(part.inline_data.data))
+        # 使用 Imagen 3.0 編輯圖片
+        response = client.models.edit_image(
+            model='imagen-3.0-capability-001',
+            prompt=processed_prompt,
+            reference_images=[raw_ref_image, mask_ref_image],
+            config=types.EditImageConfig(
+                edit_mode='EDIT_MODE_INPAINT_INSERTION',
+                number_of_images=1,
+                include_rai_reason=True,
+                output_mime_type='image/jpeg',
+            ),
+        )
         
-        if generated_image:
+        # 檢查回應中是否有圖片數據
+        if response.generated_images and len(response.generated_images) > 0:
+            generated_image = response.generated_images[0].image
+            
             # 儲存生成的圖片
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"gemini_edit_{timestamp}.png"
+            filename = f"imagen3_edit_{timestamp}.jpg"
             filepath = os.path.join(image_dir, filename)
             
+            # 儲存圖片
             generated_image.save(filepath)
             
             relative_path = os.path.join("gemini_image", filename)
             
-            result_text = f"✅ Gemini 改圖成功！\n"
+            result_text = f"✅ Imagen 3.0 改圖成功！\n"
             result_text += f"原始檔案: {original_filename}\n"
             result_text += f"原始提示: {text_prompt}\n"
             result_text += f"處理提示: {processed_prompt}\n"
-            if generated_text:
-                result_text += f"AI 回應: {generated_text}\n"
+            
+            # 如果有 RAI 原因，也可以顯示
+            if hasattr(response.generated_images[0], 'rai_reason') and response.generated_images[0].rai_reason:
+                result_text += f"AI 安全檢查: {response.generated_images[0].rai_reason}\n"
             
             return result_text, relative_path
         else:
-            return f"❌ 改圖失敗：未生成圖片\nAI 回應: {generated_text}", None
+            return f"❌ Imagen 3.0 改圖失敗：未生成圖片", None
             
     except Exception as e:
-        return f"❌ Gemini 改圖錯誤: {e}", None
+        return f"❌ Imagen 3.0 改圖錯誤: {e}", None
