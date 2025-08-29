@@ -253,7 +253,7 @@ def register_handlers(app, config, db):
             
             try:
                 # 處理上傳的圖片
-                file_info = event['files'][0]
+                file_info = message['files'][0]
                 file_url = file_info['url_private']
                 file_name = file_info['name']
                 
