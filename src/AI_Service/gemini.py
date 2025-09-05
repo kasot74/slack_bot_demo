@@ -131,6 +131,7 @@ def painting(text):
 def analyze_stock(his_data, now_data):
     """使用 Gemini 分析股票趨勢"""
     try:
+        collection_stock = ai_db.ai_analyze_stock_his
         # 初始化 Gemini 客戶端
         client = genai.Client(api_key=GEMINI_API_KEY)
         
@@ -140,23 +141,39 @@ def analyze_stock(his_data, now_data):
         current_data = f"\n現況：\n{now_data}"
         
         full_prompt = system_prompt + historical_data + current_data
+        user_message = {"role": "user", "content": full_prompt}
+        collection_stock.insert_one(user_message)
+        
+        conversation_history = convert_to_gemini_format("ai_analyze_stock_his")
         
         # 發送請求到 Gemini API
-        response = client.models.generate_content(
-            model=DEFAULT_MODEL,
-            contents=[{
-                "parts": [{"text": full_prompt}]
-            }],
-            generation_config={
-                "temperature": 0.3,  # 降低隨機性以獲得更穩定的分析
-                "maxOutputTokens": 1000
-            }
-        )
+        url = f"{GEMINI_BASE_URL}/models/{DEFAULT_MODEL}:generateContent"
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": GEMINI_API_KEY
+        }
         
-        # 檢查回應
-        if response.candidates and len(response.candidates) > 0:
-            analysis = response.candidates[0].content.parts[0].text
-            return analysis.strip()
+        payload = {
+            "contents": conversation_history,
+            "generationConfig": {            
+                "temperature": 0.7
+            }
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+            
+            result = response.json()
+            
+            if 'candidates' in result and len(result['candidates']) > 0:
+                assistant_message = result['candidates'][0]['content']['parts'][0]['text']
+            else:
+                assistant_message = "無法生成回應"
+                
+            collection_stock.insert_one({"role": "assistant", "content": assistant_message})
+            return assistant_message        
+
         else:
             return "無法生成股票分析"
             
