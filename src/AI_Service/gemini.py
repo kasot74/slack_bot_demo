@@ -66,8 +66,7 @@ def generate_summary(user_input):
     
     payload = {
         "contents": conversation_history,
-        "generationConfig": {
-            "maxOutputTokens": 1000,
+        "generationConfig": {            
             "temperature": 0.7
         }
     }
@@ -128,6 +127,42 @@ def painting(text):
     except Exception as e:
         print(f"Gemini 翻譯失敗: {e}")
         return text  # 翻譯失敗時返回原文
+
+def analyze_stock(his_data, now_data):
+    """使用 Gemini 分析股票趨勢"""
+    try:
+        # 初始化 Gemini 客戶端
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        
+        # 構建提示詞
+        system_prompt = "你是一個股票的專業技術分析專家，給你股票歷史紀錄與現況幫我分析趨勢\n\n"
+        historical_data = "歷史記錄：\n" + "\n".join([str(record) for record in his_data])
+        current_data = f"\n現況：\n{now_data}"
+        
+        full_prompt = system_prompt + historical_data + current_data
+        
+        # 發送請求到 Gemini API
+        response = client.models.generate_content(
+            model=DEFAULT_MODEL,
+            contents=[{
+                "parts": [{"text": full_prompt}]
+            }],
+            generation_config={
+                "temperature": 0.3,  # 降低隨機性以獲得更穩定的分析
+                "maxOutputTokens": 1000
+            }
+        )
+        
+        # 檢查回應
+        if response.candidates and len(response.candidates) > 0:
+            analysis = response.candidates[0].content.parts[0].text
+            return analysis.strip()
+        else:
+            return "無法生成股票分析"
+            
+    except Exception as e:
+        print(f"Gemini 股票分析錯誤: {e}")
+        return f"分析過程發生錯誤: {e}"
 
 def create_image(prompt):
     """使用 Imagen 4.0 生成圖片"""

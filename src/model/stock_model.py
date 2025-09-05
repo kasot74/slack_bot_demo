@@ -6,8 +6,7 @@ import threading
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 from slack_sdk import WebClient
-from ..AI_Service.xai  import analyze_stock as analyze_stock_xai 
-from ..AI_Service.xai  import analyze_stock_inoutpoint as analyze_stock_inoutpoint_xai 
+from ..AI_Service.gemini  import analyze_stock as analyze_stock_gemini 
 
 COMMANDS_HELP = [
     ("!查股 股票代碼", "查詢指定股票的即時資訊"),
@@ -33,19 +32,7 @@ def register_stock_handlers(app, config, db):
         for i in range(3):
             first_day_of_month = (today.replace(day=1) - timedelta(days=i*30)).strftime('%Y%m01')
             his_data.append(get_historical_data(msg_text,first_day_of_month))        
-        say(analyze_stock_xai(his_data,now_data), thread_ts=message['ts'])
-
-    # !進出點分析
-    @app.message(re.compile(r"^!進出點分析\s+(.+)$"))
-    def analyze_slock_point(message, say):
-        msg_text = re.match(r"^!進出點分析\s+(.+)$", message['text']).group(1).strip()
-        now_data = get_stock_info(msg_text)
-        his_data = []        
-        today = datetime.now()        
-        for i in range(3):
-            first_day_of_month = (today.replace(day=1) - timedelta(days=i*30)).strftime('%Y%m01')
-            his_data.append(get_historical_data(msg_text,first_day_of_month))        
-        say(analyze_stock_inoutpoint_xai(his_data,now_data), thread_ts=message['ts'])
+        say(analyze_stock_gemini(his_data,now_data), thread_ts=message['ts'])    
 
 
 #取現價
