@@ -169,13 +169,11 @@ def analyze_stock(his_data, now_data):
             if 'candidates' in result and len(result['candidates']) > 0:
                 assistant_message = result['candidates'][0]['content']['parts'][0]['text']
             else:
-                assistant_message = "無法生成回應"
-                
-            collection_stock.insert_one({"role": "assistant", "content": assistant_message})
-            return assistant_message        
-
-        else:
-            return "無法生成股票分析"
+                assistant_message = "無法生成回應"                            
+            return assistant_message
+            
+        except Exception as e:
+            return f"生成失敗: {e}"
             
     except Exception as e:
         print(f"Gemini 股票分析錯誤: {e}")
