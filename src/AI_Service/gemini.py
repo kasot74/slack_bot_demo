@@ -128,6 +128,18 @@ def painting(text):
         print(f"Gemini 翻譯失敗: {e}")
         return text  # 翻譯失敗時返回原文
 
+def model_list():
+    """列出可用的 Gemini 模型"""
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        models = []
+        for model in client.models.list():
+            models.append(str(model))            
+        return models  # 回傳模型列表
+    except Exception as e:
+        print(f"Gemini 模型列表獲取失敗: {e}")
+        return []  # 發生錯誤時回傳空列表
+
 def analyze_stock(his_data, now_data):
     """使用 Gemini 分析股票趨勢"""
     try:

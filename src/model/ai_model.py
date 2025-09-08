@@ -37,7 +37,7 @@ from ..AI_Service.gemini import create_video as gemini_create_video
 from ..AI_Service.gemini import create_video_from_bytes as gemini_create_video_from_bytes
 
 from ..AI_Service.gemini import edit_image_from_bytes as gemini_edit_image
-
+from ..AI_Service.gemini import model_list as gemini_model_list
 
 COMMANDS_HELP = [
     ("!openai 內容", "詢問 GPT "),
@@ -49,13 +49,19 @@ COMMANDS_HELP = [
     ("!畫 內容", "用 Gemini Imagen 產生圖片"),
     ("!影片 內容", "用 Gemini Veo 3.0 生成影片"),
     ("!改圖 內容", "用 Gemini 進行圖片編輯"),
-    ("!clearai", "清除 AI 聊天紀錄")
-    
+    ("!clearai", "清除 AI 聊天紀錄"),
+    ("!gmodels", "顯示目前可用的 AI 模型")
 ]
   
 
 
 def register_handlers(app, config, db):
+    @app.message(re.compile(r"!gmodels"))
+    def handle_gmodels_command(message, say):
+        gemini_model_list_text = gemini_model_list()
+        say(f"目前可用的 Gemini 模型有：\n{gemini_model_list_text}", thread_ts=message['ts'])
+
+
     # Call OpenAI
     @app.message(re.compile(r"!openai\s+(.+)"))
     def handle_summary_command(message, say):
