@@ -433,7 +433,7 @@ def edit_image_from_bytes(image_bytes, text_prompt, original_filename="uploaded"
         
         # 生成內容
         response = client.models.generate_content(
-            model="gemini-2.0-flash-preview-image-generation",
+            model="gemini-2.5-flash-image-preview",
             #model="imagen-4.0-generate-preview-06-06:predict",  
             contents=[processed_prompt, image],
             config=types.GenerateContentConfig(
