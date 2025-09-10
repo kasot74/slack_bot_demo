@@ -42,34 +42,6 @@ def clear_conversation_history():
     collection.delete_many({})
     collection.insert_one({"role": "system", "content": "用繁體中文回答"})
 
-#角色扮演用回應
-def role_generate_response(role1, role2,user_input,ts):
-    aimodel = "claude"
-    if role_collection.count_documents({"tsid": ts, "ai_model": aimodel}) == 0:        
-        role_collection.insert_one({"role": "user", "content": user_input, "tsid": ts, "ai_model": aimodel })
-    else:
-        user_message = {"role": "user", "content": user_input, "tsid": ts, "ai_model": aimodel }
-        role_collection.insert_one(user_message)
-        
-    history = list(role_collection.find({"tsid": ts, "ai_model": aimodel }))    
-    # 使用列表解析進行轉換
-    formatted_messages = [
-        {
-            "role": str(h.get("role", "user")),
-            "content": str(h.get("content", ""))
-        }
-        for h in history
-    ]            
-    response = claude.messages.create(
-        model=model_target,
-        max_tokens=1000,
-        system=f"用繁體中文回覆 模擬情境你當{role1}我是{role2}",
-        messages=formatted_messages
-    )
-    assistant_message = response.content[0].text
-    role_collection.insert_one({"role": "assistant", "content": assistant_message,"tsid": ts, "ai_model": aimodel })    
-
-    return assistant_message
 
 def analyze_sentiment(text):
     response = claude.messages.create(

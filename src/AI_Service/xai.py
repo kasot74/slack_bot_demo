@@ -14,11 +14,19 @@ from ..stock import get_historical_data
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
 ai_db = con_db(config)
+
+#XAI_clice = OpenAI(    
+#    api_key=config['XAI_API_KEY'],
+#    base_url="https://api.x.ai/v1",    
+#)
+#model_target = "grok-4-latest" #grok-2-latest #nalang-turbo-v19
+
 XAI_clice = OpenAI(    
-    api_key=config['XAI_API_KEY'],
-    base_url="https://api.x.ai/v1",    
+    api_key=config['DZMM_API_KEY'],
+    base_url=config['DZMM_API_URL']
 )
-model_target = "grok-4-latest" #grok-2-latest
+model_target = "nalang-turbo-v19" 
+
 collection = ai_db.ai_his
 role_collection = ai_db.ai_role_xai_his
 
@@ -54,71 +62,6 @@ def clear_conversation_history(collection_name="ai_his",system_message="請用�
     collection_history = ai_db[collection_name]
     collection_history.delete_many({})
     collection_history.insert_one({"role": "system", "content": system_message})    
-
-#角色扮演用回應
-def role_generate_response(role1, role2,user_input,ts):
-    aimodel = "XAI"
-    if role_collection.count_documents({"tsid": ts, "ai_model": aimodel}) == 0:        
-        role_collection.insert_one({"role": "system", "content": f"用繁體中文回覆，你當{role1}我是{role2}", "tsid": ts, "ai_model": aimodel })
-        role_collection.insert_one({"role": "user", "content": user_input, "tsid": ts, "ai_model": aimodel })
-    else:
-        user_message = {"role": "user", "content": user_input, "tsid": ts, "ai_model": aimodel }
-        role_collection.insert_one(user_message)
-        
-    history = list(role_collection.find({"tsid": ts, "ai_model": aimodel }))    
-    # 使用列表解析進行轉換
-    formatted_messages = [
-        {
-            "role": str(h.get("role", "user")),
-            "content": str(h.get("content", ""))
-        }
-        for h in history
-    ]            
-    response = XAI_clice.chat.completions.create(
-        messages=formatted_messages,
-        model=model_target        
-    )
-    assistant_message = response.choices[0].message.content
-    role_collection.insert_one({"role": "assistant", "content": assistant_message,"tsid": ts, "ai_model": aimodel })
-
-    return assistant_message
-
-def create_image(prompt):
-    try:
-        # 呼叫 XAI API 生成圖片
-        response = XAI_clice.images.generate(
-            model="grok-2-image",
-            prompt=prompt,
-            response_format="b64_json"
-        )
-
-        # 獲取 base64 圖片數據
-        b64_data = response.data[0].b64_json
-
-        # 將 base64 解碼為二進位數據
-        image_data = base64.b64decode(b64_data)
-
-        # 確保目錄存在
-        output_dir = os.path.join("images", "xai_generated")
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-
-        # 檢測圖片格式
-        img = Image.open(BytesIO(image_data))
-        img_format = img.format.lower()  # 獲取圖片格式 (如 'png', 'jpeg')        
-
-        # 生成檔案名稱
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        img_filename = f"{timestamp}.{img_format}"
-        img_path = os.path.join(output_dir, img_filename)
-
-        # 將圖片數據寫入檔案
-        with open(img_path, "wb") as img_file:
-            img_file.write(image_data)
-        
-        return f"圖片已成功儲存", os.path.join("xai_generated",img_filename)
-    except Exception as e:        
-        return f"生成圖片失敗: {e}", None
 
 def analyze_sentiment(text):
     response = XAI_clice.chat.completions.create(
@@ -176,44 +119,3 @@ def create_greet(member,types):
         ]
     )       
     return response.choices[0].message.content.strip().lower()
-
-
-def generate_search_summary(user_input, search_type):
-    # 僅允許 "web"、"x"、"news"
-    if search_type not in ["web", "x", "news"]:
-        return "無效的搜尋類型 可選類型: web、x、news"
-
-    # 儲存用戶查詢到資料庫
-    user_message = {"role": "user", "content": user_input}
-    collection.insert_one(user_message)
-
-    url = "https://api.x.ai/v1/chat/completions"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {config['XAI_API_KEY']}"
-    }
-    payload = {
-        "messages": [
-            {
-                "role": "user",
-                "content": user_input
-            }
-        ],
-        "search_parameters": {
-            "mode": "on",            
-            "return_citations": True,
-            "search_type": search_type
-        },
-        "model": "grok-3-latest"
-    }
-
-    try:
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-        data = response.json()
-        assistant_message = data["choices"][0]["message"]["content"]
-        # 儲存 AI 回覆到資料庫
-        collection.insert_one({"role": "assistant", "content": assistant_message})
-        return assistant_message        
-    except Exception as e:
-        return f"查詢失敗: {e}"
