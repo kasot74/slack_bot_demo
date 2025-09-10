@@ -8,8 +8,6 @@ from io import BytesIO
 from openai import OpenAI
 from ..utilities import read_config
 from ..database import con_db
-from ..stock import get_stock_info
-from ..stock import get_historical_data
 
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')

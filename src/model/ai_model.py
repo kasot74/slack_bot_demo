@@ -25,7 +25,8 @@ from ..AI_Service.xai import analyze_stock as analyze_stock_xai
 from ..AI_Service.xai import analyze_stock_inoutpoint as analyze_stock_inoutpoint_xai
 from ..AI_Service.xai import create_greet as xai_create_greet
 from ..AI_Service.xai import clear_conversation_history as ai_clear_conversation_history
-
+ #dzmm imports
+from ..AI_Service.dzmm import generate_summary as generate_summary_dzmm
 # gemini imports
 from ..AI_Service.gemini import generate_summary as generate_summary_gemini
 from ..AI_Service.gemini import create_image as gemini_create_image
@@ -57,6 +58,16 @@ def register_handlers(app, config, db):
         gemini_model_list_text = gemini_model_list()
         say(f"目前可用的 Gemini 模型有：\n{gemini_model_list_text}", thread_ts=message['ts'])
 
+    #!ai
+    @app.message(re.compile(r"!ai\s+(.+)"))
+    def handle_summary_command(message, say):
+        user_input = message['text'].replace('!ai', '').strip()    
+        # 調用 OpenAI API
+        try:        
+            summary = generate_summary_dzmm(user_input)
+            say(f"{summary}", thread_ts=message['ts'])            
+        except Exception as e:        
+            say(f"非預期性問題 {e}")
 
     # Call OpenAI
     @app.message(re.compile(r"!openai\s+(.+)"))
