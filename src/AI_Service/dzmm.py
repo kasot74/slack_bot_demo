@@ -55,7 +55,8 @@ def generate_summary(user_input, collection_name="ai_dzmm_his"):
         raise Exception(f"HTTP error! status: {response.status_code}")
 
     full_reply = ""
-    for line in response.iter_lines(decode_unicode=True):
+    for line in response.iter_lines():
+        line = line.decode("utf-8").strip()    
         if line and line.startswith("data: "):
             try:
                 json_data = json.loads(line[6:].strip())
