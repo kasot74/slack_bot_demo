@@ -21,11 +21,16 @@ def generate_summary(user_input, collection_name="ai_dzmm_his"):
     collection_his = ai_db[collection_name]
 
     # 儲存使用者訊息
-    user_message = {"role": "user", "content": user_input}
     collection_his.insert_one(user_message)
 
-    # 取得完整對話歷程
-    conversation_history = list(collection_his.find({}, {"_id": 0}))  # 移除 _id 欄位
+    # 建立初始 system prompt
+    system_prompt = {"role": "system", "content": "請用繁體中文，請扮演一個溫柔體貼的女朋友。"}
+
+    # 取得歷史訊息（不含 _id）
+    history_messages = list(collection_his.find({}, {"_id": 0}))
+
+    # 合併成完整對話歷程
+    conversation_history = [system_prompt] + history_messages
 
     # 建立請求 payload
     payload = {
