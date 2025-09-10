@@ -21,10 +21,11 @@ def generate_summary(user_input, collection_name="ai_dzmm_his"):
     collection_his = ai_db[collection_name]
 
     # 儲存使用者訊息
-    collection_his.insert_one(user_input)
+    user_message = {"role": "user", "content": user_input}
+    collection_his.insert_one(user_message)
 
     # 建立初始 system prompt
-    system_prompt = {"role": "system", "content": "請用繁體中文，請扮演一個溫柔體貼的女朋友。"}
+    system_prompt = {"role": "system", "content": "請用繁體中文，請扮演一個溫柔體貼的女朋友"}
 
     # 取得歷史訊息（不含 _id）
     history_messages = list(collection_his.find({}, {"_id": 0}))
