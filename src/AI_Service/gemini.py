@@ -414,7 +414,7 @@ def download_video_file(file_name, video_dir, prompt):
     except Exception as e:
         return f"❌ 影片下載失敗: {e}", None
 
-def edit_image_from_bytes(image_bytes, text_prompt, original_filename="uploaded"):
+def edit_image_from_bytes(image_bytes_list, text_prompt, original_filename="uploaded"):
     """從位元組數據改圖"""
     try:
         # 確保圖片目錄存在
