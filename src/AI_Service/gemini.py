@@ -4,6 +4,8 @@ import base64
 import os
 import time
 import filetype
+from PIL import Image
+from io import BytesIO
 from datetime import datetime
 from google import genai
 from google.genai import types
@@ -418,27 +420,23 @@ def edit_image_from_bytes(image_bytes, text_prompt, original_filename="uploaded"
         # 確保圖片目錄存在
         image_dir = os.path.join("images", "gemini_image")
         if not os.path.exists(image_dir):
-            os.makedirs(image_dir)
-        
-        # 從位元組載入圖片
-        from PIL import Image
-        from io import BytesIO
-        image = Image.open(BytesIO(image_bytes))
+            os.makedirs(image_dir)        
         
         # 初始化 Google Genai 客戶端
         client = genai.Client(api_key=GEMINI_API_KEY)
         
         # 處理提示詞
-        processed_prompt = painting(text_prompt)
-        
+        #processed_prompt = painting(text_prompt)
+        contents = []
+        for idx, image_bytes in enumerate(image_bytes_list):
+            # 從位元組載入圖片
+            image = Image.open(BytesIO(image_bytes))
+            contents.append(image)
         # 生成內容
+        contents.append(text_prompt)
         response = client.models.generate_content(
-            model="gemini-2.5-flash-image-preview",
-            #model="imagen-4.0-generate-preview-06-06:predict",  
-            contents=[processed_prompt, image],
-            config=types.GenerateContentConfig(
-                response_modalities=['TEXT', 'IMAGE']
-            )
+            model="gemini-2.5-flash-image-preview",            
+            contents=contents
         )
         
         # 處理回應

@@ -263,27 +263,26 @@ def register_handlers(app, config, db):
             
             # 先回應用戶，告知改圖進行中
             say("🎨 開始改圖，請稍候...")
-            
+            image_bytes_list = []
             try:
-                # 處理上傳的圖片
-                file_info = message['files'][0]
-                file_url = file_info['url_private']
-                file_name = file_info['name']
-                
-                # 下載圖片
-                headers = {'Authorization': f'Bearer {config["SLACK_BOT_TOKEN"]}'}
-                response = requests.get(file_url, headers=headers)
-                
-                if response.status_code == 200:
-                    image_bytes = response.content
+                for file_info in message['files']:
+                    # 處理上傳的圖片
+                    file_url = file_info['url_private']
+                    file_name = file_info['name']
+                    # 下載圖片
+                    headers = {'Authorization': f'Bearer {config["SLACK_BOT_TOKEN"]}'}
+                    response = requests.get(file_url, headers=headers)                
+                    if response.status_code == 200:
+                        image_bytes = response.content
+                        image_bytes_list.append(image_bytes)
                     
-                    # 調用 Gemini 改圖功能
-                    result_text, file_path = gemini_edit_image(image_bytes, text_prompt, file_name)
-                    
-                    if file_path:
-                        send_image(channel, result_text, say, file_path)
-                    else:
-                        say(result_text)  # 顯示錯誤訊息
+                # 調用 Gemini 改圖功能
+                result_text, file_path = gemini_edit_image(image_bytes_list, text_prompt, file_name)
+
+                if file_path:
+                    send_image(channel, result_text, say, file_path)
+                else:
+                    say(result_text)  # 顯示錯誤訊息
                 else:
                     say("❌ 無法下載圖片檔案")
                     
