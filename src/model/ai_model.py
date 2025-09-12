@@ -283,8 +283,6 @@ def register_handlers(app, config, db):
                     send_image(channel, result_text, say, file_path)
                 else:
                     say(result_text)  # 顯示錯誤訊息
-                else:
-                    say("❌ 無法下載圖片檔案")
                     
             except Exception as e:
                 say(f"❌ 改圖失敗：{e}")
