@@ -461,8 +461,7 @@ def edit_image_from_bytes(image_bytes_list, text_prompt, original_filename="uplo
             
             result_text = f"✅ Gemini 改圖成功！\n"
             result_text += f"原始檔案: {original_filename}\n"
-            result_text += f"原始提示: {text_prompt}\n"
-            result_text += f"處理提示: {processed_prompt}\n"
+            result_text += f"提示: {text_prompt}\n"            
             if generated_text:
                 result_text += f"AI 回應: {generated_text}\n"
             
