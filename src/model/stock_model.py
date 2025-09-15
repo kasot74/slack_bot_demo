@@ -11,7 +11,7 @@ from ..AI_Service.gemini  import analyze_stock as analyze_stock_gemini
 COMMANDS_HELP = [
     ("!查股 股票代碼", "查詢指定股票的即時資訊"),
     ("!技術分析 股票代碼", "查詢指定股票的技術分析"),
-    ("!進出點分析 股票代碼", "查詢指定股票的進出點建議"),
+    ("!BTC", "MAX 交易所加密貨幣即時價格"),
 ]
 
 
@@ -33,7 +33,12 @@ def register_stock_handlers(app, config, db):
             first_day_of_month = (today.replace(day=1) - timedelta(days=i*30)).strftime('%Y%m01')
             his_data.append(get_historical_data(msg_text,first_day_of_month))        
         say(analyze_stock_gemini(his_data,now_data), thread_ts=message['ts'])    
-
+    
+    # !BTC
+    @app.message(re.compile(r"^!BTC\s+(.+)$"))
+    def get_btc_price(message, say):
+        msg_text = re.match(r"^!BTC\s+(.+)$", message['text']).group(1).strip()
+        say(get_prices())
 
 #取現價
 def get_stock_info(stock_code):
@@ -75,6 +80,30 @@ def get_historical_data(stock_code, date):
         return format_historical_data(historical_data)
     else:        
         return f"請求失敗，狀態碼：{response.status_code}"
+
+def get_prices()
+    url = "https://max-api.maicoin.com/api/v3/wallet/m/index_prices"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        data = response.json()
+        
+        # 抓出指定幣別的價格
+        btc_usdt = data.get("btcusdt")
+        btc_twd = data.get("btctwd")
+        usdt_twd = data.get("usdttwd")
+
+        # 組成易懂字串
+        result = (
+            f"幣價資訊：\n"
+            f"BTC 對 USDT：{btc_usdt} 美元\n"
+            f"BTC 對 TWD：{btc_twd} 台幣\n"
+            f"USDT 對 TWD：{usdt_twd} 台幣"
+        )
+        print(result)
+    else:
+        print(f"請求失敗，狀態碼：{response.status_code}")
+
 
 def format_historical_data(data):
     try:
