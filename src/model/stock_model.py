@@ -80,7 +80,7 @@ def get_historical_data(stock_code, date):
     else:        
         return f"請求失敗，狀態碼：{response.status_code}"
 
-def get_prices()
+def get_prices():
     url = "https://max-api.maicoin.com/api/v3/wallet/m/index_prices"
     response = requests.get(url)
 
