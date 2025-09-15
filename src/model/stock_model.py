@@ -99,9 +99,9 @@ def get_prices():
             f"BTC 對 TWD：{btc_twd} 台幣\n"
             f"USDT 對 TWD：{usdt_twd} 台幣"
         )
-        print(result)
+        return result        
     else:
-        print(f"請求失敗，狀態碼：{response.status_code}")
+        return f"請求失敗，狀態碼：{response.status_code}")
 
 
 def format_historical_data(data):
