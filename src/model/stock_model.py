@@ -34,10 +34,9 @@ def register_stock_handlers(app, config, db):
             his_data.append(get_historical_data(msg_text,first_day_of_month))        
         say(analyze_stock_gemini(his_data,now_data), thread_ts=message['ts'])    
     
-    # !BTC
-    @app.message(re.compile(r"^!BTC\s+(.+)$"))
-    def get_btc_price(message, say):
-        msg_text = re.match(r"^!BTC\s+(.+)$", message['text']).group(1).strip()
+    # !BTC    
+    @app.message(re.compile(r"^!BTC$"))
+    def get_btc_price(message, say):        
         say(get_prices())
 
 #取現價
