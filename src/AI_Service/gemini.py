@@ -206,7 +206,7 @@ def create_image(prompt):
         # 使用 SDK 發送請求到 Imagen API
         client = genai.Client(api_key=GEMINI_API_KEY)
         response = client.models.generate_images(
-            model='imagen-4.0-generate-001',
+            model='imagen-4.0-generate-preview-06-06',
             prompt=prompt,
             config=types.GenerateImagesConfig(
                 number_of_images=1,  # 生成1張圖片，可調整為1-4
