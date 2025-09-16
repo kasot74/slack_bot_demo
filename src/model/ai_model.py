@@ -18,12 +18,6 @@ from ..AI_Service.openai import look_conversation_history as openai_look_convers
 # claude imports
 from ..AI_Service.claude import generate_summary as generate_summary_claude
 
-# xai imports
-from ..AI_Service.xai import generate_summary as generate_summary_xai
-from ..AI_Service.xai import analyze_sentiment as analyze_sentiment_xai 
-from ..AI_Service.xai import analyze_stock as analyze_stock_xai
-from ..AI_Service.xai import analyze_stock_inoutpoint as analyze_stock_inoutpoint_xai
-from ..AI_Service.xai import create_greet as xai_create_greet
 from ..AI_Service.xai import clear_conversation_history as ai_clear_conversation_history
  #dzmm imports
 from ..AI_Service.dzmm import generate_summary as generate_summary_dzmm
@@ -38,25 +32,17 @@ from ..AI_Service.gemini import model_list as gemini_model_list
 
 COMMANDS_HELP = [
     ("!openai 內容", "詢問 GPT "),
-    ("!claude 內容", "詢問 Claude "),
-    ("!xai 內容", "詢問 grok4"),
-    ("!X 內容", "詢問 grok4(不受約束版本)"),
-    ("!gemini 內容", "詢問 gemini"),
-    ("!xai查 [web|x|news] 查詢內容", "AI 搜尋摘要"),
+    ("!claude 內容", "詢問 Claude "),    
+    ("!gemini 內容", "詢問 gemini"),    
     ("!畫 內容", "用 Gemini Imagen 產生圖片"),
     ("!影片 內容", "用 Gemini Veo 3.0 生成影片"),
     ("!改圖 內容", "用 Gemini 進行圖片編輯"),
-    ("!clearai", "清除 AI 聊天紀錄"),
-    ("!gmodels", "顯示目前可用的 AI 模型")
+    ("!clearai", "清除 AI 聊天紀錄")
 ]
   
 
 
 def register_handlers(app, config, db):
-    @app.message(re.compile(r"!gmodels"))
-    def handle_gmodels_command(message, say):
-        gemini_model_list_text = gemini_model_list()
-        say(f"目前可用的 Gemini 模型有：\n{gemini_model_list_text}", thread_ts=message['ts'])
 
     #!ai
     @app.message(re.compile(r"!ai\s+(.+)"))
@@ -90,17 +76,7 @@ def register_handlers(app, config, db):
             say(f"{summary}", thread_ts=message['ts'])                        
         except Exception as e:        
             say(f"非預期性問題 {e}")        
-
-    # Call XAI
-    @app.message(re.compile(r"!xai\s+(.+)"))
-    def handle_summary_command(message, say):
-        user_input = message['text'].replace('!xai', '').strip()    
-        # 調用 xai API
-        try:        
-            summary = generate_summary_xai(user_input)
-            say(f"{summary}", thread_ts=message['ts'])            
-        except Exception as e:        
-            say(f"非預期性問題 {e}")                
+           
             
     # Call gemini
     @app.message(re.compile(r"!gemini\s+(.+)"))
@@ -112,17 +88,6 @@ def register_handlers(app, config, db):
             say(f"{summary}", thread_ts=message['ts'])            
         except Exception as e:        
             say(f"非預期性問題 {e}")
-
-    # Call XAI
-    @app.message(re.compile(r"!X\s+(.+)"))
-    def handle_summary_command(message, say):
-        user_input = message['text'].replace('!X', '').strip()    
-        # 調用 xai API
-        try:        
-            summary = generate_summary_xai(user_input,"X_his")
-            say(f"{summary}", thread_ts=message['ts'])            
-        except Exception as e:        
-            say(f"非預期性問題 {e}")        
 
     # Call XAI查
     @app.message(re.compile(r"!xai查\s+(\w+)\s+(.+)"))

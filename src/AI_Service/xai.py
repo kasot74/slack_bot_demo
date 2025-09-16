@@ -13,17 +13,12 @@ from ..database import con_db
 config = read_config('config/config.txt')
 ai_db = con_db(config)
 
-#XAI_clice = OpenAI(    
-#    api_key=config['XAI_API_KEY'],
-#    base_url="https://api.x.ai/v1",    
-#)
-#model_target = "grok-4-latest" #grok-2-latest #nalang-turbo-v19
-
 XAI_clice = OpenAI(    
-    api_key=config['DZMM_API_KEY'],
-    base_url=config['DZMM_API_URL']
+    api_key=config['XAI_API_KEY'],
+    base_url="https://api.x.ai/v1",    
 )
-model_target = "nalang-turbo-v19" 
+model_target = "grok-4-latest" #grok-2-latest #nalang-turbo-v19
+
 
 collection = ai_db.ai_his
 role_collection = ai_db.ai_role_xai_his
