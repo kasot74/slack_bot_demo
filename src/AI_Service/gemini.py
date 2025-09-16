@@ -201,7 +201,7 @@ def create_image(prompt):
         if not os.path.exists(image_dir):
             os.makedirs(image_dir)
         
-        prompt = painting(prompt)  # 確保 prompt 是經過處理的
+        #prompt = painting(prompt)  # 確保 prompt 是經過處理的
         
         # 使用 SDK 發送請求到 Imagen API
         client = genai.Client(api_key=GEMINI_API_KEY)
