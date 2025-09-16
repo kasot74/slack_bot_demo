@@ -29,7 +29,7 @@ def generate_summary(user_input, collection_name="ai_dzmm_his"):
     collection_his.insert_one(user_message)
 
     # 建立初始 system prompt
-    system_prompt = {"role": "system", "content": "請用繁體中文，請扮演一個溫柔體貼的女朋友"}
+    system_prompt = {"role": "system", "content": "請扮演一個有耐心願意實習女朋友 好好教導我學習如何的當個好男友，會指點出問題並給予建議，請用繁體中文回答"}
 
     # 取得歷史訊息（不含 _id）
     history_messages = list(collection_his.find({}, {"_id": 0}))
