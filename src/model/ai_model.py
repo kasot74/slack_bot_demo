@@ -34,6 +34,8 @@ COMMANDS_HELP = [
     ("!openai 內容", "詢問 GPT "),
     ("!claude 內容", "詢問 Claude "),    
     ("!gemini 內容", "詢問 gemini"),    
+    ("!ai 內容", "AI角色扮演"),
+    ("!重建角色 內容", "重建AI角色扮演內容"),
     ("!畫 內容", "用 Gemini Imagen 產生圖片"),
     ("!影片 內容", "用 Gemini Veo 3.0 生成影片"),
     ("!改圖 內容", "用 Gemini 進行圖片編輯"),
