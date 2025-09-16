@@ -9,6 +9,10 @@ from io import BytesIO
 from openai import OpenAI
 from ..utilities import read_config
 from ..database import con_db
+from opencc import OpenCC
+
+cc = OpenCC('s2t')  # 簡體轉繁體
+
 
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
@@ -73,7 +77,7 @@ def generate_summary(user_input, collection_name="ai_dzmm_his"):
                     full_reply += content
             except Exception as e:
                 print("Error parsing JSON:", e)
-
+    full_reply = cc.convert(full_reply)
     # 儲存 AI 回應
     assistant_message = {"role": "assistant", "content": full_reply}
     collection_his.insert_one(assistant_message)
