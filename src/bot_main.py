@@ -174,8 +174,8 @@ ALL_COMMANDS += AI_COMMANDS
 register_ai_handlers(app, config, db)
 
 # 冒險遊戲模組
-ALL_COMMANDS += ADVENTURE_COMMANDS
-register_adventure_handlers(app, config, db)
+#ALL_COMMANDS += ADVENTURE_COMMANDS
+#register_adventure_handlers(app, config, db)
 
 # 註冊其他處理器
 ALL_COMMANDS += HANDLER_COMMANDS
