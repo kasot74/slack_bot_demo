@@ -11,7 +11,7 @@ from ..AI_Service.gemini  import analyze_stock as analyze_stock_gemini
 COMMANDS_HELP = [
     ("!查股 股票代碼", "查詢指定股票的即時資訊"),
     ("!技術分析 股票代碼", "查詢指定股票的技術分析"),
-    ("!BTC", "MAX 交易所加密貨幣即時價格"),
+    ("!MAX", "MAX 交易所加密貨幣即時價格"),
 ]
 
 
@@ -91,13 +91,15 @@ def get_prices():
         btc_usdt = data.get("btcusdt")
         btc_twd = data.get("btctwd")
         usdt_twd = data.get("usdttwd")
+        bnb_twd = data.get("bnbtwd")
 
         # 組成易懂字串
         result = (
             f"MAX 交易所 幣價資訊：\n"
             f"BTC 對 USDT：{btc_usdt} 美元\n"
             f"BTC 對 TWD：{btc_twd} 台幣\n"
-            f"USDT 對 TWD：{usdt_twd} 台幣"
+            f"USDT 對 TWD：{usdt_twd} 台幣\n"
+            f"BNB 對 TWD：{bnb_twd} 台幣\n"
         )
         return result        
     else:
