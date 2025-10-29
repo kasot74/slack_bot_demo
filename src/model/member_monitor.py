@@ -5,7 +5,6 @@ import threading
 from datetime import datetime
 from pymongo import MongoClient
 from slack_sdk import WebClient
-from ..AI_Service.xai  import create_greet as xai_create_greet  # 根據你的專案結構調整
 
 class MemberMonitor:
     def __init__(self, bot_token,channel_id):
@@ -68,14 +67,14 @@ class MemberMonitor:
                     if user_id in self.user_status:
                         previous_presence = self.user_status[user_id]
                         if previous_presence != current_presence:
-                            if current_presence == "active":                                                            
-                                greet_message = xai_create_greet(user_name,"上線")
+                            if current_presence == "active":
+                                greet_message = f"Hi {user_name} 歡迎回來！"
                                 self.client.chat_postMessage(
                                     channel=self.channel_id,  
                                     text=greet_message,
                                 )
                             if current_presence != "active":                                                                                        
-                                greet_message = xai_create_greet(user_name,"下線")
+                                greet_message = f"{user_name} 掰掰，下次見！"                                
                                 self.client.chat_postMessage(
                                     channel=self.channel_id,
                                     text=greet_message,
