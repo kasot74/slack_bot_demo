@@ -34,8 +34,7 @@ COMMANDS_HELP = [
     ("!openai 內容", "詢問 GPT "),
     ("!claude 內容", "詢問 Claude "),    
     ("!gemini 內容", "詢問 gemini"),    
-    ("!ai 內容", "AI角色扮演"),
-    ("!重建角色 內容", "重建AI角色扮演內容"),
+    ("!ai 內容", "AI角色扮演"),    
     ("!畫 內容", "用 Gemini Imagen 產生圖片"),
     ("!影片 內容", "用 Gemini Veo 3.0 生成影片"),
     ("!改圖 內容", "用 Gemini 進行圖片編輯"),
@@ -151,33 +150,12 @@ def register_handlers(app, config, db):
         say_text, file_name = gemini_create_image(msg_text)                        
         send_image(channel, say_text, say, file_name)
 
-    #!重建角色
-    @app.message(re.compile(r"^!重建角色\s+(.+)$"))
-    def clearais(message, say):
-        try:
-            collection_name = "ai_dzmm_his"
-            text = message.get('text', '')
-            match = re.match(r"^!重建角色\s+(.+)$", text)
-            
-            if match:
-                system_message = match.group(1).strip()
-            else:
-                system_message = (
-                    "請扮演一個有耐心的感情教練，好好教導我學習如何當個好男友。"
-                    "對方可能是臭直男、經驗不足，小問題都要好好指出，會指點出問題並給予建議。"
-                )
-            
-            ai_clear_conversation_history(collection_name, system_message)
-            say("記憶重建成功！")
-            
-        except Exception as e:
-            say(f"記憶重建錯誤！{e}")
-
     #!clearai
     @app.message(re.compile(r"^!clearai$"))
     def clearai(message, say):
         try:            
             ai_clear_conversation_history()
+            ai_clear_conversation_history("ai_dzmm_his","你是一個樂於助人的AI助理，請根據使用者的需求提供有用且準確的資訊。")            
             say("AI 聊天紀錄清除成功！")
         except Exception as e:
             say(f"AI 聊天紀錄清除錯誤！{e}")
