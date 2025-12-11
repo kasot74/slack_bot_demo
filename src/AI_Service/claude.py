@@ -8,7 +8,7 @@ ai_db = con_db(config)
 claude = Anthropic(api_key=config['CLAUDE_API_KEY'])
 collection = ai_db.ai_his
 role_collection = ai_db.ai_role_claude_his
-model_target = "claude-3-7-sonnet-20250219"
+model_target = "claude-haiku-4-5-20251001"
 
 def convert_to_claude_format(collection_name):
     c_collection = ai_db[collection_name]
