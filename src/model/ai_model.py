@@ -36,7 +36,7 @@ COMMANDS_HELP = [
     ("!gemini 內容", "詢問 gemini"),    
     ("!ai 內容", "AI角色扮演"),    
     ("!畫 內容", "用 Gemini Imagen 產生圖片"),
-    ("!影片 內容", "用 Gemini Veo 3.0 生成影片"),
+    #("!影片 內容", "用 Gemini Veo 3.0 生成影片"),
     ("!改圖 內容", "用 Gemini 進行圖片編輯"),
     ("!clearai", "清除 AI 聊天紀錄")
 ]
@@ -77,8 +77,7 @@ def register_handlers(app, config, db):
             say(f"{summary}", thread_ts=message['ts'])                        
         except Exception as e:        
             say(f"非預期性問題 {e}")        
-           
-            
+                       
     # Call gemini
     @app.message(re.compile(r"!gemini\s+(.+)"))
     def handle_summary_command(message, say):
@@ -88,21 +87,6 @@ def register_handlers(app, config, db):
             summary = generate_summary_gemini(user_input)
             say(f"{summary}", thread_ts=message['ts'])            
         except Exception as e:        
-            say(f"非預期性問題 {e}")
-
-    # Call XAI查
-    @app.message(re.compile(r"!xai查\s+(\w+)\s+(.+)"))
-    def handle_search_summary_command(message, say):
-        try:
-            match = re.match(r"!xai查\s+(\w+)\s+(.+)", message['text'])
-            if not match:
-                say("請輸入正確格式：!xai查 [web|x|news] 查詢內容")
-                return
-            search_type = match.group(1).strip()
-            user_input = match.group(2).strip()
-            summary = generate_search_summary(user_input, search_type)
-            say(f"{summary}", thread_ts=message['ts'])
-        except Exception as e:
             say(f"非預期性問題 {e}")
 
     # 發送圖片函數
@@ -161,15 +145,15 @@ def register_handlers(app, config, db):
             say(f"AI 聊天紀錄清除錯誤！{e}")
 
     #!影片    
-    @app.message(re.compile(r"^!影片\s+(.+)$"))
-    def create_video_handler(message, say):
-        channel = message['channel']
-        text_prompt = message['text'].replace('!影片', '').strip()
-        
-        # 檢查是否有檔案上傳
-        has_files = 'files' in message and len(message['files']) > 0
-        
-        if has_files:
+    #@app.message(re.compile(r"^!影片\s+(.+)$"))
+    #def create_video_handler(message, say):
+    #    channel = message['channel']
+    #    text_prompt = message['text'].replace('!影片', '').strip()
+    #    
+    #    # 檢查是否有檔案上傳
+    #    has_files = 'files' in message and len(message['files']) > 0
+    #    
+    #    if has_files:
             # 有圖片 + 描述：圖片轉影片
             say("🎬 開始從圖片生成影片，這可能需要幾分鐘時間，請稍候...")
             
@@ -198,8 +182,8 @@ def register_handlers(app, config, db):
                     
             except Exception as e:
                 say(f"❌ 圖片轉影片失敗：{e}")
-        
-        else:
+    #    
+    #    else:
             # 只有描述：純文字轉影片
             say("🎬 開始生成影片，這可能需要幾分鐘時間，請稍候...")
             
@@ -214,7 +198,7 @@ def register_handlers(app, config, db):
                     
             except Exception as e:
                 say(f"❌ 影片生成失敗：{e}")
-    
+    #
     # !改圖
     @app.message(re.compile(r"^!改圖\s+(.+)$"))
     def handle_edit_image(message, say):
