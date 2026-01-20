@@ -45,6 +45,16 @@ COMMANDS_HELP = [
 
 def register_handlers(app, config, db):
 
+    #!models
+    @app.message(re.compile(r"^!models$"))
+    def list_models(message, say):
+        try:
+            models = gemini_model_list()
+            model_list_text = "Gemini 可用模型列表：\n" + "\n".join(models)
+            say(model_list_text)
+        except Exception as e:
+            say(f"取得模型列表失敗：{e}")
+
     #!ai
     @app.message(re.compile(r"!ai\s+(.+)"))
     def handle_summary_command(message, say):
