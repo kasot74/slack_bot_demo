@@ -428,10 +428,15 @@ def edit_image_from_bytes(image_bytes_list, text_prompt, original_filename="uplo
         # 處理提示詞
         #processed_prompt = painting(text_prompt)
         contents = []
-        for idx, image_bytes in enumerate(image_bytes_list):
-            # 從位元組載入圖片
-            image = Image.open(BytesIO(image_bytes))
-            contents.append(image)
+        for image_bytes in image_bytes_list: 
+            kind = filetype.guess(image_bytes) 
+            if kind is None:                 
+                continue 
+            mime_type = kind.mime
+            if not mime_type.startswith("image/"):                 
+                continue 
+            contents.append({ "inline_data": { "mime_type": mime_type, "data": image_bytes } })
+
         # 生成內容
         contents.append(text_prompt)
         response = client.models.generate_content(
