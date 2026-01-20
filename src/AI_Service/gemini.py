@@ -20,7 +20,7 @@ GEMINI_API_KEY = config['GEMINI_API_KEY']
 # Gemini API 設定
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 DEFAULT_MODEL = "gemini-2.5-flash"
-IMAGE_MODEL = "gemini-2.5-flash-preview-image-generation"
+#IMAGE_MODEL = "gemini-2.5-flash-preview-image-generation"
 collection = ai_db.ai_his
 
 def convert_to_gemini_format(collection_name):
@@ -206,7 +206,7 @@ def create_image(prompt):
         # 使用 SDK 發送請求到 Imagen API
         client = genai.Client(api_key=GEMINI_API_KEY)
         response = client.models.generate_images(
-            model='imagen-4.0-generate-preview-06-06',
+            model=DEFAULT_MODEL,
             prompt=prompt,
             config=types.GenerateImagesConfig(
                 number_of_images=1,  # 生成1張圖片，可調整為1-4
@@ -435,7 +435,7 @@ def edit_image_from_bytes(image_bytes_list, text_prompt, original_filename="uplo
         # 生成內容
         contents.append(text_prompt)
         response = client.models.generate_content(
-            model="gemini-2.5-flash-image-preview",            
+            model=DEFAULT_MODEL,            
             contents=contents
         )
         
