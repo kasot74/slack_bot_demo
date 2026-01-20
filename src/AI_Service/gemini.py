@@ -20,7 +20,7 @@ GEMINI_API_KEY = config['GEMINI_API_KEY']
 # Gemini API 設定
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 DEFAULT_MODEL = "gemini-2.5-flash"
-#IMAGE_MODEL = "gemini-2.5-flash-preview-image-generation"
+IMAGE_MODEL = "gemini-2.5-flash-image"
 collection = ai_db.ai_his
 
 def convert_to_gemini_format(collection_name):
@@ -440,7 +440,7 @@ def edit_image_from_bytes(image_bytes_list, text_prompt, original_filename="uplo
         # 生成內容
         contents.append(text_prompt)
         response = client.models.generate_content(
-            model=DEFAULT_MODEL,            
+            model=IMAGE_MODEL,            
             contents=contents
         )
         
