@@ -39,11 +39,11 @@ def show_help(message, say):
     say(get_all_commands_text())
 
 # 建立資源清理器
-#cleaner = ResourceCleaner(interval_hours=6, memory_threshold_mb=400)
+# cleaner = ResourceCleaner(interval_hours=6, memory_threshold_mb=400)
 
 # 註冊資源管理命令
-#RESOURCE_COMMANDS = register_resource_commands(app, cleaner)
-#ALL_COMMANDS += RESOURCE_COMMANDS
+# RESOURCE_COMMANDS = register_resource_commands(app, cleaner)
+# ALL_COMMANDS += RESOURCE_COMMANDS
 
 # 貨幣模組
 ALL_COMMANDS += COIN_COMMANDS
@@ -67,7 +67,6 @@ base_register_handlers(app, config, db)
 
 # 啟動 SocketModeHandler
 if __name__ == "__main__":    
-
     # 啟動資源監控
-    cleaner.start_monitoring()
+    # cleaner.start_monitoring()
     SocketModeHandler(app, config['SLACK_APP_TOKEN']).start()    
