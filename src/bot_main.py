@@ -201,47 +201,7 @@ def handle_import_access_log(message, say):
     except Exception as e:
         say(f"❌ 匯入access.log時發生錯誤: {str(e)}")
 
-    """處理指定行數的access.log匯入"""
-    try:
-        # 提取行數限制
-        text = message['text']
-        import re
-        match = re.search(r'(\d+)', text)
-        max_lines = int(match.group(1)) if match else 1000
-        
-        say(f"📥 開始匯入 access.log 前 {max_lines:,} 行到資料庫...")
-        
-        # 檢查檔案是否存在
-        log_file = "access.log"
-        if not os.path.exists(log_file):
-            say("❌ 找不到 access.log 檔案")
-            return
-        
-        # 建立日誌分析器
-        analyzer = AccessLogAnalyzer(log_file, use_database=True)
-        
-        if not analyzer.use_database:
-            say("❌ 資料庫連線失敗，無法匯入日誌")
-            return
-        
-        # 載入並匯入指定行數的日誌
-        entries_loaded = analyzer.load_log_file(max_lines=max_lines, save_to_db=True)
-        
-        # 建立索引
-        analyzer.create_database_indexes()
-        
-        response = f"""✅ access.log 限量匯入完成！
-                    📊 匯入結果:
-                    • 限制行數: {max_lines:,}
-                    • 處理記錄數: {entries_loaded}
-                    • Collection: access_logs
 
-                    💡 使用 `!importlog` 匯入全部檔案"""
-        
-        say(response)
-        
-    except Exception as e:
-        say(f"❌ 匯入access.log時發生錯誤: {str(e)}")
 # 建立資源清理器
 # cleaner = ResourceCleaner(interval_hours=6, memory_threshold_mb=400)
 
