@@ -10,8 +10,8 @@ from collections import defaultdict, Counter
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 import ipaddress
-from database import con_db
-from utilities import read_config
+from .database import con_db
+from .utilities import read_config
 
 
 class AccessLogEntry:
@@ -153,7 +153,7 @@ class AccessLogAnalyzer:
     def _init_database(self):
         """初始化資料庫連線"""
         try:
-            config = read_config()
+            config = read_config('config/config.txt')
             self.db = con_db(config)
             print("✓ 資料庫連線成功")
         except Exception as e:
@@ -169,18 +169,19 @@ class AccessLogAnalyzer:
             collection = self.db.access_logs
             entry_data = entry.to_dict()
             
-            # 檢查是否已存在相同記錄
-            existing = collection.find_one({
-                'ip_address': entry.ip_address,
-                'timestamp': entry.timestamp,
-                'url': entry.url,
-                'status_code': entry.status_code
-            })
+            # 建立唯一識別碼
+            unique_key = f"{entry.ip_address}_{entry.timestamp}_{entry.url}_{entry.status_code}"
+            entry_data['unique_key'] = unique_key
             
-            if not existing:
-                collection.insert_one(entry_data)
-                return True
-            return False
+            # 使用 upsert 避免重複
+            result = collection.update_one(
+                {'unique_key': unique_key},
+                {'$set': entry_data},
+                upsert=True
+            )
+            
+            return result.upserted_id is not None or result.modified_count > 0
+            
         except Exception as e:
             print(f"儲存記錄失敗: {e}")
             return False
@@ -194,24 +195,29 @@ class AccessLogAnalyzer:
         collection = self.db.access_logs
         
         try:
-            # 使用批次操作提升效能
+            # 使用更高效的批次操作
             batch_data = []
             
             for entry in self.entries:
-                # 檢查是否已存在
-                existing = collection.find_one({
-                    'ip_address': entry.ip_address,
-                    'timestamp': entry.timestamp,
-                    'url': entry.url,
-                    'status_code': entry.status_code
-                })
-                
-                if not existing:
-                    batch_data.append(entry.to_dict())
+                entry_data = entry.to_dict()
+                # 建立唯一識別碼用於去重
+                entry_data['unique_key'] = f"{entry.ip_address}_{entry.timestamp}_{entry.url}_{entry.status_code}"
+                batch_data.append(entry_data)
             
             if batch_data:
-                result = collection.insert_many(batch_data)
-                saved_count = len(result.inserted_ids)
+                # 使用 upsert 批次操作，避免重複
+                for data in batch_data:
+                    try:
+                        result = collection.update_one(
+                            {'unique_key': data['unique_key']},
+                            {'$set': data},
+                            upsert=True
+                        )
+                        if result.upserted_id or result.modified_count > 0:
+                            saved_count += 1
+                    except Exception as e:
+                        print(f"儲存單筆記錄失敗: {e}")
+                        continue
                 
         except Exception as e:
             print(f"批次儲存失敗: {e}")
@@ -231,6 +237,7 @@ class AccessLogAnalyzer:
             collection.create_index("timestamp")
             collection.create_index("status_code")
             collection.create_index("datetime")
+            collection.create_index("unique_key", unique=True)  # 唯一索引
             collection.create_index([("ip_address", 1), ("timestamp", 1)])
             
             print("✓ 資料庫索引建立完成")

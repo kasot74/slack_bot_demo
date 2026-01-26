@@ -111,7 +111,7 @@ def check_and_cleanup_empty_collections(db):
 def handle_import_access_log(message, say):
     """處理access.log匯入資料庫指令"""
     say("📥 開始分批匯入 access.log 到資料庫...")
-    #try:
+    try:
                 
         log_file = "access.log"
         if not os.path.exists(log_file):
@@ -195,9 +195,9 @@ def handle_import_access_log(message, say):
                     • Collection: access_logs"""
         
         say(response)
-    #    
-    #except Exception as e:
-    #    say(f"❌ 匯入access.log時發生錯誤: {str(e)}")
+        
+    except Exception as e:
+        say(f"❌ 匯入access.log時發生錯誤: {str(e)}")
 
 
 # 建立資源清理器
