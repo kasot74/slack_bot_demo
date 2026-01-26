@@ -74,6 +74,7 @@ def check_and_cleanup_empty_collections(db):
         collection_names = db.list_collection_names()
         empty_collections = []
         deleted_collections = []                        
+        
         for collection_name in collection_names:
             collection = db[collection_name]
             doc_count = collection.count_documents({})                                    
@@ -84,11 +85,14 @@ def check_and_cleanup_empty_collections(db):
             for coll_name in empty_collections:
                 try:
                     db.drop_collection(coll_name)
-                    deleted_collections.append(coll_name)                    
-                except Exception as e:                    
+                    deleted_collections.append(coll_name)
+                    print(f"✅ 已刪除空Collection: {coll_name}")
+                except Exception as e:
+                    print(f"❌ 刪除 {coll_name} 失敗: {e}")
                     # 重新拋出異常，讓上層處理
                     raise Exception(f"刪除Collection '{coll_name}' 失敗: {e}")
-        else:            
+        else:
+            print("✅ 沒有發現空的Collection")
         
         return {
             'total_collections': len(collection_names),
@@ -96,7 +100,8 @@ def check_and_cleanup_empty_collections(db):
             'deleted_collections': deleted_collections
         }
         
-    except Exception as e:                
+    except Exception as e:
+        print(f"❌ 檢查Collection失敗: {e}")
         raise
 
 # 建立資源清理器
