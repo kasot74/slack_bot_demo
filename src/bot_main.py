@@ -17,6 +17,7 @@ from .model.ai_model import COMMANDS_HELP as AI_COMMANDS
 
 from .utilities import read_config
 from .database import con_db
+from .log_analyzer import AccessLogAnalyzer
 from .model.resource_monitor import ResourceCleaner, register_resource_commands
 import os
 import re
@@ -30,7 +31,7 @@ app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_
 ALL_COMMANDS = [
     ("!help 或 !指令", "顯示所有可用指令"),
     ("!cleanup 或 !清理資料庫", "檢查並清理空的資料庫Collection"),
-    ("!dbstats 或 !資料庫狀態", "顯示資料庫統計資訊")
+    ("!importlog 或 !匯入日誌", "分批匯入整個access.log到資料庫")
 ]
 
 def get_all_commands_text():
@@ -104,6 +105,143 @@ def check_and_cleanup_empty_collections(db):
         print(f"❌ 檢查Collection失敗: {e}")
         raise
 
+#這裡需要增加一個指令來 把 access.log 裡面的資料存到資料庫裡面
+
+@app.message(re.compile(r"^!importlog$|^!匯入日誌$"))
+def handle_import_access_log(message, say):
+    """處理access.log匯入資料庫指令"""
+    try:
+        say("📥 開始分批匯入 access.log 到資料庫...")
+        
+        # 檢查檔案是否存在
+        import os
+        log_file = "access.log"
+        if not os.path.exists(log_file):
+            say("❌ 找不到 access.log 檔案")
+            return
+        
+        # 建立日誌分析器
+        analyzer = AccessLogAnalyzer(log_file, use_database=True)
+        
+        if not analyzer.use_database:
+            say("❌ 資料庫連線失敗，無法匯入日誌")
+            return
+        
+        # 分批處理設定
+        batch_size = 5000  # 每批處理5000行
+        total_processed = 0
+        total_saved = 0
+        batch_count = 0
+        
+        # 取得檔案總行數
+        try:
+            with open(log_file, 'r', encoding='utf-8') as f:
+                total_lines = sum(1 for _ in f)
+            say(f"📊 檔案總行數: {total_lines:,}，開始分批處理...")
+        except:
+            total_lines = 0
+            say("📊 開始分批處理...")
+        
+        # 分批處理檔案
+        with open(log_file, 'r', encoding='utf-8') as file:
+            while True:
+                batch_count += 1
+                lines_batch = []
+                
+                # 讀取一批資料
+                for i in range(batch_size):
+                    line = file.readline()
+                    if not line:  # 檔案結束
+                        break
+                    lines_batch.append(line)
+                
+                if not lines_batch:  # 沒有更多資料
+                    break
+                
+                # 處理當前批次
+                batch_analyzer = AccessLogAnalyzer(log_file, use_database=True)
+                batch_entries = []
+                
+                for line in lines_batch:
+                    from log_analyzer import AccessLogEntry
+                    entry = AccessLogEntry(line)
+                    if entry.is_valid():
+                        batch_entries.append(entry)
+                
+                # 將批次資料存入資料庫
+                if batch_entries:
+                    batch_analyzer.entries = batch_entries
+                    saved_count = batch_analyzer.save_all_entries_to_db()
+                    total_saved += saved_count
+                
+                total_processed += len(lines_batch)
+                
+                # 每5批或處理完成時回報進度
+                if batch_count % 5 == 0 or len(lines_batch) < batch_size:
+                    progress = (total_processed / total_lines * 100) if total_lines > 0 else 0
+                    say(f"⏳ 進度: 批次 {batch_count}, 已處理 {total_processed:,} 行 ({progress:.1f}%), 已儲存 {total_saved:,} 筆")
+        
+        # 建立索引提升查詢效能
+        say("🔧 建立資料庫索引...")
+        analyzer.create_database_indexes()
+        
+        # 最終統計
+        final_db_count = len(analyzer.get_entries_from_db(limit=10000))
+        
+        response = f"""✅ access.log 分批匯入完成！
+                    📊 最終結果:
+                    • 總處理行數: {total_processed:,}
+                    • 新儲存記錄: {total_saved:,}
+                    • 資料庫總記錄: {final_db_count:,}
+                    • 處理批次數: {batch_count}
+                    • Collection: access_logs"""
+        
+        say(response)
+        
+    except Exception as e:
+        say(f"❌ 匯入access.log時發生錯誤: {str(e)}")
+
+    """處理指定行數的access.log匯入"""
+    try:
+        # 提取行數限制
+        text = message['text']
+        import re
+        match = re.search(r'(\d+)', text)
+        max_lines = int(match.group(1)) if match else 1000
+        
+        say(f"📥 開始匯入 access.log 前 {max_lines:,} 行到資料庫...")
+        
+        # 檢查檔案是否存在
+        log_file = "access.log"
+        if not os.path.exists(log_file):
+            say("❌ 找不到 access.log 檔案")
+            return
+        
+        # 建立日誌分析器
+        analyzer = AccessLogAnalyzer(log_file, use_database=True)
+        
+        if not analyzer.use_database:
+            say("❌ 資料庫連線失敗，無法匯入日誌")
+            return
+        
+        # 載入並匯入指定行數的日誌
+        entries_loaded = analyzer.load_log_file(max_lines=max_lines, save_to_db=True)
+        
+        # 建立索引
+        analyzer.create_database_indexes()
+        
+        response = f"""✅ access.log 限量匯入完成！
+                    📊 匯入結果:
+                    • 限制行數: {max_lines:,}
+                    • 處理記錄數: {entries_loaded}
+                    • Collection: access_logs
+
+                    💡 使用 `!importlog` 匯入全部檔案"""
+        
+        say(response)
+        
+    except Exception as e:
+        say(f"❌ 匯入access.log時發生錯誤: {str(e)}")
 # 建立資源清理器
 # cleaner = ResourceCleaner(interval_hours=6, memory_threshold_mb=400)
 
