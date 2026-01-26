@@ -27,7 +27,11 @@ db = con_db(config)
 # 初始化 Slack App
 app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_SECRET'])
 
-ALL_COMMANDS = [("!help 或 !指令", "顯示所有可用指令")]
+ALL_COMMANDS = [
+    ("!help 或 !指令", "顯示所有可用指令"),
+    ("!cleanup 或 !清理資料庫", "檢查並清理空的資料庫Collection"),
+    ("!dbstats 或 !資料庫狀態", "顯示資料庫統計資訊")
+]
 
 def get_all_commands_text():
     help_text = "*可用指令列表：*\n"
@@ -37,6 +41,63 @@ def get_all_commands_text():
 @app.message(re.compile(r"^!help$|^!指令$"))
 def show_help(message, say):
     say(get_all_commands_text())
+
+@app.message(re.compile(r"^!cleanup$|^!清理資料庫$"))
+def handle_database_cleanup(message, say):
+    """處理資料庫清理指令"""
+    try:
+        say("🔍 開始檢查資料庫...")
+        
+        # 檢查並清理空的Collection
+        result = check_and_cleanup_empty_collections(db)
+        
+        if result:
+            response = f""" 資料庫清理完成！
+                        檢查結果:
+                        • 總Collection數: {result['total_collections']}
+                        • 空Collection數: {len(result['empty_collections'])}
+                        • 已刪除Collection數: {len(result['deleted_collections'])}"""
+            
+            if result['deleted_collections']:
+                response += f"\n 已刪除: {', '.join(result['deleted_collections'])}"
+        else:
+            response = "❌ 資料庫清理失敗，請檢查連線狀態"
+            
+        say(response)
+        
+    except Exception as e:
+        say(f"❌ 執行資料庫清理時發生錯誤: {str(e)}")
+
+def check_and_cleanup_empty_collections(db):
+    """檢查並刪除空的Collection"""
+    try:
+        collection_names = db.list_collection_names()
+        empty_collections = []
+        deleted_collections = []                        
+        for collection_name in collection_names:
+            collection = db[collection_name]
+            doc_count = collection.count_documents({})                                    
+            if doc_count == 0:
+                empty_collections.append(collection_name)
+        
+        if empty_collections:                        
+            for coll_name in empty_collections:
+                try:
+                    db.drop_collection(coll_name)
+                    deleted_collections.append(coll_name)                    
+                except Exception as e:                    
+                    # 重新拋出異常，讓上層處理
+                    raise Exception(f"刪除Collection '{coll_name}' 失敗: {e}")
+        else:            
+        
+        return {
+            'total_collections': len(collection_names),
+            'empty_collections': empty_collections,
+            'deleted_collections': deleted_collections
+        }
+        
+    except Exception as e:                
+        raise
 
 # 建立資源清理器
 # cleaner = ResourceCleaner(interval_hours=6, memory_threshold_mb=400)
