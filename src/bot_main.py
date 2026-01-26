@@ -112,9 +112,7 @@ def handle_import_access_log(message, say):
     """處理access.log匯入資料庫指令"""
     try:
         say("📥 開始分批匯入 access.log 到資料庫...")
-        
-        # 檢查檔案是否存在
-        import os
+                
         log_file = "access.log"
         if not os.path.exists(log_file):
             say("❌ 找不到 access.log 檔案")
