@@ -18,6 +18,7 @@ from .model.ai_model import COMMANDS_HELP as AI_COMMANDS
 from .utilities import read_config
 from .database import con_db
 from .log_analyzer import AccessLogAnalyzer
+from .log_analyzer import AccessLogEntry
 from .model.resource_monitor import ResourceCleaner, register_resource_commands
 import os
 import re
@@ -160,8 +161,7 @@ def handle_import_access_log(message, say):
                 batch_analyzer = AccessLogAnalyzer(log_file, use_database=True)
                 batch_entries = []
                 
-                for line in lines_batch:
-                    from log_analyzer import AccessLogEntry
+                for line in lines_batch:                    
                     entry = AccessLogEntry(line)
                     if entry.is_valid():
                         batch_entries.append(entry)
