@@ -162,7 +162,7 @@ class AccessLogAnalyzer:
     
     def save_entry_to_db(self, entry: AccessLogEntry) -> bool:
         """將單筆記錄儲存到資料庫"""
-        if not self.use_database or not self.db:
+        if not self.use_database or self.db is None:
             return False
         
         try:
@@ -188,7 +188,7 @@ class AccessLogAnalyzer:
     
     def save_all_entries_to_db(self) -> int:
         """將所有記錄批次儲存到資料庫"""
-        if not self.use_database or not self.db:
+        if not self.use_database or self.db is None:
             return 0
         
         saved_count = 0
@@ -226,7 +226,7 @@ class AccessLogAnalyzer:
     
     def create_database_indexes(self):
         """建立資料庫索引以提升查詢效能"""
-        if not self.use_database or not self.db:
+        if not self.use_database or self.db is None:
             return
         
         try:
@@ -246,7 +246,7 @@ class AccessLogAnalyzer:
     
     def get_entries_from_db(self, limit: int = 1000, filter_dict: Dict = None) -> List[Dict]:
         """從資料庫取得記錄"""
-        if not self.use_database or not self.db:
+        if not self.use_database or self.db is None:
             return []
         
         try:
