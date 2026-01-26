@@ -146,7 +146,8 @@ def handle_import_access_log(message, say):
             while True:
                 batch_count += 1
                 lines_batch = []
-                
+                if batch_count <= 8:
+                    continue 
                 # 讀取一批資料
                 for i in range(batch_size):
                     line = file.readline()
