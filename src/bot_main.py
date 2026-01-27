@@ -20,6 +20,7 @@ from .database import con_db
 from .log_analyzer import AccessLogAnalyzer
 from .log_analyzer import AccessLogEntry
 from .model.resource_monitor import ResourceCleaner, register_resource_commands
+from datetime import datetime, timedelta
 import os
 import re
 
@@ -32,7 +33,7 @@ app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_
 ALL_COMMANDS = [
     ("!help 或 !指令", "顯示所有可用指令"),
     ("!cleanup 或 !清理資料庫", "檢查並清理空的資料庫Collection"),
-    ("!importlog 或 !匯入日誌", "分批匯入整個access.log到資料庫")
+    ("!importlog 或 !匯入日誌", "分批匯入整個昨日access.log到資料庫")
 ]
 
 def get_all_commands_text():
@@ -113,10 +114,13 @@ def handle_import_access_log(message, say):
     """處理access.log匯入資料庫指令"""
     say("📥 開始分批匯入 access.log 到資料庫...")
     try:
-                
-        log_file = "access.log"
+
+        # 計算隔天日期
+        tomorrow = datetime.now() + timedelta(days=1)
+        tomorrow_str = tomorrow.strftime("%Y%m%d")
+        log_file = os.path.join("nginx_logs", f"access.log-{tomorrow_str}")        
         if not os.path.exists(log_file):
-            say("❌ 找不到 access.log 檔案")
+            say(f"❌ 找不到 access.log 檔案")
             return
         
         # 建立日誌分析器
@@ -145,9 +149,7 @@ def handle_import_access_log(message, say):
         with open(log_file, 'r', encoding='utf-8') as file:
             while True:
                 batch_count += 1
-                lines_batch = []
-                if batch_count <= 8:
-                    continue 
+                lines_batch = []                
                 # 讀取一批資料
                 for i in range(batch_size):
                     line = file.readline()
@@ -200,13 +202,6 @@ def handle_import_access_log(message, say):
     except Exception as e:
         say(f"❌ 匯入access.log時發生錯誤: {str(e)}")
 
-
-# 建立資源清理器
-# cleaner = ResourceCleaner(interval_hours=6, memory_threshold_mb=400)
-
-# 註冊資源管理命令
-# RESOURCE_COMMANDS = register_resource_commands(app, cleaner)
-# ALL_COMMANDS += RESOURCE_COMMANDS
 
 # 貨幣模組
 ALL_COMMANDS += COIN_COMMANDS
