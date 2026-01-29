@@ -107,100 +107,75 @@ def check_and_cleanup_empty_collections(db):
         print(f"❌ 檢查Collection失敗: {e}")
         raise
 
-#這裡需要增加一個指令來 把 access.log 裡面的資料存到資料庫裡面
+def process_and_delete_logs():
+    """啟動時自動處理所有 access.log- 開頭的檔案並在處理完後刪除"""
+    log_dir = "nginx_logs"
+    if not os.path.exists(log_dir):
+        print(f"📁 找不到日誌目錄: {log_dir}")
+        return
 
-@app.message(re.compile(r"^!importlog$|^!匯入日誌$"))
-def handle_import_access_log(message, say):
-    """處理access.log匯入資料庫指令"""
-    say("📥 開始分批匯入 access.log 到資料庫...")
-    try:
+    # 取得所有以 access.log- 開頭的檔案
+    log_files = [f for f in os.listdir(log_dir) if f.startswith("access.log-")]
+    
+    if not log_files:
+        print("✅ 沒有發現待處理的 access.log- 檔案")
+        return
 
-        # 計算隔天日期
-        tomorrow = datetime.now() + timedelta(days=1)
-        tomorrow_str = tomorrow.strftime("%Y%m%d")
-        log_file = os.path.join("nginx_logs", f"access.log-{tomorrow_str}")        
-        if not os.path.exists(log_file):
-            say(f"❌ 找不到 access.log 檔案")
-            return
+    print(f"📥 發現 {len(log_files)} 個日誌檔案，開始處理...")
+
+    for filename in log_files:
+        log_file_path = os.path.join(log_dir, filename)
+        print(f"📄 正在處理檔案: {filename}...")
         
-        # 建立日誌分析器
-        analyzer = AccessLogAnalyzer(log_file, use_database=True)
-        
-        if not analyzer.use_database:
-            say("❌ 資料庫連線失敗，無法匯入日誌")
-            return
-        
-        # 分批處理設定
-        batch_size = 5000  # 每批處理5000行
-        total_processed = 0
-        total_saved = 0
-        batch_count = 0
-        
-        # 取得檔案總行數
         try:
-            with open(log_file, 'r', encoding='utf-8') as f:
-                total_lines = sum(1 for _ in f)
-            say(f"📊 檔案總行數: {total_lines:,}，開始分批處理...")
-        except:
-            total_lines = 0
-            say("📊 開始分批處理...")
-        
-        # 分批處理檔案
-        with open(log_file, 'r', encoding='utf-8') as file:
-            while True:
-                batch_count += 1
-                lines_batch = []                
-                # 讀取一批資料
-                for i in range(batch_size):
-                    line = file.readline()
-                    if not line:  # 檔案結束
-                        break
-                    lines_batch.append(line)
-                
-                if not lines_batch:  # 沒有更多資料
-                    break
-                
-                # 處理當前批次
-                batch_analyzer = AccessLogAnalyzer(log_file, use_database=True)
-                batch_entries = []
-                
-                for line in lines_batch:                    
-                    entry = AccessLogEntry(line)
-                    if entry.is_valid():
-                        batch_entries.append(entry)
-                
-                # 將批次資料存入資料庫
-                if batch_entries:
-                    batch_analyzer.entries = batch_entries
-                    saved_count = batch_analyzer.save_all_entries_to_db()
-                    total_saved += saved_count
-                
-                total_processed += len(lines_batch)
-                
-                # 每5批或處理完成時回報進度
-                if batch_count % 5 == 0 or len(lines_batch) < batch_size:
-                    progress = (total_processed / total_lines * 100) if total_lines > 0 else 0
-                    say(f"⏳ 進度: 批次 {batch_count}, 已處理 {total_processed:,} 行 ({progress:.1f}%), 已儲存 {total_saved:,} 筆")
-        
-        # 建立索引提升查詢效能
-        say("🔧 建立資料庫索引...")
-        analyzer.create_database_indexes()
-        
-        # 最終統計
-        final_db_count = len(analyzer.get_entries_from_db(limit=10000))
-        
-        response = f"""✅ access.log 分批匯入完成！
-                    📊 最終結果:
-                    • 總處理行數: {total_processed:,}
-                    • 新儲存記錄: {total_saved:,}
-                    • 資料庫總記錄: {final_db_count:,}
-                    • 處理批次數: {batch_count}
-                    • Collection: access_logs"""
-        
-        say(response)
-        
-    except Exception as e:
-        say(f"❌ 匯入access.log時發生錯誤: {str(e)}")
+            # 建立日誌分析器
+            analyzer = AccessLogAnalyzer(log_file_path, use_database=True)
+            if not analyzer.use_database:
+                print(f"❌ {filename}: 資料庫連線失敗，跳過此檔案")
+                continue
+            
+            # 分批處理設定
+            batch_size = 5000
+            total_processed = 0
+            total_saved = 0
+            
+            # 讀取並分批匯入
+            with open(log_file_path, 'r', encoding='utf-8') as file:
+                while True:
+                    lines_batch = []                
+                    for _ in range(batch_size):
+                        line = file.readline()
+                        if not line: break
+                        lines_batch.append(line)
+                    
+                    if not lines_batch: break
+                    
+                    batch_entries = []
+                    for line in lines_batch:                    
+                        entry = AccessLogEntry(line)
+                        if entry.is_valid():
+                            batch_entries.append(entry)
+                    
+                    if batch_entries:
+                        # 使用臨時分析器存入當前批次
+                        batch_analyzer = AccessLogAnalyzer(log_file_path, use_database=True)
+                        batch_analyzer.entries = batch_entries
+                        saved_count = batch_analyzer.save_all_entries_to_db()
+                        total_saved += saved_count
+                    
+                    total_processed += len(lines_batch)
+                    print(f"⏳ {filename} 進度: 已處理 {total_processed:,} 行...")
+
+            # 建立索引
+            analyzer.create_database_indexes()
+            print(f"✅ {filename} 匯入完成。總計儲存: {total_saved:,} 筆資料")
+            
+            # 處理完後刪除檔案
+            os.remove(log_file_path)
+            print(f"🗑️ 已刪除檔案: {filename}")
+
+        except Exception as e:
+            print(f"❌ 處理檔案 {filename} 時發生錯誤: {e}")
 
 
 # 貨幣模組
@@ -225,6 +200,5 @@ base_register_handlers(app, config, db)
 
 # 啟動 SocketModeHandler
 if __name__ == "__main__":    
-    # 啟動資源監控
-    # cleaner.start_monitoring()
+    process_and_delete_logs()
     SocketModeHandler(app, config['SLACK_APP_TOKEN']).start()    
