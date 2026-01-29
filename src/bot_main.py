@@ -107,31 +107,32 @@ def check_and_cleanup_empty_collections(db):
         print(f"❌ 檢查Collection失敗: {e}")
         raise
 
-def process_and_delete_logs():
-    """啟動時自動處理所有 access.log- 開頭的檔案並在處理完後刪除"""
+@app.message(re.compile(r"^!importlog$|^!匯入日誌$"))
+def handle_import_access_log(message, say):
+    """處理 access.log-* 檔案匯入並於完成後刪除"""
     log_dir = "nginx_logs"
     if not os.path.exists(log_dir):
-        print(f"📁 找不到日誌目錄: {log_dir}")
+        say(f"📁 找不到日誌目錄: {log_dir}")
         return
 
     # 取得所有以 access.log- 開頭的檔案
     log_files = [f for f in os.listdir(log_dir) if f.startswith("access.log-")]
     
     if not log_files:
-        print("✅ 沒有發現待處理的 access.log- 檔案")
+        say("✅ 沒有發現待處理的 access.log- 檔案")
         return
 
-    print(f"📥 發現 {len(log_files)} 個日誌檔案，開始處理...")
-
-    for filename in log_files:
-        log_file_path = os.path.join(log_dir, filename)
-        print(f"📄 正在處理檔案: {filename}...")
-        
-        try:
+    say(f"📥 發現 {len(log_files)} 個檔案，開始分批處理...")
+    
+    try:
+        for filename in log_files:
+            log_file_path = os.path.join(log_dir, filename)
+            say(f"📄 正在處理: {filename}...")
+            
             # 建立日誌分析器
             analyzer = AccessLogAnalyzer(log_file_path, use_database=True)
             if not analyzer.use_database:
-                print(f"❌ {filename}: 資料庫連線失敗，跳過此檔案")
+                say(f"❌ {filename}: 資料庫連線失敗，跳過")
                 continue
             
             # 分批處理設定
@@ -139,7 +140,6 @@ def process_and_delete_logs():
             total_processed = 0
             total_saved = 0
             
-            # 讀取並分批匯入
             with open(log_file_path, 'r', encoding='utf-8') as file:
                 while True:
                     lines_batch = []                
@@ -164,18 +164,18 @@ def process_and_delete_logs():
                         total_saved += saved_count
                     
                     total_processed += len(lines_batch)
-                    print(f"⏳ {filename} 進度: 已處理 {total_processed:,} 行...")
-
+            
             # 建立索引
             analyzer.create_database_indexes()
-            print(f"✅ {filename} 匯入完成。總計儲存: {total_saved:,} 筆資料")
             
-            # 處理完後刪除檔案
+            # 處理成功後刪除檔案
             os.remove(log_file_path)
-            print(f"🗑️ 已刪除檔案: {filename}")
+            say(f"✅ {filename} 處理完成 (儲存 {total_saved:,} 筆) 且已刪除檔案")
 
-        except Exception as e:
-            print(f"❌ 處理檔案 {filename} 時發生錯誤: {e}")
+        say("🏁 所有日誌檔案處理完畢！")
+        
+    except Exception as e:
+        say(f"❌ 執行過程中發生錯誤: {str(e)}")
 
 
 # 貨幣模組
@@ -199,6 +199,5 @@ ALL_COMMANDS += HANDLER_COMMANDS
 base_register_handlers(app, config, db)
 
 # 啟動 SocketModeHandler
-if __name__ == "__main__":    
-    process_and_delete_logs()
+if __name__ == "__main__":        
     SocketModeHandler(app, config['SLACK_APP_TOKEN']).start()    
