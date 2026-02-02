@@ -12,7 +12,7 @@ from google.genai import types
 from ..utilities import read_config
 from ..database import con_db
 from ..AI_Service.openai import painting
-from ..stock import get_stock_info, get_historical_data, get_crypto_prices, get_current_date
+from ..stock import get_stock_info, get_historical_data, get_crypto_prices, get_current_date, search_stock_code
 
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
@@ -26,7 +26,14 @@ IMAGE_MODEL = "gemini-2.5-flash-image"
 collection = ai_db.ai_his
 
 # 定義可供 Gemini 使用的工具
-TOOLS = [get_stock_info, get_historical_data, get_crypto_prices, get_current_date]
+TOOLS = [
+    get_stock_info, 
+    get_historical_data, 
+    get_crypto_prices, 
+    get_current_date, 
+    search_stock_code,
+    types.Tool(google_search=types.GoogleSearch())
+]
 
 def convert_to_gemini_format(collection_name):
     """轉換資料庫格式為 Gemini API 格式"""
