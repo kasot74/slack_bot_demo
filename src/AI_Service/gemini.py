@@ -12,6 +12,8 @@ from google.genai import types
 from ..utilities import read_config
 from ..database import con_db
 from ..AI_Service.openai import painting
+from ..stock import get_stock_info, get_historical_data, get_crypto_prices, get_current_date
+
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
 ai_db = con_db(config)
@@ -22,6 +24,9 @@ GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 DEFAULT_MODEL = "gemini-2.5-flash"
 IMAGE_MODEL = "gemini-2.5-flash-image"
 collection = ai_db.ai_his
+
+# 定義可供 Gemini 使用的工具
+TOOLS = [get_stock_info, get_historical_data, get_crypto_prices, get_current_date]
 
 def convert_to_gemini_format(collection_name):
     """轉換資料庫格式為 Gemini API 格式"""
@@ -53,34 +58,33 @@ def convert_to_gemini_format(collection_name):
     return contents
 
 def generate_summary(user_input):
-    """生成摘要 - 參考 openai.py 的 generate_summary"""
+    """生成摘要 - 支援 Function Calling"""
     user_message = {"role": "user", "content": user_input}
     collection.insert_one(user_message)
     
     conversation_history = convert_to_gemini_format("ai_his")
     
-    # 發送請求到 Gemini API
-    url = f"{GEMINI_BASE_URL}/models/{DEFAULT_MODEL}:generateContent"
-    headers = {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": GEMINI_API_KEY
-    }
-    
-    payload = {
-        "contents": conversation_history,
-        "generationConfig": {            
-            "temperature": 0.7
-        }
-    }
+    # 初始化 Gemini 客戶端
+    client = genai.Client(api_key=GEMINI_API_KEY)
     
     try:
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()
+        # 使用 SDK 的 Chat Session 支援自動 Function Calling
+        # 排除掉剛才加入的最新訊息，透過 send_message 發送
+        chat = client.chats.create(
+            model=DEFAULT_MODEL,
+            history=conversation_history[:-1],
+            config=types.GenerateContentConfig(
+                tools=TOOLS,
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(enabled=True),
+                temperature=0.7
+            )
+        )
         
-        result = response.json()
+        # 發送最新訊息
+        response = chat.send_message(user_input)
         
-        if 'candidates' in result and len(result['candidates']) > 0:
-            assistant_message = result['candidates'][0]['content']['parts'][0]['text']
+        if response.text:
+            assistant_message = response.text
         else:
             assistant_message = "無法生成回應"
             
@@ -93,36 +97,21 @@ def generate_summary(user_input):
 def painting(text):
     """使用 Gemini 將中文描述轉換為英文圖片提示詞"""
     try:
-        url = f"{GEMINI_BASE_URL}/models/{DEFAULT_MODEL}:generateContent"
-        headers = {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": GEMINI_API_KEY
-        }
+        # 初始化 Gemini 客戶端
+        client = genai.Client(api_key=GEMINI_API_KEY)
         
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {
-                            "text": f"你是翻譯官，幫我將文字描述翻譯為英文用來提供給 AI 生成用。請將以下中文描述轉換為英文提示詞給我不需要太多其他建議：'{text}'"
-                        }
-                    ]
-                }
-            ],
-            "generationConfig": {
-                "maxOutputTokens": 300,
-                "temperature": 0.3  # 較低的溫度確保翻譯準確性
-            }
-        }
+        # 使用 SDK 發送請求
+        response = client.models.generate_content(
+            model=DEFAULT_MODEL,
+            contents=f"你是翻譯官，幫我將文字描述翻譯為英文用來提供給 AI 生成用。請將以下中文描述轉換為英文提示詞給我不需要太多其他建議：'{text}'",
+            config=types.GenerateContentConfig(
+                max_output_tokens=300,
+                temperature=0.3  # 較低的溫度確保翻譯準確性
+            )
+        )
         
-        response = requests.post(url, headers=headers, json=payload)
-        response.raise_for_status()
-        
-        result = response.json()
-        
-        if 'candidates' in result and len(result['candidates']) > 0:
-            translated_text = result['candidates'][0]['content']['parts'][0]['text']
-            return translated_text.strip()
+        if response.text:
+            return response.text.strip()
         else:
             return text  # 如果翻譯失敗，返回原文
             
@@ -160,28 +149,18 @@ def analyze_stock(his_data, now_data):
         
         conversation_history = convert_to_gemini_format("ai_analyze_stock_his")
         
-        # 發送請求到 Gemini API
-        url = f"{GEMINI_BASE_URL}/models/{DEFAULT_MODEL}:generateContent"
-        headers = {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": GEMINI_API_KEY
-        }
-        
-        payload = {
-            "contents": conversation_history,
-            "generationConfig": {            
-                "temperature": 0.7
-            }
-        }
-        
         try:
-            response = requests.post(url, headers=headers, json=payload)
-            response.raise_for_status()
+            # 使用 SDK 發送請求
+            response = client.models.generate_content(
+                model=DEFAULT_MODEL,
+                contents=conversation_history,
+                config=types.GenerateContentConfig(
+                    temperature=0.7
+                )
+            )
             
-            result = response.json()
-            
-            if 'candidates' in result and len(result['candidates']) > 0:
-                assistant_message = result['candidates'][0]['content']['parts'][0]['text']
+            if response.text:
+                assistant_message = response.text
             else:
                 assistant_message = "無法生成回應"                            
             return assistant_message
