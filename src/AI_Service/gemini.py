@@ -12,7 +12,7 @@ from google.genai import types
 from ..utilities import read_config
 from ..database import con_db
 from ..AI_Service.openai import painting
-from ..stock import get_stock_info, get_historical_data, get_crypto_prices, get_current_date, search_stock_code
+from ..stock import get_stock_info, get_historical_data, get_crypto_prices, get_current_date
 
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
@@ -30,8 +30,7 @@ TOOLS = [
     get_stock_info, 
     get_historical_data, 
     get_crypto_prices, 
-    get_current_date, 
-    search_stock_code,
+    get_current_date,     
     types.Tool(google_search=types.GoogleSearch())
 ]
 
