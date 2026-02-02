@@ -11,11 +11,11 @@ def get_current_date():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 #取現價
-def get_stock_info(stock_code):
+def get_stock_info(stock_code: str):
     """取得股票即時資訊。
     
     Args:
-        stock_code: 股票代碼 (例如: 2330)
+        stock_code: 股票代碼 (例如: '2330')
     """
     api_url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?json=1&delay=0&ex_ch=tse_{stock_code}.tw"
     response = requests.get(api_url)
@@ -47,12 +47,12 @@ def format_stock_info(data):
     )
     return formatted_info
 
-def get_historical_data(stock_code, date):
+def get_historical_data(stock_code: str, date: str):
     """取得股票歷史資料。
     
     Args:
-        stock_code: 股票代碼 (例如: 2330)
-        date: 日期 (格式: YYYYMMDD)
+        stock_code: 股票代碼 (例如: '2330')
+        date: 日期 (格式: 'YYYYMMDD')
     """
     historical_api_url = f"https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY?date={date}&stockNo={stock_code}&response=json"
     response = requests.get(historical_api_url)
