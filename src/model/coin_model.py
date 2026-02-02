@@ -125,12 +125,13 @@ def merge_old_coin_records(coin_collection):
     return len(duplicates)
 
 def register_coin_handlers(app, config, db):
-    @app.message(re.compile(r"^!coin_delete$"))
+    @app.message(re.compile(r"^!coin_refresh$"))
     def test_command(message, say):
-        coin_collection = db.user_coins
+        #coin_collection = db.user_coins
         # 清空 coin_collection 所有資料
-        result = coin_collection.delete_many({})
-        say(f"已清空所有金幣紀錄，共刪除 {result.deleted_count} 筆資料。")
+        #result = coin_collection.delete_many({})
+        merge_old_coin_records(db.user_coins)
+        say(f"已重算所有金幣紀錄")
 
     @app.message(re.compile(r"^!簽到$"))
     def checkin(message, say):
