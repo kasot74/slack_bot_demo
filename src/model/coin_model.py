@@ -77,61 +77,15 @@ def record_coin_change(coin_collection, user_id, amount, change_type, related_us
                 record["from_user"] = related_user
         coin_collection.insert_one(record)
 
-def merge_old_coin_records(coin_collection):
-    """
-    將 user_coins 資料表中同一 user、type、date（與相關 user）重複的紀錄合併為一筆，金額相加（有上限），保留最新 timestamp。
-    適合資料量大時批次整理舊資料。
-    """
-    from pymongo import UpdateOne
-    MAX_INT64 = 9_223_372_036_854_775_807
-
-    # 聚合找出重複 key
-    pipeline = [
-        {
-            "$group": {
-                "_id": {
-                    "user_id": "$user_id",
-                    "type": "$type",
-                    "date": "$date",
-                    "to_user": "$to_user",
-                    "from_user": "$from_user"
-                },
-                "ids": {"$push": "$_id"},
-                "total": {"$sum": "$coins"},
-                "latest": {"$max": "$timestamp"}
-            }
-        },
-        {"$match": {"ids.1": {"$exists": True}}}  # 只找有重複的
-    ]
-    duplicates = list(coin_collection.aggregate(pipeline))
-
-    requests = []
-    for doc in duplicates:
-        ids = doc["ids"]
-        keep_id = ids[0]
-        remove_ids = ids[1:]
-        # 合併金額時加上上限限制
-        merged_amount = max(min(doc["total"], MAX_INT64), -MAX_INT64)
-        requests.append(
-            UpdateOne(
-                {"_id": keep_id},
-                {"$set": {"coins": merged_amount, "timestamp": doc["latest"]}}
-            )
-        )
-        # 刪除多餘的
-        coin_collection.delete_many({"_id": {"$in": remove_ids}})
-    if requests:
-        coin_collection.bulk_write(requests)
-    return len(duplicates)
 
 def register_coin_handlers(app, config, db):
-    @app.message(re.compile(r"^!coin_refresh$"))
+    @app.message(re.compile(r"^!coin_test$"))
     def test_command(message, say):
         #coin_collection = db.user_coins
         # 清空 coin_collection 所有資料
         #result = coin_collection.delete_many({})
-        merge_old_coin_records(db.user_coins)
-        say(f"已重算所有金幣紀錄")
+        #merge_old_coin_records(db.user_coins)
+        say(f"測試指令")
 
     @app.message(re.compile(r"^!簽到$"))
     def checkin(message, say):
