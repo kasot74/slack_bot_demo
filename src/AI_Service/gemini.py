@@ -75,7 +75,7 @@ def generate_summary(user_input):
             history=conversation_history[:-1],
             config=types.GenerateContentConfig(
                 tools=TOOLS,
-                automatic_function_calling=types.AutomaticFunctionCallingConfig(enabled=True),
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
                 temperature=0.7
             )
         )
