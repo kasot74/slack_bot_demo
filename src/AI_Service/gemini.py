@@ -30,8 +30,7 @@ TOOLS = [
     get_stock_info, 
     get_historical_data, 
     get_crypto_prices, 
-    get_current_date,     
-    types.Tool(google_search=types.GoogleSearch())
+    get_current_date
 ]
 
 def convert_to_gemini_format(collection_name):
