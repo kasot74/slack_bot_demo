@@ -93,14 +93,15 @@ def generate_summary(user_input):
             )
         )
 
-
-        initial_history_len = len(chat.history)
+        # 在 google-genai SDK 中，歷史紀錄存放在 _history 屬性
+        initial_history_len = len(chat._history)
         # 發送最新訊息
         response = chat.send_message(user_input)
 
-        #提取所有被呼叫的工具名稱
+        # 提取所有被呼叫的工具名稱
         called_tools = []
-        for msg in chat.history[initial_history_len:]:
+        # 遍歷從發送訊息後新增的歷史紀錄
+        for msg in chat._history[initial_history_len:]:
             if msg.parts:
                 for part in msg.parts:
                     if part.function_call:
