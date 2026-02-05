@@ -98,34 +98,34 @@ def google_search(query: str) -> str:
         links_direct = re.findall(r'href="(https?://[^"&]+)"', response.text)
         
         all_links = links_basic + links_direct
-        
-        filtered_urls = []
-        for url in all_links:
-            # 排除 Google 內部服務、廣告、公共資源等不具分析價值的網址
-            exclude_keywords = [
-                'google.com', 'googleadservices', 'youtube.com', 'accounts.google',
-                'facebook.com', 'instagram.com', 'twitter.com', 'support.google',
-                'maps.google', 'play.google'
-            ]
-            if any(domain in url for domain in exclude_keywords):
-                continue
-                                    
-            # 加入未重複且合法的網址
-            if clean_url not in filtered_urls:
-                filtered_urls.append(clean_url)
-            
-            # 達標 3 個就停止
-            if len(filtered_urls) >= 3:
-                break
-                
-        if not filtered_urls:
-            return f"找不到關於 '{query}' 的相關有機結果。"
-            
-        result_text = f"關於 '{query}' 的 Google 搜尋前 3 名網址：\n"
-        for i, url in enumerate(filtered_urls, 1):
-            result_text += f"{i}. {url}\n"
-            
-        return result_text
+        return all_links
+        #filtered_urls = []
+        #for url in all_links:
+        #    # 排除 Google 內部服務、廣告、公共資源等不具分析價值的網址
+        #    exclude_keywords = [
+        #        'google.com', 'googleadservices', 'youtube.com', 'accounts.google',
+        #        'facebook.com', 'instagram.com', 'twitter.com', 'support.google',
+        #        'maps.google', 'play.google'
+        #    ]
+        #    if any(domain in url for domain in exclude_keywords):
+        #        continue
+        #                            
+        #    # 加入未重複且合法的網址
+        #    if clean_url not in filtered_urls:
+        #        filtered_urls.append(clean_url)
+        #    
+        #    # 達標 3 個就停止
+        #    if len(filtered_urls) >= 3:
+        #        break
+        #        
+        #if not filtered_urls:
+        #    return f"找不到關於 '{query}' 的相關有機結果。"
+        #    
+        #result_text = f"關於 '{query}' 的 Google 搜尋前 3 名網址：\n"
+        #for i, url in enumerate(filtered_urls, 1):
+        #    result_text += f"{i}. {url}\n"
+        #    
+        #return result_text
         
     except Exception as e:
         return f"Google 爬取失敗: {str(e)}"
