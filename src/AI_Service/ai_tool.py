@@ -87,22 +87,32 @@ def google_search(query: str) -> str:
             'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
         }
         
-        search_url = f"https://www.google.com/search?q={query}"
+        search_url = f"https://www.google.com/search?q={query}&num=10"
         response = requests.get(search_url, headers=headers, timeout=10)
         response.raise_for_status()
         
-        # 提取所有包含 /url?q= 的連結 (這是 Google 基礎版本的原始連結格式)
-        all_links = re.findall(r'href="/url\?q=(https?://[^"&]+)', response.text)
+        # 提取網址的邏輯優化：同時支援基本版與行動版 Google 的路徑
+        # 1. 嘗試提取 /url?q= 格式 (常見於簡化版連結)
+        links_basic = re.findall(r'href="/url\?q=(https?://[^"&]+)', response.text)
+        # 2. 嘗試提取直接連結 (有些情況下會直接出現)
+        links_direct = re.findall(r'href="(https?://[^"&]+)"', response.text)
+        
+        all_links = links_basic + links_direct
         
         filtered_urls = []
         for url in all_links:
-            # 排除 Google 內部服務與廣告連結
-            if any(domain in url for domain in ['google.com', 'googleadservices', 'youtube.com', 'accounts.google']):
+            # 排除 Google 內部服務、廣告、公共資源等不具分析價值的網址
+            exclude_keywords = [
+                'google.com', 'googleadservices', 'youtube.com', 'accounts.google',
+                'facebook.com', 'instagram.com', 'twitter.com', 'support.google',
+                'maps.google', 'play.google'
+            ]
+            if any(domain in url for domain in exclude_keywords):
                 continue
-            
-            # 加入未重複的網址
-            if url not in filtered_urls:
-                filtered_urls.append(url)
+                                    
+            # 加入未重複且合法的網址
+            if clean_url not in filtered_urls:
+                filtered_urls.append(clean_url)
             
             # 達標 3 個就停止
             if len(filtered_urls) >= 3:
