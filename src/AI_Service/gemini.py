@@ -13,82 +13,13 @@ from google.genai import types
 from ..utilities import read_config
 from ..database import con_db
 from ..AI_Service.openai import painting
+from ..AI_Service.ai_tool import read_url_content, google_search
 from ..stock import get_stock_info, get_historical_data, get_crypto_prices, get_current_date
 
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
 ai_db = con_db(config)
 GEMINI_API_KEY = config['GEMINI_API_KEY']
-
-def read_url_content(url: str) -> str:
-    """讀取指定 URL 的內容，並進行初步的 HTML 清理與格式化。
-    
-    Args:
-        url (str): 要讀取的網頁 URL
-        
-    Returns:
-        str: 清理後的網頁內容文字，如果失敗則返回錯誤訊息
-    """
-    try:
-        # 1. 驗證 URL 格式
-        if not (url.startswith('http://') or url.startswith('https://')):
-            return "錯誤：無效的 URL 格式，必須以 http:// 或 https:// 開頭。"
-
-        # 設定請求標頭        
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
-        }
-        
-        # 2. 發送請求並設定超時
-        response = requests.get(url, headers=headers, timeout=15)
-        response.raise_for_status()
-        
-        # 3. 檢查內容類型，僅處理 HTML 或純文字
-        content_type = response.headers.get('Content-Type', '').lower()
-        if 'text/html' not in content_type and 'text/plain' not in content_type:
-            return f"注意：該 URL 的內容類型為 {content_type}，AI 目前僅支援閱讀網頁或文字。"
-
-        if response.encoding:
-            response.encoding = response.apparent_encoding
-        
-        html_content = response.text
-        
-        # 4. 提取網頁標題
-        title_match = re.search(r'<title>(.*?)</title>', html_content, re.IGNORECASE | re.DOTALL)
-        title = title_match.group(1).strip() if title_match else "無標題"
-        
-        # 5. 精細清理內容
-        # 移除不可見的腳本與樣式
-        clean_content = re.sub(r'<(script|style).*?>.*?</\1>', '', html_content, flags=re.IGNORECASE | re.DOTALL)
-        # 移除所有 HTML 標籤
-        clean_content = re.sub(r'<.*?>', '', clean_content, flags=re.DOTALL)
-        
-        # 處理 HTML 轉義字元
-        clean_content = re.sub(r'&nbsp;', ' ', clean_content)
-        clean_content = re.sub(r'&quot;', '"', clean_content)
-        clean_content = re.sub(r'&amp;', '&', clean_content)
-        clean_content = re.sub(r'&lt;', '<', clean_content)
-        clean_content = re.sub(r'&gt;', '>', clean_content)
-
-        # 移除過多重複的換行與空白
-        clean_content = re.sub(r'\n\s*\n', '\n', clean_content)
-        clean_content = clean_content.strip()
-        
-        # 6. 截取長度限制，避免超出分析範圍
-        max_length = 3500 
-        if len(clean_content) > max_length:
-            clean_content = clean_content[:max_length] + "\n... (內容過長已截斷)"
-        
-        return f"--- 網頁分析結果 ---\n【標題】：{title}\n【來源】：{url}\n\n【主要內容】：\n{clean_content}"
-        
-    except requests.exceptions.Timeout:
-        return f"錯誤：連線至 {url} 逾時，請稍後再試。"
-    except requests.exceptions.HTTPError as e:
-        return f"錯誤：網頁回應錯誤 (HTTP {e.response.status_code})，無法獲取內容。"
-    except Exception as e:
-        return f"錯誤：處理網頁時發生非預期問題: {str(e)}"
 
 # Gemini API 設定
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
@@ -102,7 +33,8 @@ TOOLS = [
     get_historical_data, 
     get_crypto_prices, 
     get_current_date,
-    read_url_content
+    read_url_content,
+    google_search
 ]
 
 def convert_to_gemini_format(collection_name):
@@ -145,12 +77,16 @@ def generate_summary(user_input):
     client = genai.Client(api_key=GEMINI_API_KEY)
     
     try:
+        # 在系統提示中引導 AI 只有在「不知道」或「需要即時資料」時才搜尋
+        system_instruction = "若使用者詢問你不知道的時事、人物或具體細節，請優先使用 `google_search` 獲取相關網址。拿到網址後，如有需要了解細節，可再搭配 `read_url_content` 讀取內容。"
+
         # 使用 SDK 的 Chat Session 支援自動 Function Calling
         # 排除掉剛才加入的最新訊息，透過 send_message 發送
         chat = client.chats.create(
             model=DEFAULT_MODEL,
             history=conversation_history[:-1],
             config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
                 tools=TOOLS,
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
                 temperature=0.7
