@@ -156,12 +156,29 @@ def generate_summary(user_input):
                 temperature=0.7
             )
         )
-        
+
+
+        initial_history_len = len(chat.history)
         # 發送最新訊息
         response = chat.send_message(user_input)
-        
+
+        #提取所有被呼叫的工具名稱
+        called_tools = []
+        for msg in chat.history[initial_history_len:]:
+            if msg.parts:
+                for part in msg.parts:
+                    if part.function_call:
+                        called_tools.append(part.function_call.name)
+
         if response.text:
             assistant_message = response.text
+            
+            # 3. 如果有呼叫工具，在回覆的最後面加上提示
+            if called_tools:
+                # 移除重複的工具名稱並美化顯示
+                unique_tools = list(dict.fromkeys(called_tools))
+                tools_display = "、".join([f"`{t}`" for t in unique_tools])
+                assistant_message += f"\n\n```diff\n+ 💡 使用工具：{tools_display}\n```"
         else:
             assistant_message = "無法生成回應"
             
