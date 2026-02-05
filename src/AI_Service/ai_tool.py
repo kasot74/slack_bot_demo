@@ -96,7 +96,7 @@ def google_search(query: str) -> str:
         search_url = f"https://www.google.com/search?q={query}&num=15"
         response = requests.get(search_url, headers=headers, timeout=12)
         response.raise_for_status()
-        return response
+        return response.text
         # 3. 限縮範圍：抓取包含 id="search" 的 <div> 區塊
         # 使用非貪婪匹配來獲取 search 區塊內容
         search_block_match = re.search(r'<div[^>]*id="search"[^>]*>(.*?)</div>\s*<div[^>]*id="foot"', response.text, re.DOTALL | re.IGNORECASE)
