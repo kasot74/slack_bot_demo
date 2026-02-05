@@ -95,7 +95,7 @@ def google_search(query: str) -> str:
         search_url = f"https://www.bing.com/search?q={query}"
         response = requests.get(search_url, headers=headers, timeout=12)
         response.raise_for_status()
-        
+        return response.text
         # 3. 解析 Bing 結果 (id="b_results")
         soup = BeautifulSoup(response.text, 'html.parser')
         filtered_urls = []
