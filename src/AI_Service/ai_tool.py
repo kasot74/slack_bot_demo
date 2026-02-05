@@ -1,7 +1,8 @@
-import requests
 import re
 import time
 import random
+from curl_cffi import requests
+from bs4 import BeautifulSoup
 
 def read_url_content(url: str) -> str:
     """讀取指定 URL 的內容，並進行初步的 HTML 清理與格式化。
@@ -24,8 +25,8 @@ def read_url_content(url: str) -> str:
             'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
         }
         
-        # 2. 發送請求並設定超時
-        response = requests.get(url, headers=headers, timeout=15)
+        # 2. 發送請求並設定超時 (使用擬真模式繞過檢測)
+        response = requests.get(url, headers=headers, timeout=15, impersonate="chrome110")
         response.raise_for_status()
         
         # 3. 檢查內容類型，僅處理 HTML 或純文字
@@ -83,58 +84,57 @@ def google_search(query: str) -> str:
         str: 格式化後的網址列表
     """
     try:
-        # 1. 延遲模擬，隨機等待 1~3 秒以降低被偵測風險
-        time.sleep(random.uniform(1.0, 3.0))
+        # 1. 延遲模擬，隨機等待 1.5~3.5 秒
+        time.sleep(random.uniform(1.5, 3.5))
 
-        # 2. 使用桌面版 User-Agent 以獲取包含 id="search" 的標準結構
+        # 2. 執行擬真請求 (TLS 指紋偽裝 Chrome)
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
             'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
-            'Referer': 'https://www.google.com/'
+            'Referer': 'https://www.google.com/',
+            'Upgrade-Insecure-Requests': '1'
         }
-        
         search_url = f"https://www.google.com/search?q={query}&num=15"
-        response = requests.get(search_url, headers=headers, timeout=12)
+        response = requests.get(search_url, headers=headers, timeout=15, impersonate="chrome110")
         response.raise_for_status()
-        return response.text
-        # 3. 限縮範圍：抓取包含 id="search" 的 <div> 區塊
-        # 使用非貪婪匹配來獲取 search 區塊內容
-        search_block_match = re.search(r'<div[^>]*id="search"[^>]*>(.*?)</div>\s*<div[^>]*id="foot"', response.text, re.DOTALL | re.IGNORECASE)
+
+        # 3. 解析結果 (使用 BeautifulSoup 定位)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        search_div = soup.find('div', id='search')
         
-        # 如果找不到 search block，則退而求其次使用全文 (提高容錯)
-        search_content = search_block_match.group(1) if search_block_match else response.text
-        
-        # 4. 提取網址
-        # 嘗試提取 Google 典型的結果連結格式
-        links_basic = re.findall(r'href="/url\?q=(https?://[^"&]+)', search_content)
-        links_direct = re.findall(r'href="(https?://[^"&]+)"', search_content)
-        
-        all_links = links_basic + links_direct        
         filtered_urls = []
-        
-        # 排除清單
         exclude_keywords = [
             'google.com', 'googleadservices', 'youtube.com', 'accounts.google',
             'facebook.com', 'instagram.com', 'twitter.com', 'support.google',
             'maps.google', 'play.google', 'whatsapp.com', 'dictionary.cambridge',
-            'moe.edu.tw' # 排除教育部辭典等通常不需 AI 讀取全文的站點
+            'moe.edu.tw'
         ]
 
-        for url in all_links:
-            # 清洗網址：移除 Google 的跳轉參數
-            clean_url = url.split('&')[0]
+        if search_div:
+            # 遍歷搜尋結果區塊內的連結
+            for a_tag in search_div.find_all('a', href=True):
+                url = a_tag['href']
+                # 排除無效連結與特定網域
+                if url.startswith('http') and not any(k in url for k in exclude_keywords):
+                    # 清洗網址：移除所有參數，只保留乾淨的 URL
+                    clean_url = url.split('&')[0].split('?')[0]
+                    if clean_url not in filtered_urls:
+                        filtered_urls.append(clean_url)
+                
+                if len(filtered_urls) >= 3:
+                    break
+                
+        if not filtered_urls:
+            return f"找不到關於 '{query}' 的相關有機結果。"
             
-            # 排除特定網域
-            if any(domain in clean_url for domain in exclude_keywords):
-                continue
-                                    
-            # 加入未重複且合法的網址
-            if clean_url not in filtered_urls:
-                filtered_urls.append(clean_url)
+        result_text = f"關於 '{query}' 的 Google 搜尋前 3 名網址：\n"
+        for i, url in enumerate(filtered_urls, 1):
+            result_text += f"{i}. {url}\n"
             
-            # 達標 3 個就停止
-            if len(filtered_urls) >= 3:
-                break
+        return result_text
+        
+    except Exception as e:
+        return f"Google 搜尋失敗: {str(e)}"
                 
         if not filtered_urls:
             return f"找不到關於 '{query}' 的相關有機結果。"
