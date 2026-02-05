@@ -1,7 +1,7 @@
+import requests
 import re
 import time
 import random
-from curl_cffi import requests
 from bs4 import BeautifulSoup
 
 def read_url_content(url: str) -> str:
@@ -25,8 +25,8 @@ def read_url_content(url: str) -> str:
             'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
         }
         
-        # 2. 發送請求並設定超時 (使用擬真模式繞過檢測)
-        response = requests.get(url, headers=headers, timeout=15, impersonate="chrome110")
+        # 2. 發送請求並設定超時
+        response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
         
         # 3. 檢查內容類型，僅處理 HTML 或純文字
@@ -39,24 +39,19 @@ def read_url_content(url: str) -> str:
         
         html_content = response.text
         
-        # 4. 提取網頁標題
-        title_match = re.search(r'<title>(.*?)</title>', html_content, re.IGNORECASE | re.DOTALL)
-        title = title_match.group(1).strip() if title_match else "無標題"
+        # 4. 使用 BeautifulSoup 提取標題與內容
+        soup = BeautifulSoup(html_content, 'html.parser')
+        title = soup.title.string.strip() if soup.title else "無標題"
         
         # 5. 精細清理內容
         # 移除不可見的腳本與樣式
-        clean_content = re.sub(r'<(script|style).*?>.*?</\1>', '', html_content, flags=re.IGNORECASE | re.DOTALL)
-        # 移除所有 HTML 標籤
-        clean_content = re.sub(r'<.*?>', '', clean_content, flags=re.DOTALL)
+        for script_or_style in soup(["script", "style", "header", "footer", "nav"]):
+            script_or_style.decompose()
+            
+        # 取得純文字
+        clean_content = soup.get_text(separator='\n')
         
-        # 處理 HTML 轉義字元
-        clean_content = re.sub(r'&nbsp;', ' ', clean_content)
-        clean_content = re.sub(r'&quot;', '"', clean_content)
-        clean_content = re.sub(r'&amp;', '&', clean_content)
-        clean_content = re.sub(r'&lt;', '<', clean_content)
-        clean_content = re.sub(r'&gt;', '>', clean_content)
-
-        # 移除過多重複的換行與空白
+        # 處理 HTML 轉義字元與空白
         clean_content = re.sub(r'\n\s*\n', '\n', clean_content)
         clean_content = clean_content.strip()
         
@@ -70,12 +65,13 @@ def read_url_content(url: str) -> str:
     except requests.exceptions.Timeout:
         return f"錯誤：連線至 {url} 逾時，請稍後再試。"
     except requests.exceptions.HTTPError as e:
-        return f"錯誤：網頁回應錯誤 (HTTP {e.response.status_code})，無法獲取內容。"
+        status_code = e.response.status_code if hasattr(e, 'response') else 'Unknown'
+        return f"錯誤：網頁回應錯誤 (HTTP {status_code})，無法獲取內容。"
     except Exception as e:
-        return f"錯誤：處理網頁時發生非預期問題: {str(e)}"
+        return f"錯誤：處理網頁時發生問題: {str(e)}"
 
 def google_search(query: str) -> str:
-    """搜尋 Google 並回傳前 3 個有機搜尋結果網址。
+    """使用 Bing 搜尋並回傳前 3 個有機搜尋結果網址。
     
     Args:
         query (str): 搜尋關鍵字
@@ -84,66 +80,49 @@ def google_search(query: str) -> str:
         str: 格式化後的網址列表
     """
     try:
-        # 1. 延遲模擬，隨機等待 1.5~3.5 秒
-        time.sleep(random.uniform(1.5, 3.5))
+        # 1. 延遲模擬
+        time.sleep(random.uniform(1.0, 2.5))
 
-        # 2. 執行擬真請求 (TLS 指紋偽裝 Chrome)
+        # 2. 準備標頭 (Bing 對 requests 較友善)
         headers = {
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
             'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
-            'Referer': 'https://www.google.com/',
-            'Upgrade-Insecure-Requests': '1'
+            'Referer': 'https://www.bing.com/'
         }
-        search_url = f"https://www.google.com/search?q={query}&num=15"
-        response = requests.get(search_url, headers=headers, timeout=15, impersonate="chrome110")
-        response.raise_for_status()
-        return response.text
-        # 3. 解析結果 (使用 BeautifulSoup 定位)
-        soup = BeautifulSoup(response.text, 'html.parser')
-        search_div = soup.find('div', id='search')
         
+        # 使用 Bing 搜尋
+        search_url = f"https://www.bing.com/search?q={query}"
+        response = requests.get(search_url, headers=headers, timeout=12)
+        response.raise_for_status()
+        
+        # 3. 解析 Bing 結果 (id="b_results")
+        soup = BeautifulSoup(response.text, 'html.parser')
         filtered_urls = []
-        exclude_keywords = [
-            'google.com', 'googleadservices', 'youtube.com', 'accounts.google',
-            'facebook.com', 'instagram.com', 'twitter.com', 'support.google',
-            'maps.google', 'play.google', 'whatsapp.com', 'dictionary.cambridge',
-            'moe.edu.tw'
-        ]
-
-        if search_div:
-            # 遍歷搜尋結果區塊內的連結
-            for a_tag in search_div.find_all('a', href=True):
-                url = a_tag['href']
-                # 排除無效連結與特定網域
-                if url.startswith('http') and not any(k in url for k in exclude_keywords):
-                    # 清洗網址：移除所有參數，只保留乾淨的 URL
-                    clean_url = url.split('&')[0].split('?')[0]
+        
+        results = soup.select('li.b_algo h2 a')
+        for link in results:
+            url = link.get('href')
+            if url and url.startswith('http'):
+                # 排除廣告、社交媒體與 Bing 自身
+                exclude = ['microsoft.com', 'bing.com', 'msn.com', 'facebook.com', 'instagram.com']
+                if not any(domain in url for domain in exclude):
+                    # 移除 URL 參數
+                    clean_url = url.split('?')[0].split('&')[0]
                     if clean_url not in filtered_urls:
                         filtered_urls.append(clean_url)
-                
-                if len(filtered_urls) >= 3:
-                    break
+            
+            if len(filtered_urls) >= 3:
+                break
                 
         if not filtered_urls:
-            return f"找不到關於 '{query}' 的相關有機結果。"
+            return f"Bing 搜尋完成，但在結果中找不到適合的有機連結 (關鍵字: {query})。"
             
-        result_text = f"關於 '{query}' 的 Google 搜尋前 3 名網址：\n"
+        result_text = f"關於 '{query}' 的 Bing 搜尋前 3 名網址：\n"
         for i, url in enumerate(filtered_urls, 1):
             result_text += f"{i}. {url}\n"
             
         return result_text
         
     except Exception as e:
-        return f"Google 搜尋失敗: {str(e)}"
-                
-        if not filtered_urls:
-            return f"找不到關於 '{query}' 的相關有機結果。"
-            
-        result_text = f"關於 '{query}' 的 Google 搜尋前 3 名網址：\n"
-        for i, url in enumerate(filtered_urls, 1):
-            result_text += f"{i}. {url}\n"
-            
-        return result_text
-        
-    except Exception as e:
-        return f"Google 爬取失敗: {str(e)}"
+        return f"Bing 搜尋失敗: {str(e)}"
