@@ -97,7 +97,7 @@ def google_search(query: str) -> str:
         search_url = f"https://www.google.com/search?q={query}&num=15"
         response = requests.get(search_url, headers=headers, timeout=15, impersonate="chrome110")
         response.raise_for_status()
-
+        return response.text
         # 3. 解析結果 (使用 BeautifulSoup 定位)
         soup = BeautifulSoup(response.text, 'html.parser')
         search_div = soup.find('div', id='search')
