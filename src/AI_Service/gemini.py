@@ -13,7 +13,7 @@ from google.genai import types
 from ..utilities import read_config
 from ..database import con_db
 from ..AI_Service.openai import painting
-from ..AI_Service.ai_tool import read_url_content, google_search
+from ..AI_Service.ai_tool import read_url_content
 from ..stock import get_stock_info, get_historical_data, get_crypto_prices, get_current_date
 
 # 從配置文件中讀取 tokens
@@ -34,7 +34,7 @@ TOOLS = [
     get_crypto_prices, 
     get_current_date,
     read_url_content,
-    google_search
+    types.Tool(google_search=types.GoogleSearch())
 ]
 
 def convert_to_gemini_format(collection_name):
@@ -77,16 +77,14 @@ def generate_summary(user_input):
     client = genai.Client(api_key=GEMINI_API_KEY)
     
     try:
-        # 在系統提示中引導 AI 只有在「不知道」或「需要即時資料」時才搜尋
-        system_instruction = "若使用者詢問你不知道的時事、人物或具體細節，請優先使用 `google_search` 獲取相關網址。拿到網址後，如有需要了解細節，可再搭配 `read_url_content` 讀取內容。"
+        # 在系統提示中引導 AI 只有在「不知道」或「需要即時資料」時才搜尋        
 
         # 使用 SDK 的 Chat Session 支援自動 Function Calling
         # 排除掉剛才加入的最新訊息，透過 send_message 發送
         chat = client.chats.create(
             model=DEFAULT_MODEL,
             history=conversation_history[:-1],
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
+            config=types.GenerateContentConfig(                
                 tools=TOOLS,
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
                 temperature=0.7
