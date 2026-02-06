@@ -80,7 +80,7 @@ def generate_summary(user_input):
     # 根據官方文件，Google 搜尋可透過 types.Tool 定義
     all_tools = list(TOOLS)
     #all_tools.append(types.Tool(google_search=types.GoogleSearch()))
-    #all_tools.append(types.Tool(google_search_retrieval=types.GoogleSearchRetrieval()))
+    all_tools.append(types.Tool(google_search_retrieval=types.GoogleSearchRetrieval()))
     try:
         # 在系統提示中引導 AI 只有在「不知道」或「需要即時資料」時才搜尋        
 
