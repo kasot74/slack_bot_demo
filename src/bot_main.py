@@ -34,8 +34,7 @@ app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_
 ALL_COMMANDS = [
     ("!help 或 !指令", "顯示所有可用指令"),
     ("!cleanup 或 !清理資料庫", "檢查並清理空的資料庫Collection"),
-    ("!importlog 或 !匯入日誌", "分批匯入整個昨日access.log到資料庫"),
-    ("!ts 關鍵字", "測試 Google 搜尋工具")    
+    ("!importlog 或 !匯入日誌", "分批匯入整個昨日access.log到資料庫")    
 ]
 
 def get_all_commands_text():

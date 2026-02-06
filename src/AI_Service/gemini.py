@@ -120,20 +120,24 @@ def generate_summary(user_input):
         # 發送最新訊息
         response = chat.send_message(user_input)
 
-        # 提取所有被呼叫的工具名稱
+        # 提取被呼叫的工具 (從對話歷史中搜尋，捕捉自動呼叫過程中的所有工具)
         called_tools = []
         
-        # 1. 偵測 Function Calling (如股價、自定義工具)
-        if response.function_calls:
-            for fn in response.function_calls:
-                called_tools.append(fn.name)
+        # 1. 從歷史中找出本次對話產生的 Funtion Call
+        # 遍歷歷史，直到遇到最後一則 user 訊息
+        for turn in reversed(chat.history):
+            if turn.role == "user":
+                break
+            if turn.role == "model" and turn.parts:
+                for part in turn.parts:
+                    if part.function_call:
+                        called_tools.append(part.function_call.name)
         
         # 2. 偵測 Google 搜尋驗證 (Grounding)
-        # 搜尋不會顯示在 function_calls 中，必須檢查 grounding_metadata
         try:
-            # 檢查是否有搜尋查詢詞，若有則代表觸發了 Google 搜尋
             if response.candidates and response.candidates[0].grounding_metadata:
                 metadata = response.candidates[0].grounding_metadata
+                # 檢查是否有搜尋連結或查詢詞
                 if hasattr(metadata, 'search_entry_point') or (hasattr(metadata, 'web_search_queries') and metadata.web_search_queries):
                     called_tools.append("google_search")
         except:
