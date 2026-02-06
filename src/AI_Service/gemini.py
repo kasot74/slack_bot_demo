@@ -28,13 +28,35 @@ IMAGE_MODEL = "gemini-2.5-flash-image"
 collection = ai_db.ai_his
 
 
-# 定義可供 Gemini 使用的工具 (不含內建搜尋，稍後動態加入)
+def google_search(query: str) -> str:
+    """
+    使用 Google 搜尋獲取即時資訊或驗證事實。
+    當你需要知道最近的新聞、事件或即時數據時使用此工具。
+    
+    Args:
+        query: 搜尋關鍵字或問題
+    """
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        response = client.models.generate_content(
+            model=DEFAULT_MODEL,
+            contents=query,
+            config=types.GenerateContentConfig(
+                tools=[types.Tool(google_search=types.GoogleSearch())]
+            )
+        )
+        return response.text if response.text else "搜尋未返回結果"
+    except Exception as e:
+        return f"Google 搜尋發生錯誤: {e}"
+
+# 定義可供 Gemini 使用的工具
 TOOLS = [
-    #get_stock_info, 
-    #get_historical_data, 
-    #get_crypto_prices, 
-    #get_current_date,
-    #read_url_content
+    get_stock_info, 
+    get_historical_data, 
+    get_crypto_prices, 
+    get_current_date,
+    read_url_content,
+    google_search
 ]
 
 def convert_to_gemini_format(collection_name):
@@ -76,11 +98,10 @@ def generate_summary(user_input):
     # 初始化 Gemini 客戶端
     client = genai.Client(api_key=GEMINI_API_KEY)
     
-    # 準備完整的工具清單 (包含自定義函數與 Google 搜尋)
-    # 根據官方文件，Google 搜尋可透過 types.Tool 定義
+    # 使用封裝好的 TOOLS 列表 (包含我們自定義的 google_search 函數)
+    # 這樣可以避免 Gemini 不支援同時使用內建搜尋與自定義函數的問題
     all_tools = list(TOOLS)
-    all_tools.append(types.Tool(google_search=types.GoogleSearch()))
-    #all_tools.append(types.Tool(google_search_retrieval=types.GoogleSearchRetrieval()))
+
     try:
         # 在系統提示中引導 AI 只有在「不知道」或「需要即時資料」時才搜尋        
 
