@@ -45,7 +45,8 @@ jobs:
           bash /home/${{ secrets.EC2_USER }}/aws.bash
           cd /home/${{ secrets.EC2_USER }}/slock_bot
           docker compose pull   
-          docker compose up -d --force-recreate
+          docker compose down
+          docker compose up -d
           docker image prune -f
 
     - name: Notify Slack
