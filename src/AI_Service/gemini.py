@@ -98,61 +98,69 @@ def generate_summary(user_input):
     # 初始化 Gemini 客戶端
     client = genai.Client(api_key=GEMINI_API_KEY)
     
-    # 使用封裝好的 TOOLS 列表 (包含我們自定義的 google_search 函數)
-    # 這樣可以避免 Gemini 不支援同時使用內建搜尋與自定義函數的問題
+    available_functions = {f.__name__: f for f in TOOLS}
     all_tools = list(TOOLS)
 
     try:
-        # 在系統提示中引導 AI 只有在「不知道」或「需要即時資料」時才搜尋        
-
-        # 使用 SDK 的 Chat Session 支援自動 Function Calling
+        # 使用 SDK 的 Chat Session 並禁用自動呼叫 (disable=True)
         # 排除掉剛才加入的最新訊息，透過 send_message 發送
         chat = client.chats.create(
             model=DEFAULT_MODEL,
             history=conversation_history[:-1],
             config=types.GenerateContentConfig(                
                 tools=all_tools,
-                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
                 temperature=0.7
             )
         )
 
-        # 發送最新訊息
+        # 1. 發送初始提問
         response = chat.send_message(user_input)
+        called_tools_info = []
 
-        # 提取被呼叫的工具 (從對話歷史中搜尋，捕捉自動呼叫過程中的所有工具)
-        called_tools = []
-        
-        # 1. 從歷史中找出本次對話產生的 Funtion Call
-        # 遍歷歷史，直到遇到最後一則 user 訊息 (新的 SDK 中使用的屬性名是 _history)
-        history = getattr(chat, '_history', [])
-        for turn in reversed(history):
-            if turn.role == "user":
-                break
-            if turn.role == "model" and turn.parts:
-                for part in turn.parts:
-                    if part.function_call:
-                        called_tools.append(part.function_call.name)
-        
-        # 2. 偵測 Google 搜尋驗證 (Grounding)
-        try:
-            if response.candidates and response.candidates[0].grounding_metadata:
-                metadata = response.candidates[0].grounding_metadata
-                # 檢查是否有搜尋連結或查詢詞
-                if hasattr(metadata, 'search_entry_point') or (hasattr(metadata, 'web_search_queries') and metadata.web_search_queries):
-                    called_tools.append("google_search")
-        except:
-            pass
+        # 2. 手動處理 Function Calling 迴圈
+        # 只要 response 中包含 function_calls 就繼續執行
+        while response.function_calls:
+            function_responses = []
+            
+            for fn in response.function_calls:
+                name = fn.name
+                args = fn.args or {}
+                
+                # 記錄工具名稱與參數 (格式化為字串)
+                args_str = ", ".join([f"{k}={repr(v)}" for k, v in args.items()])
+                called_tools_info.append(f"{name}({args_str})")
+                
+                # 執行對應的 Python 函式
+                func = available_functions.get(name)
+                if func:
+                    try:
+                        result = func(**args)
+                    except Exception as e:
+                        result = f"Error executing {name}: {str(e)}"
+                else:
+                    result = f"Error: Function '{name}' not found."
+                
+                # 封裝執行結果為 Part
+                function_responses.append(
+                    types.Part.from_function_response(
+                        name=name,
+                        response={'result': result}
+                    )
+                )
+            
+            # 將工具結果餵回模型，獲取下一輪回應
+            response = chat.send_message(function_responses)
 
         if response.text:
             assistant_message = response.text
             
-            # 3. 如果有呼叫工具，在回覆的最後面加上提示
-            if called_tools:
-                # 移除重複的工具名稱並美化顯示
-                unique_tools = list(dict.fromkeys(called_tools))
-                tools_display = "、".join([f"`{t}`" for t in unique_tools])
-                assistant_message += f"\n\n```diff\n+ 💡 使用工具：{tools_display}\n```"
+            # 4. 如果有執行過工具，在回覆末尾加上詳細紀錄
+            if called_tools_info:
+                # 移除重複紀錄
+                unique_tools = list(dict.fromkeys(called_tools_info))
+                tools_display = "\n+ ".join([f"`{t}`" for t in unique_tools])
+                assistant_message += f"\n\n```diff\n+ 💡 執行工具紀錄：\n+ {tools_display}\n```"
         else:
             assistant_message = "無法生成回應"
             
