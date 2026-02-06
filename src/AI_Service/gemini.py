@@ -27,14 +27,14 @@ DEFAULT_MODEL = "gemini-2.5-flash"
 IMAGE_MODEL = "gemini-2.5-flash-image"
 collection = ai_db.ai_his
 
-# 定義可供 Gemini 使用的工具
+
+# 定義可供 Gemini 使用的工具 (不含內建搜尋，稍後動態加入)
 TOOLS = [
     get_stock_info, 
     get_historical_data, 
     get_crypto_prices, 
     get_current_date,
-    read_url_content,
-    types.Tool(google_search=types.GoogleSearch())
+    read_url_content
 ]
 
 def convert_to_gemini_format(collection_name):
@@ -76,6 +76,11 @@ def generate_summary(user_input):
     # 初始化 Gemini 客戶端
     client = genai.Client(api_key=GEMINI_API_KEY)
     
+    # 準備完整的工具清單 (包含自定義函數與 Google 搜尋)
+    # 根據官方文件，Google 搜尋可透過 types.Tool 定義
+    all_tools = list(TOOLS)
+    all_tools.append(types.Tool(google_search=types.GoogleSearch()))
+
     try:
         # 在系統提示中引導 AI 只有在「不知道」或「需要即時資料」時才搜尋        
 
@@ -85,7 +90,7 @@ def generate_summary(user_input):
             model=DEFAULT_MODEL,
             history=conversation_history[:-1],
             config=types.GenerateContentConfig(                
-                tools=TOOLS,
+                tools=all_tools,
                 automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=False),
                 temperature=0.7
             )
@@ -96,10 +101,22 @@ def generate_summary(user_input):
 
         # 提取所有被呼叫的工具名稱
         called_tools = []
-        # 在 google-genai SDK 中，可以直接從 response.function_calls 獲取本次對話中觸發的所有工具
+        
+        # 1. 偵測 Function Calling (如股價、自定義工具)
         if response.function_calls:
             for fn in response.function_calls:
                 called_tools.append(fn.name)
+        
+        # 2. 偵測 Google 搜尋驗證 (Grounding)
+        # 搜尋不會顯示在 function_calls 中，必須檢查 grounding_metadata
+        try:
+            # 檢查是否有搜尋查詢詞，若有則代表觸發了 Google 搜尋
+            if response.candidates and response.candidates[0].grounding_metadata:
+                metadata = response.candidates[0].grounding_metadata
+                if hasattr(metadata, 'search_entry_point') or (hasattr(metadata, 'web_search_queries') and metadata.web_search_queries):
+                    called_tools.append("google_search")
+        except:
+            pass
 
         if response.text:
             assistant_message = response.text
