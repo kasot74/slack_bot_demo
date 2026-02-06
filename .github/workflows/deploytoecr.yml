@@ -33,6 +33,7 @@ jobs:
         tags: ${{ secrets.ECR_REPOSITORY }}/slock_bot/app:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        provenance: false
 
     - name: SSH commands to load and run the Docker container
       uses: appleboy/ssh-action@master
@@ -43,8 +44,8 @@ jobs:
         script: |    
           bash /home/${{ secrets.EC2_USER }}/aws.bash
           cd /home/${{ secrets.EC2_USER }}/slock_bot
-          docker-compose pull   
-          docker-compose up -d --force-recreate
+          docker compose pull   
+          docker compose up -d --force-recreate
           docker image prune -f
 
     - name: Notify Slack
