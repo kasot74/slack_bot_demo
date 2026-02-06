@@ -20,7 +20,7 @@ from .database import con_db
 from .log_analyzer import AccessLogAnalyzer
 from .log_analyzer import AccessLogEntry
 from .model.resource_monitor import ResourceCleaner, register_resource_commands
-from .AI_Service.ai_tool import google_search, read_url_content
+from .AI_Service.ai_tool import  read_url_content
 from datetime import datetime, timedelta
 import os
 import re
