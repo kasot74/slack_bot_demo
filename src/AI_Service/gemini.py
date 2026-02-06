@@ -23,7 +23,7 @@ GEMINI_API_KEY = config['GEMINI_API_KEY']
 
 # Gemini API 設定
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-DEFAULT_MODEL = "gemini-3-flash""
+DEFAULT_MODEL = "gemini-3-flash"
 IMAGE_MODEL = "gemini-2.5-flash-image"
 collection = ai_db.ai_his
 
