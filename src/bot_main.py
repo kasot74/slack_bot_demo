@@ -73,21 +73,6 @@ def handle_database_cleanup(message, say):
     except Exception as e:
         say(f"❌ 執行資料庫清理時發生錯誤: {str(e)}")
 
-@app.message(re.compile(r"^!ts\s+(.+)"))
-def handle_test_search(message, say):
-    """手動測試 Google 搜尋功能"""
-    query = message['text'].replace('!ts', '').strip()
-    if not query:
-        say("請提供搜尋關鍵字，例如：`!ts 2024 奧運`")
-        return
-        
-    say(f"🔍 正在手動測試 Google 搜尋：`{query}` ...")
-    try:
-        result = google_search(query)
-        say(result)
-    except Exception as e:
-        say(f"❌ 搜尋測試失敗：{str(e)}")
-
 def check_and_cleanup_empty_collections(db):
     """檢查並刪除空的Collection"""
     try:
