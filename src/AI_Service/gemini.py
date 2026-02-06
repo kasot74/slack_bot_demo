@@ -124,8 +124,9 @@ def generate_summary(user_input):
         called_tools = []
         
         # 1. 從歷史中找出本次對話產生的 Funtion Call
-        # 遍歷歷史，直到遇到最後一則 user 訊息
-        for turn in reversed(chat.history):
+        # 遍歷歷史，直到遇到最後一則 user 訊息 (新的 SDK 中使用的屬性名是 _history)
+        history = getattr(chat, '_history', [])
+        for turn in reversed(history):
             if turn.role == "user":
                 break
             if turn.role == "model" and turn.parts:
