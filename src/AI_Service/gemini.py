@@ -30,11 +30,11 @@ collection = ai_db.ai_his
 
 # 定義可供 Gemini 使用的工具 (不含內建搜尋，稍後動態加入)
 TOOLS = [
-    get_stock_info, 
-    get_historical_data, 
-    get_crypto_prices, 
-    get_current_date,
-    read_url_content
+    #get_stock_info, 
+    #get_historical_data, 
+    #get_crypto_prices, 
+    #get_current_date,
+    #read_url_content
 ]
 
 def convert_to_gemini_format(collection_name):
