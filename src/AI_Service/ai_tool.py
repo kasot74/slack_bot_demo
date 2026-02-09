@@ -53,10 +53,10 @@ def read_url_content(url: str) -> str:
             )
             
             # 4. 設定頁面超時與攔截不必要的資源（提高載入速度）
-            page.set_default_timeout(5000)  # 5 秒超時            
+            page.set_default_timeout(15000)  # 15 秒超時            
             # 5. 導航至目標 URL 並等待頁面載入完成
-            response = page.goto(url, wait_until='networkidle', timeout=5000)
-            page.wait_for_timeout(2000)  # 等待 2 秒讓 JavaScript 執行
+            response = page.goto(url, wait_until='networkidle', timeout=15000)
+            page.wait_for_timeout(5000)  # 等待 2 秒讓 JavaScript 執行
 
 
             # 6. 檢查回應狀態
