@@ -49,14 +49,13 @@ def read_url_content(url: str) -> str:
             # 3. 建立新頁面並設定視窗大小與User-Agent
             page = browser.new_page(
                 user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                viewport={'width': 800, 'height': 600}
+                viewport={'width': 1920, 'height': 1080}
             )
             
             # 4. 設定頁面超時與攔截不必要的資源（提高載入速度）
-            page.set_default_timeout(15000)  # 15 秒超時            
+            page.set_default_timeout(5000)  # 5 秒超時            
             # 5. 導航至目標 URL 並等待頁面載入完成
-            response = page.goto(url, wait_until='networkidle', timeout=15000)
-            page.wait_for_timeout(5000)  # 等待 2 秒讓 JavaScript 執行
+            response = page.goto(url, wait_until='networkidle', timeout=5000)
 
 
             # 6. 檢查回應狀態
@@ -64,6 +63,7 @@ def read_url_content(url: str) -> str:
                 browser.close()
                 return f"錯誤：網頁回應錯誤 (HTTP {response.status})，無法獲取內容。"
                                     
+            page.wait_for_timeout(2000)  # 等待 2 秒讓 JavaScript 執行
             
             # 7. 獲取頁面標題
             title = page.title() or "無標題"
@@ -109,7 +109,7 @@ def read_url_content(url: str) -> str:
             clean_content = clean_content.strip()
             
             # 12. 長度限制處理
-            max_length = 3500
+            max_length = 1500
             if len(clean_content) > max_length:
                 clean_content = clean_content[:max_length] + "\n... (內容過長已截斷)"
             
