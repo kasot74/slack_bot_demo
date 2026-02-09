@@ -26,13 +26,7 @@ def read_url_content(url: str) -> str:
                 args=[
                     '--disable-gpu',
                     '--no-sandbox', 
-                    '--disable-dev-shm-usage',
-                    
-                    # 記憶體限制核心參數
-                    '--memory-pressure-off',           # 關閉記憶體壓力監控
-                    '--max-heap-size=50',              # 限制 JS 堆疊為 50MB
-                    '--max-old-space-size=100',        # 限制 V8 引擎為 100MB
-                    '--single-process',                # 單進程模式（省很多記憶體）
+                    '--disable-dev-shm-usage',                                        
                     
                     # 功能禁用
                     '--disable-extensions',
@@ -53,9 +47,11 @@ def read_url_content(url: str) -> str:
             )
             
             # 4. 設定頁面超時與攔截不必要的資源（提高載入速度）
-            page.set_default_timeout(5000)  # 5 秒超時            
+            page.set_default_timeout(8000)  # 8 秒超時
+            
+            page.route("**/*.{png,jpg,gif,css,js,mp4,ads,analytics}", lambda route: route.abort())
             # 5. 導航至目標 URL 並等待頁面載入完成
-            response = page.goto(url, wait_until='networkidle', timeout=5000)
+            response = page.goto(url, wait_until='domcontentloaded', timeout=15000)
 
 
             # 6. 檢查回應狀態
@@ -63,7 +59,7 @@ def read_url_content(url: str) -> str:
                 browser.close()
                 return f"錯誤：網頁回應錯誤 (HTTP {response.status})，無法獲取內容。"
                                     
-            page.wait_for_timeout(2000)  # 等待 2 秒讓 JavaScript 執行
+            page.wait_for_timeout(3000)  # 等待 3 秒讓 JavaScript 執行
             
             # 7. 獲取頁面標題
             title = page.title() or "無標題"
