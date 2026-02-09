@@ -1,4 +1,5 @@
 import requests
+import json
 import re
 import time
 import random
@@ -69,3 +70,40 @@ def read_url_content(url: str) -> str:
         return f"錯誤：網頁回應錯誤 (HTTP {status_code})，無法獲取內容。"
     except Exception as e:
         return f"錯誤：處理網頁時發生問題: {str(e)}"
+
+def get_technical_indicators(market: str, period: int = 15, limit: int = 30) -> str:
+    """
+    獲取加密貨幣的技術指標數據 
+    
+    回傳的 JSON 結構包含：
+    1. current_indicators: 最新一筆的技術指標摘要
+       - price: current, open, high, low, volume
+       - moving_averages: MA_5, MA_10, MA_20, MA_50, EMA_12, EMA_26
+       - oscillators: RSI, Stoch_K, Stoch_D, Williams_R
+       - macd: MACD, MACD_Signal, MACD_Histogram
+       - bollinger_bands: BB_Upper, BB_Middle, BB_Lower
+       - volatility: ATR
+    2. indicators: 歷史技術指標列表 (包含時間戳與詳細數值)
+    
+    Args:
+        market: 交易對符號 (例如: 'btctwd', 'ethusdt')
+        period: 時間週期 (分鐘)，預設為 15
+        limit: 返回的歷史數據量，範圍 20-500，預設為 30
+    """
+    url = "https://herry537.sytes.net/max_api/analysis/indicators"
+    params = {
+        "market": market,
+        "period": period,
+        "limit": limit
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=15)
+        response.raise_for_status()
+        data = response.json()
+        
+        # 這裡根據 API 回傳格式進行簡單格式化，或者直接回傳 JSON 字串讓 AI 讀取
+        return json.dumps(data, indent=2, ensure_ascii=False)
+        
+    except Exception as e:
+        return f"技術指標獲取失敗: {str(e)}"

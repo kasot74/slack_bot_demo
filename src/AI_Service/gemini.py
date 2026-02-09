@@ -13,7 +13,7 @@ from google.genai import types
 from ..utilities import read_config
 from ..database import con_db
 from ..AI_Service.openai import painting
-from ..AI_Service.ai_tool import read_url_content
+from ..AI_Service.ai_tool import read_url_content, get_technical_indicators
 from ..stock import get_stock_info, get_historical_data, get_crypto_prices, get_current_date
 
 # 從配置文件中讀取 tokens
@@ -56,7 +56,8 @@ TOOLS = [
     get_crypto_prices, 
     get_current_date,
     read_url_content,
-    google_search
+    google_search,
+    get_technical_indicators
 ]
 
 def convert_to_gemini_format(collection_name):
