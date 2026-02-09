@@ -71,7 +71,7 @@ def read_url_content(url: str) -> str:
     except Exception as e:
         return f"錯誤：處理網頁時發生問題: {str(e)}"
 
-def get_technical_indicators(market: str, period: int = 15, limit: int = 30) -> str:
+def get_technical_indicators(market: str, period: int = 15, limit: int = 500) -> str:
     """
     獲取加密貨幣的技術指標數據 
     
@@ -88,7 +88,7 @@ def get_technical_indicators(market: str, period: int = 15, limit: int = 30) -> 
     Args:
         market: 交易對符號 (例如: 'btctwd', 'ethusdt')
         period: 時間週期 (分鐘)，預設為 15
-        limit: 返回的歷史數據量，範圍 20-500，預設為 30
+        limit: 返回的歷史數據量，範圍 20-500，預設為 500
     """
     url = "https://herry537.sytes.net/max_api/analysis/indicators"
     params = {
