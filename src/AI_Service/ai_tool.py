@@ -3,10 +3,10 @@ import json
 import re
 import time
 import random
-from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright
 
 def read_url_content(url: str) -> str:
-    """讀取指定 URL 的內容，並進行初步的 HTML 清理與格式化。
+    """使用 Playwright 讀取指定 URL 的內容，並進行清理與格式化。
     
     Args:
         url (str): 要讀取的網頁 URL
@@ -19,57 +19,102 @@ def read_url_content(url: str) -> str:
         if not (url.startswith('http://') or url.startswith('https://')):
             return "錯誤：無效的 URL 格式，必須以 http:// 或 https:// 開頭。"
 
-        # 設定請求標頭        
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            'Accept-Language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
-        }
-        
-        # 2. 發送請求並設定超時
-        response = requests.get(url, headers=headers, timeout=15)
-        response.raise_for_status()
-        
-        # 3. 檢查內容類型，僅處理 HTML 或純文字
-        content_type = response.headers.get('Content-Type', '').lower()
-        if 'text/html' not in content_type and 'text/plain' not in content_type:
-            return f"注意：該 URL 的內容類型為 {content_type}，AI 目前僅支援閱讀網頁或文字。"
-
-        if response.encoding:
-            response.encoding = response.apparent_encoding
-        
-        html_content = response.text
-        
-        # 4. 使用 BeautifulSoup 提取標題與內容
-        soup = BeautifulSoup(html_content, 'html.parser')
-        title = soup.title.string.strip() if soup.title else "無標題"
-        
-        # 5. 精細清理內容
-        # 移除不可見的腳本與樣式
-        for script_or_style in soup(["script", "style", "header", "footer", "nav"]):
-            script_or_style.decompose()
+        with sync_playwright() as p:
+            # 2. 啟動無頭瀏覽器 (Chrome)
+            browser = p.chromium.launch(
+                headless=True,
+                args=['--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage']
+            )
             
-        # 取得純文字
-        clean_content = soup.get_text(separator='\n')
-        
-        # 處理 HTML 轉義字元與空白
-        clean_content = re.sub(r'\n\s*\n', '\n', clean_content)
-        clean_content = clean_content.strip()
-        
-        # 6. 截錄長度限制，避免超出分析範圍
-        max_length = 3500 
-        if len(clean_content) > max_length:
-            clean_content = clean_content[:max_length] + "\n... (內容過長已截斷)"
-        
-        return f"--- 網頁分析結果 ---\n【標題】：{title}\n【來源】：{url}\n\n【主要內容】：\n{clean_content}"
-        
-    except requests.exceptions.Timeout:
-        return f"錯誤：連線至 {url} 逾時，請稍後再試。"
-    except requests.exceptions.HTTPError as e:
-        status_code = e.response.status_code if hasattr(e, 'response') else 'Unknown'
-        return f"錯誤：網頁回應錯誤 (HTTP {status_code})，無法獲取內容。"
+            # 3. 建立新頁面並設定視窗大小與User-Agent
+            page = browser.new_page(
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                viewport={'width': 1920, 'height': 1080}
+            )
+            
+            # 4. 設定頁面超時與攔截不必要的資源（提高載入速度）
+            page.set_default_timeout(15000)  # 15 秒超時
+            page.route("**/*.{png,jpg,jpeg,gif,svg,ico,css,woff,woff2,ttf}", lambda route: route.abort())
+            
+            # 5. 導航至目標 URL 並等待頁面載入完成
+            response = page.goto(url, wait_until='networkidle', timeout=15000)
+            
+            # 6. 檢查回應狀態
+            if response and response.status >= 400:
+                browser.close()
+                return f"錯誤：網頁回應錯誤 (HTTP {response.status})，無法獲取內容。"
+            
+            # 7. 等待 JavaScript 載入完成（額外等待動態內容）
+            page.wait_for_timeout(2000)  # 等待 2 秒讓 JavaScript 執行
+            
+            # 8. 獲取頁面標題
+            title = page.title() or "無標題"
+            
+            # 9. 移除不需要的元素並獲取文字內容
+            page.evaluate("""
+                // 移除不可見元素
+                const unwantedElements = document.querySelectorAll('script, style, header, footer, nav, .advertisement, .ads, .popup');
+                unwantedElements.forEach(el => el.remove());
+                
+                // 移除隱藏元素
+                const hiddenElements = document.querySelectorAll('[style*="display: none"], [style*="visibility: hidden"]');
+                hiddenElements.forEach(el => el.remove());
+            """)
+            
+            # 10. 提取主要內容文字
+            main_content = page.evaluate("""
+                // 嘗試獲取主要內容區域
+                const mainSelectors = ['main', 'article', '.content', '#content', '.post', '.entry', 'body'];
+                let content = '';
+                
+                for (const selector of mainSelectors) {
+                    const element = document.querySelector(selector);
+                    if (element) {
+                        content = element.innerText;
+                        break;
+                    }
+                }
+                
+                // 如果還是沒有內容，獲取整個 body
+                if (!content) {
+                    content = document.body.innerText || document.body.textContent || '';
+                }
+                
+                return content;
+            """)
+            
+            browser.close()
+            
+            # 11. 清理文字內容
+            if not main_content:
+                return f"警告：無法從 {url} 獲取有效內容。"
+                
+            # 處理空白字元與換行
+            clean_content = re.sub(r'\n\s*\n', '\n', main_content)
+            clean_content = re.sub(r'[ \t]+', ' ', clean_content)  # 壓縮空白
+            clean_content = clean_content.strip()
+            
+            # 12. 長度限制處理
+            max_length = 3500
+            if len(clean_content) > max_length:
+                clean_content = clean_content[:max_length] + "\n... (內容過長已截斷)"
+            
+            return f"--- 網頁分析結果 ---\n【標題】：{title}\n【來源】：{url}\n\n【主要內容】：\n{clean_content}"
+            
     except Exception as e:
-        return f"錯誤：處理網頁時發生問題: {str(e)}"
+        error_message = str(e)
+        
+        # 針對常見錯誤提供更友善的訊息
+        if "timeout" in error_message.lower() or "timed out" in error_message.lower():
+            return f"錯誤：連線至 {url} 逾時，請稍後再試。"
+        elif "net::" in error_message:
+            return f"錯誤：無法連線到 {url}，請檢查網址是否正確。"
+        elif "403" in error_message:
+            return f"錯誤：網站 {url} 拒絕存取 (403 Forbidden)。"
+        elif "404" in error_message:
+            return f"錯誤：找不到指定的網頁 {url} (404 Not Found)。"
+        else:
+            return f"錯誤：處理網頁時發生問題: {error_message}"
 
 def get_technical_indicators(market: str, period: int = 15, limit: int = 500) -> str:
     """
