@@ -159,8 +159,8 @@ def generate_summary(user_input):
             if called_tools_info:
                 # 移除重複紀錄
                 unique_tools = list(dict.fromkeys(called_tools_info))
-                tools_display = "\n+ ".join([f"`{t}`" for t in unique_tools])
-                assistant_message += f"\n\n```diff\n+ 💡 執行工具紀錄：\n+ {tools_display}\n```"
+                tools_display = "\n".join(unique_tools)
+                assistant_message += f"\n\n💡 *執行工具紀錄：*\n```\n{tools_display}\n```"
         else:
             assistant_message = "無法生成回應"
             
