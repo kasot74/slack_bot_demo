@@ -6,7 +6,12 @@ import random
 from playwright.sync_api import sync_playwright
 
 def read_url_content(url: str) -> str:
-    """使用 Playwright 讀取指定 URL 的內容，並進行清理與格式化。
+    """使用 Playwright 隱蔽模式讀取指定 URL 的內容，並進行清理與格式化。
+    
+    隱蔽模式特點：
+    - 隱藏自動化標識，避免被反爬蟲檢測
+    - 模擬真實用戶瀏覽行為（隨機延遲、滑鼠移動、滾動）
+    - 偽造瀏覽器指紋（plugins、languages、deviceMemory 等）
     
     Args:
         url (str): 要讀取的網頁 URL
@@ -20,19 +25,32 @@ def read_url_content(url: str) -> str:
             return "錯誤：無效的 URL 格式，必須以 http:// 或 https:// 開頭。"
 
         with sync_playwright() as p:
-            # 2. 啟動無頭瀏覽器 (Chrome)
+            # 2. 啟動無頭瀏覽器 (Chrome) - 隱蔽模式
             browser = p.chromium.launch(
                 headless=True,
                 args=[
+                    # 基礎參數
                     '--disable-gpu',
                     '--no-sandbox', 
-                    '--disable-dev-shm-usage',                                        
+                    '--disable-dev-shm-usage',
+                    
+                    # 隱蔽模式核心參數
+                    '--disable-blink-features=AutomationControlled',  # 隱藏自動化標識
+                    '--no-first-run',
+                    '--disable-default-apps',
+                    '--disable-extensions-file-access-check',
+                    '--disable-background-timer-throttling',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-renderer-backgrounding',
                     
                     # 功能禁用
                     '--disable-extensions',
                     '--disable-plugins',
                     '--disable-images',                # 不載入圖片
                     '--disable-background-networking',
+                    '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+                    '--disable-logging',
+                    '--disable-gpu-logging',
                     
                     # 快取限制
                     '--disk-cache-size=10485760',      # 10MB 磁碟快取
@@ -40,31 +58,85 @@ def read_url_content(url: str) -> str:
                 ]
             )
             
-            # 3. 建立新頁面並設定視窗大小與User-Agent
+            # 3. 建立新頁面並設定真實瀏覽器特徵
             page = browser.new_page(
                 user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                viewport={'width': 1920, 'height': 1080}
+                viewport={'width': 1366, 'height': 768},  # 常見解析度
+                locale='zh-TW',
+                timezone_id='Asia/Taipei'
             )
             
-            # 4. 設定頁面超時與攔截不必要的資源（提高載入速度）
+            # 4. 隱蔽模式 JavaScript 偽裝
+            page.add_init_script("""
+                // 隱藏 webdriver 屬性
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined,
+                });
+                
+                // 偽造 Chrome 對象
+                window.chrome = {
+                    runtime: {},
+                    app: {
+                        isInstalled: false,
+                    }
+                };
+                
+                // 偽造 plugins
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5],
+                });
+                
+                // 偽造 languages
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['zh-TW', 'zh', 'en'],
+                });
+                
+                // 偽造 deviceMemory 和 hardwareConcurrency
+                Object.defineProperty(navigator, 'deviceMemory', {
+                    get: () => 8
+                });
+                Object.defineProperty(navigator, 'hardwareConcurrency', {
+                    get: () => 4
+                });
+            """)
+            
+            # 5. 設定頁面超時與攔截不必要的資源
             page.set_default_timeout(8000)  # 8 秒超時
             
-            page.route("**/*.{png,jpg,gif,css,js,mp4,ads,analytics}", lambda route: route.abort())
-            # 5. 導航至目標 URL 並等待頁面載入完成
+            page.route("**/*.{png,jpg,gif,css,js,mp4,ads,analytics,woff,woff2,ttf}", lambda route: route.abort())
+            
+            # 6. 模擬真實用戶行為 - 隨機延遲
+            time.sleep(random.uniform(0.5, 2.0))
+            
+            # 7. 導航至目標 URL 並等待頁面載入完成
             response = page.goto(url, wait_until='domcontentloaded', timeout=15000)
 
 
-            # 6. 檢查回應狀態
+            # 8. 檢查回應狀態
             if response and response.status >= 400:
                 browser.close()
                 return f"錯誤：網頁回應錯誤 (HTTP {response.status})，無法獲取內容。"
-                                    
-            page.wait_for_timeout(3000)  # 等待 3 秒讓 JavaScript 執行
             
-            # 7. 獲取頁面標題
+            # 9. 模擬人類瀏覽行為
+            # 隨機滑鼠移動
+            page.mouse.move(
+                random.randint(100, 600), 
+                random.randint(100, 400)
+            )
+            
+            # 隨機滾動頁面
+            for _ in range(random.randint(1, 3)):
+                scroll_amount = random.randint(100, 400)
+                page.evaluate(f"window.scrollBy(0, {scroll_amount})")
+                time.sleep(random.uniform(0.3, 0.8))
+            
+            # 等待內容載入（模擬人類閱讀時間）
+            page.wait_for_timeout(random.randint(1500, 3500))
+            
+            # 10. 獲取頁面標題
             title = page.title() or "無標題"
             
-            # 8. 移除不需要的元素並獲取文字內容
+            # 11. 移除不需要的元素並獲取文字內容
             page.evaluate("""() => {
                 const unwantedElements = document.querySelectorAll('script, style, header, footer, nav, .advertisement, .ads, .popup');
                 unwantedElements.forEach(el => el.remove());
@@ -73,7 +145,7 @@ def read_url_content(url: str) -> str:
                 hiddenElements.forEach(el => el.remove());
             }""")
             
-            # 9. 提取主要內容文字
+            # 12. 提取主要內容文字
             main_content = page.evaluate("""() => {
                 const mainSelectors = ['main', 'article', '.content', '#content', '.post', '.entry', 'body'];
                 let content = '';
@@ -95,7 +167,7 @@ def read_url_content(url: str) -> str:
             
             browser.close()
             
-            # 11. 清理文字內容
+            # 13. 清理文字內容
             if not main_content:
                 return f"警告：無法從 {url} 獲取有效內容。"
                 
@@ -104,12 +176,12 @@ def read_url_content(url: str) -> str:
             clean_content = re.sub(r'[ \t]+', ' ', clean_content)  # 壓縮空白
             clean_content = clean_content.strip()
             
-            # 12. 長度限制處理
+            # 14. 長度限制處理
             max_length = 1500
             if len(clean_content) > max_length:
                 clean_content = clean_content[:max_length] + "\n... (內容過長已截斷)"
             
-            return f"--- 網頁分析結果 ---\n【標題】：{title}\n【來源】：{url}\n\n【主要內容】：\n{clean_content}"
+            return f"--- 網頁分析結果 (隱蔽模式) ---\n【標題】：{title}\n【來源】：{url}\n\n【主要內容】：\n{clean_content}"
             
     except Exception as e:
         error_message = str(e)
