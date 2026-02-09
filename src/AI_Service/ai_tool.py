@@ -53,23 +53,22 @@ def read_url_content(url: str) -> str:
             )
             
             # 4. 設定頁面超時與攔截不必要的資源（提高載入速度）
-            page.set_default_timeout(5000)  # 5 秒超時
-            page.route("**/*.{png,jpg,jpeg,gif,svg,ico,css,woff,woff2,ttf}", lambda route: route.abort())
+            page.set_default_timeout(5000)  # 5 秒超時            
             # 5. 導航至目標 URL 並等待頁面載入完成
             response = page.goto(url, wait_until='networkidle', timeout=5000)
-            
+            page.wait_for_timeout(2000)  # 等待 2 秒讓 JavaScript 執行
+
+
             # 6. 檢查回應狀態
             if response and response.status >= 400:
                 browser.close()
                 return f"錯誤：網頁回應錯誤 (HTTP {response.status})，無法獲取內容。"
+                                    
             
-            # 7. 等待 JavaScript 載入完成（額外等待動態內容）
-            page.wait_for_timeout(2000)  # 等待 2 秒讓 JavaScript 執行
-            
-            # 8. 獲取頁面標題
+            # 7. 獲取頁面標題
             title = page.title() or "無標題"
             
-            # 9. 移除不需要的元素並獲取文字內容
+            # 8. 移除不需要的元素並獲取文字內容
             page.evaluate("""() => {
                 const unwantedElements = document.querySelectorAll('script, style, header, footer, nav, .advertisement, .ads, .popup');
                 unwantedElements.forEach(el => el.remove());
@@ -78,7 +77,7 @@ def read_url_content(url: str) -> str:
                 hiddenElements.forEach(el => el.remove());
             }""")
             
-            # 10. 提取主要內容文字
+            # 9. 提取主要內容文字
             main_content = page.evaluate("""() => {
                 const mainSelectors = ['main', 'article', '.content', '#content', '.post', '.entry', 'body'];
                 let content = '';
@@ -118,18 +117,7 @@ def read_url_content(url: str) -> str:
             
     except Exception as e:
         error_message = str(e)
-        
-        # 針對常見錯誤提供更友善的訊息
-        if "timeout" in error_message.lower() or "timed out" in error_message.lower():
-            return f"錯誤：連線至 {url} 逾時，請稍後再試。"
-        elif "net::" in error_message:
-            return f"錯誤：無法連線到 {url}，請檢查網址是否正確。"
-        elif "403" in error_message:
-            return f"錯誤：網站 {url} 拒絕存取 (403 Forbidden)。"
-        elif "404" in error_message:
-            return f"錯誤：找不到指定的網頁 {url} (404 Not Found)。"
-        else:
-            return f"錯誤：處理網頁時發生問題: {error_message}"
+        return f"錯誤：無法讀取 {url} 的內容，原因: {error_message}"        
 
 def get_technical_indicators(market: str, period: int = 15, limit: int = 500) -> str:
     """
