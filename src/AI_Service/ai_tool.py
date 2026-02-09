@@ -51,19 +51,16 @@ def read_url_content(url: str) -> str:
             title = page.title() or "無標題"
             
             # 9. 移除不需要的元素並獲取文字內容
-            page.evaluate("""
-                // 移除不可見元素
+            page.evaluate("""() => {
                 const unwantedElements = document.querySelectorAll('script, style, header, footer, nav, .advertisement, .ads, .popup');
                 unwantedElements.forEach(el => el.remove());
                 
-                // 移除隱藏元素
                 const hiddenElements = document.querySelectorAll('[style*="display: none"], [style*="visibility: hidden"]');
                 hiddenElements.forEach(el => el.remove());
-            """)
+            }""")
             
             # 10. 提取主要內容文字
-            main_content = page.evaluate("""
-                // 嘗試獲取主要內容區域
+            main_content = page.evaluate("""() => {
                 const mainSelectors = ['main', 'article', '.content', '#content', '.post', '.entry', 'body'];
                 let content = '';
                 
@@ -75,13 +72,12 @@ def read_url_content(url: str) -> str:
                     }
                 }
                 
-                // 如果還是沒有內容，獲取整個 body
                 if (!content) {
                     content = document.body.innerText || document.body.textContent || '';
                 }
                 
                 return content;
-            """)
+            }""")
             
             browser.close()
             
