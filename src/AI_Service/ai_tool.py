@@ -23,21 +23,40 @@ def read_url_content(url: str) -> str:
             # 2. 啟動無頭瀏覽器 (Chrome)
             browser = p.chromium.launch(
                 headless=True,
-                args=['--disable-gpu', '--no-sandbox', '--disable-dev-shm-usage']
+                args=[
+                    '--disable-gpu',
+                    '--no-sandbox', 
+                    '--disable-dev-shm-usage',
+                    
+                    # 記憶體限制核心參數
+                    '--memory-pressure-off',           # 關閉記憶體壓力監控
+                    '--max-heap-size=50',              # 限制 JS 堆疊為 50MB
+                    '--max-old-space-size=100',        # 限制 V8 引擎為 100MB
+                    '--single-process',                # 單進程模式（省很多記憶體）
+                    
+                    # 功能禁用
+                    '--disable-extensions',
+                    '--disable-plugins',
+                    '--disable-images',                # 不載入圖片
+                    '--disable-background-networking',
+                    
+                    # 快取限制
+                    '--disk-cache-size=10485760',      # 10MB 磁碟快取
+                    '--media-cache-size=5242880',      # 5MB 媒體快取
+                ]
             )
             
             # 3. 建立新頁面並設定視窗大小與User-Agent
             page = browser.new_page(
                 user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                viewport={'width': 1920, 'height': 1080}
+                viewport={'width': 800, 'height': 600}
             )
             
             # 4. 設定頁面超時與攔截不必要的資源（提高載入速度）
-            page.set_default_timeout(15000)  # 15 秒超時
+            page.set_default_timeout(5000)  # 5 秒超時
             page.route("**/*.{png,jpg,jpeg,gif,svg,ico,css,woff,woff2,ttf}", lambda route: route.abort())
-            
             # 5. 導航至目標 URL 並等待頁面載入完成
-            response = page.goto(url, wait_until='networkidle', timeout=15000)
+            response = page.goto(url, wait_until='networkidle', timeout=5000)
             
             # 6. 檢查回應狀態
             if response and response.status >= 400:
