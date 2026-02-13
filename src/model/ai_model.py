@@ -35,8 +35,7 @@ COMMANDS_HELP = [
     ("!claude 內容", "詢問 Claude "),    
     ("!gemini 內容", "詢問 gemini"),    
     ("!ai 內容", "AI角色扮演"),    
-    ("!畫 內容", "用 Gemini Imagen 產生圖片"),
-    #("!影片 內容", "用 Gemini Veo 3.0 生成影片"),
+    ("!畫 內容", "用 Gemini Imagen 產生圖片"),    
     ("!改圖 內容", "用 Gemini 進行圖片編輯"),
     ("!clearai", "清除 AI 聊天紀錄")
 ]
@@ -153,62 +152,7 @@ def register_handlers(app, config, db):
             say("AI 聊天紀錄清除成功！")
         except Exception as e:
             say(f"AI 聊天紀錄清除錯誤！{e}")
-
-    #!影片    
-    #@app.message(re.compile(r"^!影片\s+(.+)$"))
-    #def create_video_handler(message, say):
-    #    channel = message['channel']
-    #    text_prompt = message['text'].replace('!影片', '').strip()
-    #    
-    #    # 檢查是否有檔案上傳
-    #    has_files = 'files' in message and len(message['files']) > 0
-    #    
-    #    if has_files:
-            # 有圖片 + 描述：圖片轉影片
-            say("🎬 開始從圖片生成影片，這可能需要幾分鐘時間，請稍候...")
-            
-            try:
-                # 處理上傳的圖片
-                file_info = message['files'][0]
-                file_url = file_info['url_private']
-                file_name = file_info['name']
-                
-                # 下載圖片
-                headers = {'Authorization': f'Bearer {config["SLACK_BOT_TOKEN"]}'}
-                response = requests.get(file_url, headers=headers)
-
-                if response.status_code == 200:
-                    image_bytes = response.content
-
-                    result_text, file_path = gemini_create_video_from_bytes(image_bytes, text_prompt)
-                    
-                    if file_path:
-                        send_video(channel, result_text, say, file_path)
-                    else:
-                        say(result_text)  # 顯示錯誤訊息
-                else:
-                    say("❌ 無法下載圖片檔案")
-
-                    
-            except Exception as e:
-                say(f"❌ 圖片轉影片失敗：{e}")
-    #    
-    #    else:
-            # 只有描述：純文字轉影片
-            say("🎬 開始生成影片，這可能需要幾分鐘時間，請稍候...")
-            
-            try:
-                # 調用 Gemini 純文字轉影片功能
-                result_text, file_path = gemini_create_video(text_prompt)
-                
-                if file_path:
-                    send_video(channel, result_text, say, file_path)
-                else:
-                    say(result_text)  # 顯示錯誤訊息
-                    
-            except Exception as e:
-                say(f"❌ 影片生成失敗：{e}")
-    #
+   
     # !改圖
     @app.message(re.compile(r"^!改圖\s+(.+)$"))
     def handle_edit_image(message, say):
