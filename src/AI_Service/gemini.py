@@ -208,46 +208,6 @@ def model_list():
         print(f"Gemini 模型列表獲取失敗: {e}")
         return []  # 發生錯誤時回傳空列表
 
-def analyze_stock(his_data, now_data):
-    """使用 Gemini 分析股票趨勢"""
-    try:
-        collection_stock = ai_db.ai_analyze_stock_his
-        # 初始化 Gemini 客戶端
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        
-        # 構建提示詞
-        system_prompt = "你是一個股票的專業技術分析專家，給你股票歷史紀錄與現況幫我分析趨勢\n\n"
-        historical_data = "歷史記錄：\n" + "\n".join([str(record) for record in his_data])
-        current_data = f"\n現況：\n{now_data}"
-        
-        full_prompt = system_prompt + historical_data + current_data
-        user_message = {"role": "user", "content": full_prompt}
-        collection_stock.insert_one(user_message)
-        
-        conversation_history = convert_to_gemini_format("ai_analyze_stock_his")
-        
-        try:
-            # 使用 SDK 發送請求
-            response = client.models.generate_content(
-                model=DEFAULT_MODEL,
-                contents=conversation_history,
-                config=types.GenerateContentConfig(
-                    temperature=0.7
-                )
-            )
-            
-            if response.text:
-                assistant_message = response.text
-            else:
-                assistant_message = "無法生成回應"                            
-            return assistant_message
-            
-        except Exception as e:
-            return f"生成失敗: {e}"
-            
-    except Exception as e:
-        print(f"Gemini 股票分析錯誤: {e}")
-        return f"分析過程發生錯誤: {e}"
 
 def create_image(prompt):
     """使用 Imagen 4.0 生成圖片"""
