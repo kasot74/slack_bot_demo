@@ -13,18 +13,64 @@ from slack_sdk import WebClient
 from math import comb
 from datetime import datetime, timedelta
 
-
+from ..threads_search import search_threads_content
 
 
 COMMANDS_HELP = [    
     ("!曬卡", "隨機曬卡趣味指令"),
     ("!add 指令 回覆", "新增自訂指令"),
     ("!show", "顯示所有自訂指令"),
+    ("!threads 關鍵字", "搜尋最近3天的 Threads 內容"),
     ("!remove 指令", "刪除自訂指令")
 ]
 
 def register_handlers(app, config, db):
-    
+
+    # !threads 搜尋 (預設最近3天)
+    @app.message(re.compile(r"^!threads\s+(.+)$"))
+    def handle_threads_search(message, say):
+        query = re.match(r"^!threads\s+(.+)$", message['text']).group(1).strip()
+        
+        try:
+            say("🔍 正在搜尋最近3天的 Threads...")
+            
+            result = search_threads_content(query)  # 預設3天
+            
+            if 'error' in result:
+                say(f"❌ 搜尋失敗：{result['error']}")
+                return
+                
+            if 'data' in result and result['data']:
+                response_text = f"🧵 **Threads 搜尋結果** (關鍵字: {query} | 最近3天)\n\n"
+                
+                for i, post in enumerate(result['data'][:5], 1):
+                    text_content = post.get('text', '無文字內容')[:100] + ('...' if len(post.get('text', '')) > 100 else '')
+                    username = post.get('username', 'Unknown')
+                    permalink = post.get('permalink', '#')
+                    timestamp = post.get('timestamp', '')
+                    
+                    # 格式化時間戳
+                    if timestamp:
+                        try:
+                            dt = datetime.fromtimestamp(int(timestamp))
+                            time_str = dt.strftime("%m-%d %H:%M")
+                        except:
+                            time_str = timestamp
+                    else:
+                        time_str = "未知時間"
+                    
+                    response_text += f"**{i}.** @{username} ({time_str})\n"
+                    response_text += f"💬 {text_content}\n"
+                    response_text += f"🔗 {permalink}\n\n"
+                
+                say(response_text)
+            else:
+                say(f"🔍 最近3天沒有找到包含「{query}」的 Threads 內容")
+                
+        except Exception as e:
+            say(f"❌ 搜尋 Threads 時發生錯誤：{e}")
+
+
     # !曬卡
     @app.message(re.compile(r"^!曬卡.*"))
     def show_card(message, say):        
