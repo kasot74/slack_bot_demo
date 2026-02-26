@@ -188,13 +188,13 @@ def read_url_content(url: str) -> str:
         return f"錯誤：無法讀取 {url} 的內容，原因: {error_message}"        
 
 def search_threads(keyword: str, max_results: int = 10) -> str:
-    """使用 Playwright 增強隱蔽模式搜索 Meta Threads 平台上的關鍵字內容。
+    """使用 Scrapfly 方法搜索 Meta Threads 平台上的關鍵字內容。
     
-    專為動態內容設計的增強隱蔽模式特點：
-    - 深度隱藏自動化標識，完全模擬真實瀏覽器
-    - 智能等待動態內容載入完成
-    - 多階段反檢測與行為模擬
-    - 增強的瀏覽器指紋偽裝
+    基於 Scrapfly 建議的方法：
+    - 提取隱藏的 JSON 數據而非 DOM 元素
+    - 尋找 script[type="application/json"][data-sjs] 標籤
+    - 解析 thread_items 結構獲取貼文數據
+    - 使用簡化的瀏覽器設定減少檢測風險
     
     Args:
         keyword (str): 要搜索的關鍵字
@@ -203,393 +203,188 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
     Returns:
         str: 格式化的 Threads 搜索結果，包含貼文內容、作者、時間等資訊
     """
-    
-    # 重試機制
-    max_retries = 2
-    for attempt in range(max_retries):
-        try:
-            # 1. 驗證關鍵字
-            if not keyword or not keyword.strip():
-                return "錯誤：搜索關鍵字不能為空。"
-                
-            keyword = keyword.strip()
-            search_url = f"https://www.threads.net/search?q={requests.utils.quote(keyword)}"
+    try:
+        # 1. 驗證關鍵字
+        if not keyword or not keyword.strip():
+            return "錯誤：搜索關鍵字不能為空。"
+            
+        keyword = keyword.strip()
+        search_url = f"https://www.threads.net/search?q={requests.utils.quote(keyword)}"
 
-            with sync_playwright() as p:
-                # 2. 啟動無頭瀏覽器 - 增強隱蔽模式
-                browser = p.chromium.launch(
-                    headless=True,
-                    args=[
-                        # 基礎參數
-                        '--disable-gpu',
-                        '--no-sandbox', 
-                        '--disable-dev-shm-usage',
-                        '--disable-setuid-sandbox',
-                        
-                        # 核心反檢測參數
-                        '--disable-blink-features=AutomationControlled',
-                        '--no-first-run',
-                        '--disable-default-apps',
-                        '--disable-extensions-file-access-check',
-                        '--disable-background-timer-throttling',
-                        '--disable-backgrounding-occluded-windows',
-                        '--disable-renderer-backgrounding',
-                        '--disable-component-extensions-with-background-pages',
-                        
-                        # 增強反檢測
-                        '--disable-ipc-flooding-protection',
-                        '--disable-hang-monitor',
-                        '--disable-prompt-on-repost',
-                        '--disable-background-networking',
-                        '--disable-sync',
-                        '--disable-translate',
-                        '--hide-scrollbars',
-                        '--mute-audio',
-                        
-                        # 功能細化控制
-                        '--disable-extensions',
-                        '--disable-plugins',
-                        '--disable-features=TranslateUI,BlinkGenPropertyTrees,VizDisplayCompositor',
-                        '--disable-logging',
-                        '--disable-gpu-logging',
-                        '--silent',
-                        
-                        # 記憶體與快取優化
-                        '--memory-pressure-off',
-                        '--max_old_space_size=4096',
-                        '--disk-cache-size=16777216',  # 16MB
-                        '--media-cache-size=8388608',  # 8MB
-                    ]
-                )
+        with sync_playwright() as p:
+            # 2. 簡化的瀏覽器設定 (基於 Scrapfly 建議)
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    '--disable-gpu',
+                    '--no-sandbox', 
+                    '--disable-dev-shm-usage',
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-extensions',
+                    '--disable-plugins'
+                ]
+            )
+            
+            # 3. 建立新頁面
+            page = browser.new_page(
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                viewport={'width': 1920, 'height': 1080}
+            )
+            
+            # 4. 隱藏 webdriver 標識
+            page.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined,
+                });
                 
-                # 3. 建立新頁面 - 超真實瀏覽器模擬
-                page = browser.new_page(
-                    user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                    viewport={'width': random.randint(1200, 1440), 'height': random.randint(720, 900)},
-                    locale='zh-TW',
-                    timezone_id='Asia/Taipei',
-                    has_touch=False,
-                    is_mobile=False,
-                    device_scale_factor=1
-                )
+                window.chrome = {
+                    runtime: {},
+                    app: { isInstalled: false }
+                };
+            """)
+            
+            # 5. 攔截不需要的資源
+            page.route("**/*.{png,jpg,gif,css,woff,woff2,ttf}", lambda route: route.abort())
+            
+            # 6. 導航至搜索頁面
+            page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
+            
+            # 7. 等待頁面載入完成
+            try:
+                page.wait_for_selector("[data-pressable-container=true]", timeout=15000)
+            except:
+                pass  # 如果特定元素不存在，繼續嘗試
                 
-                # 4. 深度隱蔽模式 JavaScript 偽裝
-                page.add_init_script("""
-                    // 完全隱藏 webdriver 痕跡
-                    Object.defineProperty(navigator, 'webdriver', {
-                        get: () => undefined,
-                        configurable: true
-                    });
-                    
-                    // 移除 automation 相關屬性
-                    delete window.navigator.__proto__.webdriver;
-                    
-                    // 偽造完整的 Chrome 對象
-                    window.chrome = {
-                        runtime: {
-                            onConnect: null,
-                            onMessage: null
-                        },
-                        app: {
-                            isInstalled: false,
-                            InstallState: {
-                                DISABLED: 'disabled',
-                                INSTALLED: 'installed',
-                                NOT_INSTALLED: 'not_installed'
-                            }
+            # 8. 模擬滾動載入更多內容
+            for _ in range(3):
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                time.sleep(random.uniform(1.0, 2.0))
+            
+            # 9. 提取隱藏的 JSON 數據 (Scrapfly 方法)
+            hidden_datasets = page.evaluate("""() => {
+                const scripts = document.querySelectorAll('script[type="application/json"][data-sjs]');
+                const datasets = [];
+                
+                scripts.forEach(script => {
+                    try {
+                        const text = script.textContent || script.innerText;
+                        if (text && text.includes('ScheduledServerJS') && text.includes('thread_items')) {
+                            datasets.push(text);
                         }
-                    };
-                    
-                    // 偽造真實的 plugins 陣列
-                    Object.defineProperty(navigator, 'plugins', {
-                        get: () => {
-                            return Array.from(Array(5), (_, i) => ({
-                                name: `Plugin ${i}`,
-                                filename: `plugin${i}.dll`,
-                                description: `Description ${i}`
-                            }));
-                        },
-                        configurable: true
-                    });
-                    
-                    // 偽造語言設定
-                    Object.defineProperty(navigator, 'languages', {
-                        get: () => ['zh-TW', 'zh-CN', 'zh', 'en-US', 'en'],
-                        configurable: true
-                    });
-                    
-                    // 偽造設備資訊
-                    Object.defineProperty(navigator, 'deviceMemory', {
-                        get: () => 8,
-                        configurable: true
-                    });
-                    
-                    Object.defineProperty(navigator, 'hardwareConcurrency', {
-                        get: () => 8,
-                        configurable: true
-                    });
-                    
-                    // 偽造螢幕資訊
-                    Object.defineProperty(screen, 'width', {
-                        get: () => 1920,
-                        configurable: true
-                    });
-                    
-                    Object.defineProperty(screen, 'height', {
-                        get: () => 1080,
-                        configurable: true
-                    });
-                    
-                    // 偽造時區
-                    Date.prototype.getTimezoneOffset = function() {
-                        return -480; // GMT+8
-                    };
-                    
-                    // 偽造 permissions API
-                    navigator.permissions.query = navigator.permissions.query || function() {
-                        return Promise.resolve({ state: 'granted' });
-                    };
-                """)
+                    } catch (e) {
+                        console.log('解析 script 標籤時出錯:', e);
+                    }
+                });
                 
-                # 5. 設定超時與資源攔截
-                page.set_default_timeout(15000)
-                
-                # 只攔截大型媒體檔案，保留 CSS/JS 以確保動態內容載入
-                page.route("**/*.{jpg,jpeg,png,gif,webp,mp4,avi,mov,wmv,flv,woff,woff2,ttf,otf}", 
-                          lambda route: route.abort())
-                
-                # 6. 預載入等待 - 模擬真實用戶行為
-                time.sleep(random.uniform(2.0, 4.0))
-                
-                # 7. 導航至 Threads 主頁（模擬真實用戶路徑）
+                return datasets;
+            }""")
+            
+            browser.close()
+            
+            # 10. 解析 JSON 數據尋找貼文內容
+            threads_data = []
+            
+            for dataset_str in hidden_datasets:
                 try:
-                    page.goto("https://www.threads.net", wait_until='domcontentloaded', timeout=25000)
-                    page.wait_for_timeout(random.randint(2000, 4000))
+                    dataset = json.loads(dataset_str)
                     
-                    # 模擬點擊搜索或直接導航
-                    time.sleep(random.uniform(1.0, 2.0))
-                except:
-                    pass  # 如果主頁失敗，直接進行搜索
-                
-                # 8. 導航至搜索頁面
-                response = page.goto(search_url, wait_until='networkidle', timeout=30000)
-                
-                # 9. 檢查回應狀態
-                if response and response.status >= 400:
-                    browser.close()
-                    if attempt < max_retries - 1:
-                        continue
-                    return f"錯誤：Threads 回應錯誤 (HTTP {response.status})，可能被限制存取。"
-                
-                # 10. 深度等待與互動模擬
-                # 第一階段：等待基本頁面結構
-                page.wait_for_timeout(random.randint(3000, 6000))
-                
-                # 模擬真實用戶互動
-                # 隨機滑鼠移動到不同位置
-                for _ in range(random.randint(2, 4)):
-                    x = random.randint(100, 1000)
-                    y = random.randint(100, 600)
-                    page.mouse.move(x, y, steps=random.randint(5, 15))
-                    time.sleep(random.uniform(0.5, 1.5))
-                
-                # 第二階段：模擬滾動以觸發內容載入
-                scroll_attempts = 0
-                max_scroll_attempts = 8
-                
-                while scroll_attempts < max_scroll_attempts:
-                    # 向下滾動
-                    scroll_amount = random.randint(200, 500)
-                    page.evaluate(f"""
-                        window.scrollTo({{
-                            top: window.scrollY + {scroll_amount},
-                            behavior: 'smooth'
-                        }});
-                    """)
+                    # 遞迴搜尋 thread_items
+                    def find_thread_items(obj, path=""):
+                        if isinstance(obj, dict):
+                            if 'thread_items' in obj:
+                                return obj['thread_items']
+                            for key, value in obj.items():
+                                result = find_thread_items(value, f"{path}.{key}")
+                                if result:
+                                    return result
+                        elif isinstance(obj, list):
+                            for i, item in enumerate(obj):
+                                result = find_thread_items(item, f"{path}[{i}]")
+                                if result:
+                                    return result
+                        return None
                     
-                    # 等待內容載入
-                    time.sleep(random.uniform(1.5, 3.0))
+                    thread_items = find_thread_items(dataset)
                     
-                    # 檢查是否有新內容出現
-                    content_check = page.evaluate("""
-                        () => {
-                            const posts = document.querySelectorAll('[role="article"], article, div[data-testid*="thread"], div[style*="cursor"]');
-                            return posts.length;
-                        }
-                    """)
+                    if thread_items:
+                        for thread_list in thread_items:
+                            if isinstance(thread_list, list):
+                                for thread in thread_list:
+                                    try:
+                                        # 提取貼文基本資訊
+                                        if isinstance(thread, dict) and 'post' in thread:
+                                            post = thread['post']
+                                            
+                                            # 提取內容文字
+                                            content = ""
+                                            if 'caption' in post and post['caption'] and 'text' in post['caption']:
+                                                content = post['caption']['text']
+                                            
+                                            # 提取作者資訊
+                                            author = "未知用戶"
+                                            if 'user' in post and post['user'] and 'username' in post['user']:
+                                                author = post['user']['username']
+                                            
+                                            # 提取時間 (Unix 時間戳)
+                                            post_time = "最近"
+                                            if 'taken_at' in post and post['taken_at']:
+                                                try:
+                                                    timestamp = int(post['taken_at'])
+                                                    from datetime import datetime
+                                                    dt = datetime.fromtimestamp(timestamp)
+                                                    post_time = dt.strftime("%Y-%m-%d %H:%M")
+                                                except:
+                                                    pass
+                                            
+                                            # 提取互動數據
+                                            like_count = post.get('like_count', 0)
+                                            
+                                            if content and len(content.strip()) > 10:
+                                                threads_data.append({
+                                                    'author': f"@{author}",
+                                                    'content': content.strip(),
+                                                    'time': post_time,
+                                                    'likes': like_count,
+                                                    'index': len(threads_data) + 1
+                                                })
+                                                
+                                                if len(threads_data) >= max_results:
+                                                    break
+                                    except Exception as e:
+                                        continue
+                            
+                            if len(threads_data) >= max_results:
+                                break
                     
-                    if content_check > 0:
+                    if len(threads_data) >= max_results:
                         break
                         
-                    scroll_attempts += 1
+                except Exception as e:
+                    continue
+            
+            # 11. 格式化搜索結果
+            if not threads_data:
+                return f"搜索關鍵字「{keyword}」在 Threads 上沒有找到相關結果。\n可能原因：\n- 該關鍵字沒有相關貼文\n- 需要登入才能查看搜索結果\n- 內容載入限制"
+            
+            result_text = f"🧵 **Threads 搜索結果** (Scrapfly 方法)\n"
+            result_text += f"【關鍵字】：{keyword}\n"
+            result_text += f"【找到】：{len(threads_data)} 筆結果\n"
+            result_text += f"【來源】：{search_url}\n"
+            result_text += f"{'=' * 50}\n\n"
+            
+            for post in threads_data:
+                result_text += f"▶ **貼文 {post['index']}**\n"
+                result_text += f"👤 **作者**：{post['author']}\n"
+                result_text += f"⏰ **時間**：{post['time']}\n"
+                result_text += f"❤️ **讚數**：{post['likes']}\n"
+                result_text += f"💬 **內容**：{post['content'][:300]}{'...' if len(post['content']) > 300 else ''}\n"
+                result_text += f"{'-' * 40}\n\n"
+            
+            return result_text
                 
-                # 第三階段：最終等待確保所有動態內容載入
-                page.wait_for_timeout(random.randint(3000, 5000))
-                
-                # 11. 智能內容提取
-                threads_data = page.evaluate(f"""() => {{
-                    console.log('開始提取 Threads 內容...');
-                    const posts = [];
-                    const maxResults = {max_results};
-                    
-                    // 更全面的內容選擇器
-                    const contentSelectors = [
-                        '[role="article"]',
-                        'article',
-                        'div[data-testid*="thread"]', 
-                        'div[data-testid*="post"]',
-                        'div[aria-label*="post"]',
-                        'div[style*="cursor: pointer"]',
-                        'div[tabindex="0"]'
-                    ];
-                    
-                    let foundElements = [];
-                    
-                    // 嘗試各種選擇器
-                    for (const selector of contentSelectors) {{
-                        console.log('嘗試選擇器:', selector);
-                        const elements = document.querySelectorAll(selector);
-                        console.log('找到元素數量:', elements.length);
-                        
-                        if (elements.length > 0) {{
-                            foundElements = Array.from(elements);
-                            break;
-                        }}
-                    }}
-                    
-                    // 備用方法：尋找包含文字的 div
-                    if (foundElements.length === 0) {{
-                        console.log('使用備用方法搜尋內容...');
-                        const allDivs = document.querySelectorAll('div');
-                        foundElements = Array.from(allDivs).filter(div => {{
-                            const text = (div.textContent || div.innerText || '').trim();
-                            const hasReasonableLength = text.length > 30 && text.length < 2000;
-                            const hasPostLikeContent = /[\u4e00-\u9fff]|[a-zA-Z]/.test(text);
-                            const notNavigationElement = !div.querySelector('nav') && !div.closest('nav');
-                            
-                            return hasReasonableLength && hasPostLikeContent && notNavigationElement;
-                        }});
-                    }}
-                    
-                    console.log('總共找到可能的內容元素:', foundElements.length);
-                    
-                    // 提取內容
-                    const processedTexts = new Set(); // 避免重複
-                    
-                    for (let i = 0; i < foundElements.length && posts.length < maxResults; i++) {{
-                        const element = foundElements[i];
-                        
-                        try {{
-                            let postText = (element.textContent || element.innerText || '').trim();
-                            
-                            // 基本過濾
-                            if (postText.length < 20 || postText.length > 2000) {{
-                                continue;
-                            }}
-                            
-                            // 避免重複內容
-                            if (processedTexts.has(postText)) {{
-                                continue;
-                            }}
-                            
-                            // 過濾明顯的導航或系統文字
-                            const systemWords = ['登入', '註冊', '隱私', '條款', '設定', '搜尋', '首頁', 'Home', 'Search', 'Settings'];
-                            const isSystemText = systemWords.some(word => postText.includes(word) && postText.length < 100);
-                            
-                            if (isSystemText) {{
-                                continue;
-                            }}
-                            
-                            processedTexts.add(postText);
-                            
-                            // 嘗試提取作者資訊
-                            let author = '未知用戶';
-                            const authorSelectors = [
-                                'a[href*="@"]',
-                                '[data-testid*="user"]',
-                                '[data-testid*="username"]',
-                                'span[dir="ltr"]',
-                                'strong'
-                            ];
-                            
-                            for (const selector of authorSelectors) {{
-                                const authorElement = element.querySelector(selector);
-                                if (authorElement && authorElement.textContent) {{
-                                    const authorText = authorElement.textContent.trim();
-                                    if (authorText.length < 50 && !authorText.includes('\\n')) {{
-                                        author = authorText;
-                                        break;
-                                    }}
-                                }}
-                            }}
-                            
-                            // 嘗試提取時間
-                            let postTime = '最近';
-                            const timeSelectors = ['time', '[datetime]', 'span'];
-                            
-                            for (const selector of timeSelectors) {{
-                                const timeElement = element.querySelector(selector);
-                                if (timeElement) {{
-                                    const timeText = timeElement.textContent || timeElement.getAttribute('datetime') || '';
-                                    if (timeText && (timeText.includes('分') || timeText.includes('時') || timeText.includes('天') || timeText.match(/\\d/))) {{
-                                        postTime = timeText.trim();
-                                        break;
-                                    }}
-                                }}
-                            }}
-                            
-                            posts.push({{
-                                author: author,
-                                content: postText,
-                                time: postTime,
-                                index: posts.length + 1
-                            }});
-                            
-                            console.log(`成功提取貼文 ${{posts.length}}: ${{postText.substring(0, 50)}}...`);
-                            
-                        }} catch (e) {{
-                            console.log('處理元素時發生錯誤:', e);
-                            continue;
-                        }}
-                    }}
-                    
-                    console.log('最終提取到的貼文數量:', posts.length);
-                    return posts;
-                }}""")
-                
-                browser.close()
-                
-                # 12. 格式化搜索結果
-                if not threads_data or len(threads_data) == 0:
-                    if attempt < max_retries - 1:
-                        time.sleep(random.uniform(2.0, 5.0))  # 重試前等待
-                        continue
-                    return f"搜索關鍵字「{keyword}」在 Threads 上沒有找到相關結果。這可能是由於內容動態載入或訪問限制。"
-                
-                # 成功獲取結果，格式化輸出
-                result_text = f"🧵 **Threads 搜索結果** (隱蔽模式)\n"
-                result_text += f"【關鍵字】：{keyword}\n"
-                result_text += f"【找到】：{len(threads_data)} 筆結果\n"
-                result_text += f"【來源】：{search_url}\n"
-                result_text += f"{'=' * 50}\n\n"
-                
-                for post in threads_data:
-                    result_text += f"▶ **貼文 {post['index']}**\n"
-                    result_text += f"👤 **作者**：{post['author']}\n"
-                    result_text += f"⏰ **時間**：{post['time']}\n"
-                    result_text += f"💬 **內容**：{post['content'][:250]}{'...' if len(post['content']) > 250 else ''}\n"
-                    result_text += f"{'-' * 40}\n\n"
-                
-                return result_text
-                
-        except Exception as e:
-            error_message = str(e)
-            if attempt < max_retries - 1:
-                time.sleep(random.uniform(3.0, 6.0))  # 重試前等待
-                continue
-            return f"錯誤：Threads 搜索失敗。關鍵字：{keyword}，錯誤：{error_message}"
-    
-    return f"錯誤：經過 {max_retries} 次嘗試後仍無法完成 Threads 搜索。"
+    except Exception as e:
+        error_message = str(e)
+        return f"錯誤：Threads 搜索失敗。關鍵字：{keyword}，錯誤：{error_message}\n\n注意：Threads 的搜索功能主要在行動應用程式中提供，網頁版的搜索結果可能有限。"
 
 
 def get_technical_indicators(market: str, period: int = 15, limit: int = 500) -> str:
