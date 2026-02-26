@@ -366,10 +366,30 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                         thread_items_found.append(f"數據集{i+1}：找到thread_items，類型：{type(thread_items)}")
                         debug_info.append(f"✓ 數據集 {i+1} 找到 thread_items：{len(thread_items) if isinstance(thread_items, list) else '非列表類型'}")
                         
-                        for thread_list in thread_items:
-                            if isinstance(thread_list, list):
-                                debug_info.append(f"✓ 處理 thread_list，包含 {len(thread_list)} 個項目")
-                                for thread in thread_list:
+                        # 處理不同的 thread_items 結構
+                        if isinstance(thread_items, list):
+                            # thread_items 是列表，直接處理每個元素
+                            threads_to_process = thread_items
+                        elif isinstance(thread_items, dict):
+                            # thread_items 是字典，需要找到包含貼文的鍵
+                            threads_to_process = []
+                            for key, value in thread_items.items():
+                                if isinstance(value, list):
+                                    debug_info.append(f"✓ 在字典鍵 '{key}' 中找到列表，包含 {len(value)} 個項目")
+                                    threads_to_process.extend(value)
+                                elif isinstance(value, dict):
+                                    debug_info.append(f"✓ 在字典鍵 '{key}' 中找到字典數據")
+                                    threads_to_process.append(value)
+                        else:
+                            debug_info.append(f"✗ thread_items 類型不支持：{type(thread_items)}")
+                            continue
+                        
+                        for thread_item in threads_to_process:
+                            # 處理列表中的每個項目
+                            if isinstance(thread_item, list):
+                                # 如果是列表，處理列表中的每個貼文
+                                debug_info.append(f"✓ 處理貼文列表，包含 {len(thread_item)} 個項目")
+                                for thread in thread_item:
                                     try:
                                         # 提取貼文基本資訊
                                         if isinstance(thread, dict) and 'post' in thread:
@@ -414,8 +434,61 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                                     except Exception as e:
                                         debug_info.append(f"✗ 解析個別貼文失敗：{str(e)}")
                                         continue
+                            elif isinstance(thread_item, dict):
+                                # 如果是字典，直接處理這個貼文
+                                debug_info.append(f"✓ 處理單個貼文字典")
+                                try:
+                                    # 檢查是否直接包含 post 數據
+                                    if 'post' in thread_item:
+                                        post = thread_item['post']
+                                    elif 'caption' in thread_item and 'user' in thread_item:
+                                        # 可能這個字典本身就是 post 數據
+                                        post = thread_item
+                                    else:
+                                        debug_info.append(f"✗ 字典結構不符合預期，跳過")
+                                        continue
+                                    
+                                    # 提取內容文字
+                                    content = ""
+                                    if 'caption' in post and post['caption'] and 'text' in post['caption']:
+                                        content = post['caption']['text']
+                                    
+                                    # 提取作者資訊
+                                    author = "未知用戶"
+                                    if 'user' in post and post['user'] and 'username' in post['user']:
+                                        author = post['user']['username']
+                                    
+                                    # 提取時間 (Unix 時間戳)
+                                    post_time = "最近"
+                                    if 'taken_at' in post and post['taken_at']:
+                                        try:
+                                            timestamp = int(post['taken_at'])
+                                            from datetime import datetime
+                                            dt = datetime.fromtimestamp(timestamp)
+                                            post_time = dt.strftime("%Y-%m-%d %H:%M")
+                                        except:
+                                            pass
+                                    
+                                    # 提取互動數據
+                                    like_count = post.get('like_count', 0)
+                                    
+                                    if content and len(content.strip()) > 10:
+                                        threads_data.append({
+                                            'author': f"@{author}",
+                                            'content': content.strip(),
+                                            'time': post_time,
+                                            'likes': like_count,
+                                            'index': len(threads_data) + 1
+                                        })
+                                        debug_info.append(f"✓ 成功提取貼文 {len(threads_data)}：@{author}")
+                                        
+                                        if len(threads_data) >= max_results:
+                                            break
+                                except Exception as e:
+                                    debug_info.append(f"✗ 解析字典貼文失敗：{str(e)}")
+                                    continue
                             else:
-                                debug_info.append(f"✗ thread_list 不是列表類型：{type(thread_list)}")
+                                debug_info.append(f"✗ 未知的貼文項目類型：{type(thread_item)}")
                             
                             if len(threads_data) >= max_results:
                                 break
