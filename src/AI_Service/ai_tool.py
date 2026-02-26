@@ -539,15 +539,15 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                                 # 如果是列表，處理列表中的每個貼文
                                 debug_info.append(f"✓ 處理貼文列表，包含 {len(thread_item)} 個項目")
                                 for thread in thread_item:
-                                if _extract_single_thread(thread, threads_data, debug_info):
-                                    processed_count += 1
+                                    if _extract_single_thread(thread, threads_data, debug_info):
+                                        processed_count += 1
                                         
                             elif isinstance(thread_item, dict):
                                 # 如果是字典，直接處理這個貼文
                                 if _extract_single_thread(thread_item, threads_data, debug_info):
                                     processed_count += 1
-                            else:
-                                debug_info.append(f"✗ 未知的貼文項目類型：{type(thread_item)}")
+                                else:
+                                    debug_info.append(f"✗ 未知的貼文項目類型：{type(thread_item)}")
                         
                         debug_info.append(f"📊 {key} 處理完成，提取了 {processed_count} 筆貼文，目前總計 {len(threads_data)} 筆")
                         
