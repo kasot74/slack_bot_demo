@@ -606,15 +606,15 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
             result_text += f"- 頁面載入：✓ {page_title}\n" 
             result_text += f"- JSON數據集：{hidden_datasets_info['foundValidDatasets']} 個\n"
             result_text += f"- 提取貼文：{len(threads_data)} 筆\n"
-            result_text += f"\n🔍 **詳細調試信息：**\n"
-            result_text += f"{debug_summary}\n"
+            #result_text += f"\n🔍 **詳細調試信息：**\n"
+            #result_text += f"{debug_summary}\n"
             result_text += f"{'=' * 50}\n\n"
             
             for post in threads_data:
                 result_text += f"▶ **貼文 {post['index']}**\n"
                 result_text += f"👤 **作者**：{post['author']}\n"
                 result_text += f"⏰ **時間**：{post['time']}\n"
-                result_text += f"❤️ **讚數**：{post['likes']}\n"
+                #result_text += f"❤️ **讚數**：{post['likes']}\n"
                 result_text += f"💬 **內容**：{post['content'][:300]}{'...' if len(post['content']) > 300 else ''}\n"
                 result_text += f"{'-' * 40}\n\n"
             
