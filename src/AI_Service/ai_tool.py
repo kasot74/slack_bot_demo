@@ -419,7 +419,10 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                                             # 提取互動數據
                                             like_count = post.get('like_count', 0)
                                             
-                                            if content and len(content.strip()) > 10:
+                                            # 降低內容長度限制，並加入調試信息
+                                            debug_info.append(f"📝 檢查貼文內容：長度={len(content.strip()) if content else 0}，作者=@{author}")
+                                            
+                                            if content and len(content.strip()) > 5:  # 降低從10到5
                                                 threads_data.append({
                                                     'author': f"@{author}",
                                                     'content': content.strip(),
@@ -427,13 +430,15 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                                                     'likes': like_count,
                                                     'index': len(threads_data) + 1
                                                 })
-                                                debug_info.append(f"✓ 成功提取貼文 {len(threads_data)}：@{author}")
-                                                
-                                                if len(threads_data) >= max_results:
-                                                    break
+                                                debug_info.append(f"✅ 成功提取貼文 {len(threads_data)}：@{author}")
+                                            else:
+                                                debug_info.append(f"❌ 跳過貼文：內容太短或為空")
                                     except Exception as e:
                                         debug_info.append(f"✗ 解析個別貼文失敗：{str(e)}")
                                         continue
+                                        
+                                debug_info.append(f"📊 此列表處理完成，已提取 {len(threads_data)} 筆貼文")
+                                
                             elif isinstance(thread_item, dict):
                                 # 如果是字典，直接處理這個貼文
                                 debug_info.append(f"✓ 處理單個貼文字典")
@@ -441,11 +446,13 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                                     # 檢查是否直接包含 post 數據
                                     if 'post' in thread_item:
                                         post = thread_item['post']
+                                        debug_info.append(f"📝 字典包含post結構")
                                     elif 'caption' in thread_item and 'user' in thread_item:
                                         # 可能這個字典本身就是 post 數據
                                         post = thread_item
+                                        debug_info.append(f"📝 字典本身為post數據")
                                     else:
-                                        debug_info.append(f"✗ 字典結構不符合預期，跳過")
+                                        debug_info.append(f"✗ 字典結構不符合預期，鍵有：{list(thread_item.keys())[:5]}")
                                         continue
                                     
                                     # 提取內容文字
@@ -472,7 +479,10 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                                     # 提取互動數據
                                     like_count = post.get('like_count', 0)
                                     
-                                    if content and len(content.strip()) > 10:
+                                    # 降低內容長度限制，並加入調試信息
+                                    debug_info.append(f"📝 檢查字典貼文內容：長度={len(content.strip()) if content else 0}，作者=@{author}")
+                                    
+                                    if content and len(content.strip()) > 5:  # 降低從10到5
                                         threads_data.append({
                                             'author': f"@{author}",
                                             'content': content.strip(),
@@ -480,18 +490,22 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                                             'likes': like_count,
                                             'index': len(threads_data) + 1
                                         })
-                                        debug_info.append(f"✓ 成功提取貼文 {len(threads_data)}：@{author}")
+                                        debug_info.append(f"✅ 成功提取字典貼文 {len(threads_data)}：@{author}")
+                                    else:
+                                        debug_info.append(f"❌ 跳過字典貼文：內容太短或為空")
                                         
-                                        if len(threads_data) >= max_results:
-                                            break
                                 except Exception as e:
                                     debug_info.append(f"✗ 解析字典貼文失敗：{str(e)}")
                                     continue
                             else:
                                 debug_info.append(f"✗ 未知的貼文項目類型：{type(thread_item)}")
-                            
-                            if len(threads_data) >= max_results:
-                                break
+                        
+                        debug_info.append(f"📊 數據集 {i+1} 處理完成，目前總計 {len(threads_data)} 筆貼文")
+                        
+                        # 只有在達到最大結果數時才跳出，讓它處理完所有數據
+                        if len(threads_data) >= max_results:
+                            debug_info.append(f"🔄 已達到最大結果數 {max_results}，停止處理")
+                            break
                     else:
                         debug_info.append(f"✗ 數據集 {i+1} 沒有找到 thread_items")
                     
