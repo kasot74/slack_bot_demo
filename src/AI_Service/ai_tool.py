@@ -250,6 +250,9 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
             # 6. 導航至搜索頁面
             page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
             
+            # 初始化調試信息
+            debug_info = []
+            
             # 7. 等待頁面載入完成
             try:
                 page.wait_for_selector("[data-pressable-container=true]", timeout=15000)
@@ -281,7 +284,6 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                 time.sleep(random.uniform(2.0, 3.0))
             
             # 9. 檢查頁面載入狀況
-            debug_info = []
             page_title = page.title() or "無標題"
             page_url = page.url
             debug_info.append(f"✓ 頁面載入成功：{page_title}")
@@ -620,7 +622,7 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                 
     except Exception as e:
         error_message = str(e)
-        return f"錯誤：Threads 搜索失敗。關鍵字：{keyword}，錯誤：{error_message}\n\n注意：Threads 的搜索功能主要在行動應用程式中提供，網頁版的搜索結果可能有限。"
+        return f"錯誤：Threads 搜索失敗。關鍵字：{keyword}，錯誤：{error_message}\n\n"
 
 
 def get_technical_indicators(market: str, period: int = 15, limit: int = 500) -> str:
