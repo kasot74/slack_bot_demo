@@ -260,32 +260,88 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 time.sleep(random.uniform(1.0, 2.0))
             
+            # 9. 檢查頁面載入狀況
+            debug_info = []
+            page_title = page.title() or "無標題"
+            page_url = page.url
+            debug_info.append(f"✓ 頁面載入成功：{page_title}")
+            debug_info.append(f"✓ 當前URL：{page_url}")
+            
+            # 檢查頁面是否包含 Threads 相關內容
+            page_content_check = page.evaluate("""() => {
+                const bodyText = document.body.innerText || document.body.textContent || '';
+                const hasThreadsContent = bodyText.toLowerCase().includes('threads') || 
+                                        bodyText.includes('搜尋') || 
+                                        bodyText.includes('search');
+                const scriptCount = document.querySelectorAll('script').length;
+                const jsonScriptCount = document.querySelectorAll('script[type="application/json"]').length;
+                
+                return {
+                    hasThreadsContent,
+                    totalScripts: scriptCount,
+                    jsonScripts: jsonScriptCount,
+                    bodyLength: bodyText.length
+                };
+            }""")
+            
+            debug_info.append(f"✓ 頁面包含Threads內容：{page_content_check['hasThreadsContent']}")
+            debug_info.append(f"✓ Script標籤總數：{page_content_check['totalScripts']}")
+            debug_info.append(f"✓ JSON Script標籤數：{page_content_check['jsonScripts']}")
+            debug_info.append(f"✓ 頁面內容長度：{page_content_check['bodyLength']} 字元")
+            
             # 9. 提取隱藏的 JSON 數據 (Scrapfly 方法)
-            hidden_datasets = page.evaluate("""() => {
+            hidden_datasets_info = page.evaluate("""() => {
                 const scripts = document.querySelectorAll('script[type="application/json"][data-sjs]');
                 const datasets = [];
+                const allJsonScripts = document.querySelectorAll('script[type="application/json"]');
+                
+                let scheduledServerJSCount = 0;
+                let threadItemsCount = 0;
                 
                 scripts.forEach(script => {
                     try {
                         const text = script.textContent || script.innerText;
-                        if (text && text.includes('ScheduledServerJS') && text.includes('thread_items')) {
-                            datasets.push(text);
+                        if (text) {
+                            if (text.includes('ScheduledServerJS')) scheduledServerJSCount++;
+                            if (text.includes('thread_items')) threadItemsCount++;
+                            
+                            if (text.includes('ScheduledServerJS') && text.includes('thread_items')) {
+                                datasets.push(text);
+                            }
                         }
                     } catch (e) {
                         console.log('解析 script 標籤時出錯:', e);
                     }
                 });
                 
-                return datasets;
+                return {
+                    datasets,
+                    totalJsonScripts: allJsonScripts.length,
+                    dataSjsScripts: scripts.length,
+                    scheduledServerJSCount,
+                    threadItemsCount,
+                    foundValidDatasets: datasets.length
+                };
             }""")
+            
+            hidden_datasets = hidden_datasets_info['datasets']
+            
+            debug_info.append(f"✓ 所有JSON Script標籤：{hidden_datasets_info['totalJsonScripts']} 個")
+            debug_info.append(f"✓ data-sjs標籤：{hidden_datasets_info['dataSjsScripts']} 個") 
+            debug_info.append(f"✓ 包含ScheduledServerJS：{hidden_datasets_info['scheduledServerJSCount']} 個")
+            debug_info.append(f"✓ 包含thread_items：{hidden_datasets_info['threadItemsCount']} 個")
+            debug_info.append(f"✓ 符合條件的數據集：{hidden_datasets_info['foundValidDatasets']} 個")
             
             browser.close()
             
             # 10. 解析 JSON 數據尋找貼文內容
             threads_data = []
+            json_parse_errors = []
+            thread_items_found = []
             
-            for dataset_str in hidden_datasets:
+            for i, dataset_str in enumerate(hidden_datasets):
                 try:
+                    debug_info.append(f"✓ 正在解析第 {i+1} 個數據集，長度：{len(dataset_str)} 字元")
                     dataset = json.loads(dataset_str)
                     
                     # 遞迴搜尋 thread_items
@@ -307,8 +363,12 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                     thread_items = find_thread_items(dataset)
                     
                     if thread_items:
+                        thread_items_found.append(f"數據集{i+1}：找到thread_items，類型：{type(thread_items)}")
+                        debug_info.append(f"✓ 數據集 {i+1} 找到 thread_items：{len(thread_items) if isinstance(thread_items, list) else '非列表類型'}")
+                        
                         for thread_list in thread_items:
                             if isinstance(thread_list, list):
+                                debug_info.append(f"✓ 處理 thread_list，包含 {len(thread_list)} 個項目")
                                 for thread in thread_list:
                                     try:
                                         # 提取貼文基本資訊
@@ -347,29 +407,64 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                                                     'likes': like_count,
                                                     'index': len(threads_data) + 1
                                                 })
+                                                debug_info.append(f"✓ 成功提取貼文 {len(threads_data)}：@{author}")
                                                 
                                                 if len(threads_data) >= max_results:
                                                     break
                                     except Exception as e:
+                                        debug_info.append(f"✗ 解析個別貼文失敗：{str(e)}")
                                         continue
+                            else:
+                                debug_info.append(f"✗ thread_list 不是列表類型：{type(thread_list)}")
                             
                             if len(threads_data) >= max_results:
                                 break
+                    else:
+                        debug_info.append(f"✗ 數據集 {i+1} 沒有找到 thread_items")
                     
                     if len(threads_data) >= max_results:
                         break
                         
                 except Exception as e:
+                    json_parse_errors.append(f"數據集{i+1}解析失敗：{str(e)}")
+                    debug_info.append(f"✗ JSON 解析失敗：{str(e)}")
                     continue
             
             # 11. 格式化搜索結果
+            debug_summary = "\n".join(debug_info)
+            
             if not threads_data:
-                return f"搜索關鍵字「{keyword}」在 Threads 上沒有找到相關結果。\n可能原因：\n- 該關鍵字沒有相關貼文\n- 需要登入才能查看搜索結果\n- 內容載入限制"
+                error_detail = f"""
+🔍 **Threads 搜索調試報告**
+【關鍵字】：{keyword}
+【搜索URL】：{search_url}
+
+📋 **執行步驟詳情：**
+{debug_summary}
+
+❌ **最終結果：** 未找到有效貼文數據
+
+💡 **可能原因分析：**
+1. 如果 JSON Script 標籤數量為 0：頁面結構可能已改變
+2. 如果找不到 ScheduledServerJS：Threads 可能更新了數據載入方式  
+3. 如果找不到 thread_items：搜索結果可能為空或需要登入
+4. 如果有 JSON 解析錯誤：數據格式可能已變更
+
+🔧 **建議解決方案：**
+- 檢查是否需要登入 Threads 帳號
+- 嘗試其他關鍵字進行搜索
+- 確認搜索URL是否正確載入
+"""
+                return error_detail
             
             result_text = f"🧵 **Threads 搜索結果** (Scrapfly 方法)\n"
             result_text += f"【關鍵字】：{keyword}\n"
             result_text += f"【找到】：{len(threads_data)} 筆結果\n"
             result_text += f"【來源】：{search_url}\n"
+            result_text += f"\n📋 **執行摘要：**\n"
+            result_text += f"- 頁面載入：✓ {page_title}\n" 
+            result_text += f"- JSON數據集：{hidden_datasets_info['foundValidDatasets']} 個\n"
+            result_text += f"- 提取貼文：{len(threads_data)} 筆\n"
             result_text += f"{'=' * 50}\n\n"
             
             for post in threads_data:
