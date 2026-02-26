@@ -449,7 +449,7 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
             
             for i, dataset_info in enumerate(hidden_datasets):
                 try:
-            dataset_str = dataset_info['content']
+                    dataset_str = dataset_info['content']
                     dataset_index = dataset_info['index']
                     
                     debug_info.append(f"✓ 正在解析第 {i+1} 個數據集 (腳本索引 {dataset_index})，長度：{len(dataset_str)} 字元")
