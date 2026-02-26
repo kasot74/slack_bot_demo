@@ -33,25 +33,13 @@ def register_handlers(app, config, db):
         
         try:
             say("🔍 正在搜尋 Threads 中...")
-            
-            # 使用新的 search_threads 函數（預設返回 10 筆結果）
-            result = search_threads(query, max_results=5)
-            
-            # 檢查是否有錯誤訊息
-            if result.startswith("錯誤："):
-                say(f"❌ {result}")
-                return
-            
-            # 檢查是否找到結果
-            #if "沒有找到相關結果" in result:
-                #say(f"🔍 在 Threads 上沒有找到包含「{query}」的相關內容")
-                #return
-            
+                        
+            result = search_threads(query, max_results=10)
             # 直接回傳格式化後的結果
-            say(result)
+            say(f"{result}", thread_ts=message['ts'])                        
                 
         except Exception as e:
-            say(f"❌ 搜尋 Threads 時發生錯誤：{e}")
+            say(f"❌ 搜尋 Threads 時發生錯誤：{e}", thread_ts=message['ts'])
 
 
     # !曬卡
