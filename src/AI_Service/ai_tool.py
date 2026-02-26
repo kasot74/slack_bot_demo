@@ -546,8 +546,8 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                                 # 如果是字典，直接處理這個貼文
                                 if _extract_single_thread(thread_item, threads_data, debug_info):
                                     processed_count += 1
-                                else:
-                                    debug_info.append(f"✗ 未知的貼文項目類型：{type(thread_item)}")
+                            else:
+                                debug_info.append(f"✗ 未知的貼文項目類型：{type(thread_item)}")
                         
                         debug_info.append(f"📊 {key} 處理完成，提取了 {processed_count} 筆貼文，目前總計 {len(threads_data)} 筆")
                         
