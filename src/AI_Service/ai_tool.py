@@ -256,10 +256,29 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
             except:
                 pass  # 如果特定元素不存在，繼續嘗試
                 
-            # 8. 模擬滾動載入更多內容
-            for _ in range(3):
+            # 8. 更積極的滾動載入更多內容
+            debug_info.append("🔄 開始滾動載入更多貼文...")
+            
+            # 先等待初始內容載入
+            time.sleep(3)
+            
+            # 多次滾動以載入更多內容
+            for scroll_round in range(8):  # 增加到8輪滾動
+                # 滾動到底部
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                time.sleep(random.uniform(1.0, 2.0))
+                time.sleep(random.uniform(1.5, 2.5))
+                
+                # 檢查是否有新內容載入
+                content_length = page.evaluate("document.body.innerText.length")
+                debug_info.append(f"🔄 第 {scroll_round + 1} 輪滾動，頁面內容長度：{content_length}")
+                
+                # 滾動到一半位置，模擬用戶瀏覽
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2)")
+                time.sleep(random.uniform(1.0, 1.5))
+                
+                # 再滾動到底部
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                time.sleep(random.uniform(2.0, 3.0))
             
             # 9. 檢查頁面載入狀況
             debug_info = []
@@ -290,24 +309,39 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
             debug_info.append(f"✓ JSON Script標籤數：{page_content_check['jsonScripts']}")
             debug_info.append(f"✓ 頁面內容長度：{page_content_check['bodyLength']} 字元")
             
-            # 9. 提取隱藏的 JSON 數據 (Scrapfly 方法)
+            # 9. 提取隱藏的 JSON 數據 (Scrapfly 方法) - 更全面的搜索
             hidden_datasets_info = page.evaluate("""() => {
-                const scripts = document.querySelectorAll('script[type="application/json"][data-sjs]');
+                const allScripts = document.querySelectorAll('script[type="application/json"]');
+                const dataSjsScripts = document.querySelectorAll('script[type="application/json"][data-sjs]');
                 const datasets = [];
-                const allJsonScripts = document.querySelectorAll('script[type="application/json"]');
                 
                 let scheduledServerJSCount = 0;
                 let threadItemsCount = 0;
+                let totalDatasets = 0;
                 
-                scripts.forEach(script => {
+                // 搜索所有 JSON script，不只是 data-sjs
+                allScripts.forEach((script, index) => {
                     try {
                         const text = script.textContent || script.innerText;
-                        if (text) {
+                        if (text && text.length > 100) {  // 確保有足夠內容
+                            totalDatasets++;
+                            
                             if (text.includes('ScheduledServerJS')) scheduledServerJSCount++;
                             if (text.includes('thread_items')) threadItemsCount++;
                             
-                            if (text.includes('ScheduledServerJS') && text.includes('thread_items')) {
-                                datasets.push(text);
+                            // 更寬鬆的條件：包含 thread_items 或其他相關關鍵字
+                            if (text.includes('thread_items') || 
+                                text.includes('threads') || 
+                                text.includes('posts') ||
+                                text.includes('feed_items')) {
+                                datasets.push({
+                                    content: text,
+                                    index: index,
+                                    hasThreadItems: text.includes('thread_items'),
+                                    hasThreads: text.includes('threads'),
+                                    hasPosts: text.includes('posts'),
+                                    hasFeedItems: text.includes('feed_items')
+                                });
                             }
                         }
                     } catch (e) {
@@ -317,10 +351,11 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                 
                 return {
                     datasets,
-                    totalJsonScripts: allJsonScripts.length,
-                    dataSjsScripts: scripts.length,
+                    totalJsonScripts: allScripts.length,
+                    dataSjsScripts: dataSjsScripts.length,
                     scheduledServerJSCount,
                     threadItemsCount,
+                    totalDatasets,
                     foundValidDatasets: datasets.length
                 };
             }""")
@@ -331,57 +366,138 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
             debug_info.append(f"✓ data-sjs標籤：{hidden_datasets_info['dataSjsScripts']} 個") 
             debug_info.append(f"✓ 包含ScheduledServerJS：{hidden_datasets_info['scheduledServerJSCount']} 個")
             debug_info.append(f"✓ 包含thread_items：{hidden_datasets_info['threadItemsCount']} 個")
+            debug_info.append(f"✓ 總有效數據集：{hidden_datasets_info['totalDatasets']} 個")
             debug_info.append(f"✓ 符合條件的數據集：{hidden_datasets_info['foundValidDatasets']} 個")
             
             browser.close()
             
-            # 10. 解析 JSON 數據尋找貼文內容
+            # 內部函數：提取單個貼文的數據
+            def _extract_single_thread(thread, threads_data, debug_info):
+                """提取單個貼文的數據"""
+                try:
+                    # 檢查是否直接包含 post 數據
+                    if 'post' in thread:
+                        post = thread['post']
+                        debug_info.append(f"📝 字典包含post結構")
+                    elif 'caption' in thread and 'user' in thread:
+                        # 可能這個字典本身就是 post 數據
+                        post = thread
+                        debug_info.append(f"📝 字典本身為post數據")
+                    else:
+                        debug_info.append(f"✗ 字典結構不符合預期，鍵有：{list(thread.keys())[:5]}")
+                        return False
+                    
+                    # 提取內容文字
+                    content = ""
+                    if 'caption' in post and post['caption'] and 'text' in post['caption']:
+                        content = post['caption']['text']
+                    elif 'text' in post:
+                        content = post['text']
+                    elif 'content' in post:
+                        content = post['content']
+                    
+                    # 提取作者資訊
+                    author = "未知用戶"
+                    if 'user' in post and post['user'] and 'username' in post['user']:
+                        author = post['user']['username']
+                    elif 'username' in post:
+                        author = post['username']
+                    elif 'author' in post:
+                        author = post['author']
+                    
+                    # 提取時間 (Unix 時間戳)
+                    post_time = "最近"
+                    if 'taken_at' in post and post['taken_at']:
+                        try:
+                            timestamp = int(post['taken_at'])
+                            from datetime import datetime
+                            dt = datetime.fromtimestamp(timestamp)
+                            post_time = dt.strftime("%Y-%m-%d %H:%M")
+                        except:
+                            pass
+                    elif 'created_at' in post:
+                        post_time = str(post['created_at'])
+                    
+                    # 提取互動數據
+                    like_count = post.get('like_count', 0)
+                    
+                    # 檢查內容有效性
+                    debug_info.append(f"📝 檢查貼文內容：長度={len(content.strip()) if content else 0}，作者=@{author}")
+                    
+                    if content and len(content.strip()) > 3:  # 降低到3個字元
+                        threads_data.append({
+                            'author': f"@{author}",
+                            'content': content.strip(),
+                            'time': post_time,
+                            'likes': like_count,
+                            'index': len(threads_data) + 1
+                        })
+                        debug_info.append(f"✅ 成功提取貼文 {len(threads_data)}：@{author}")
+                        return True
+                    else:
+                        debug_info.append(f"❌ 跳過貼文：內容太短或為空")
+                        return False
+                        
+                except Exception as e:
+                    debug_info.append(f"✗ 解析貼文失敗：{str(e)}")
+                    return False
+            
+            # 10. 解析 JSON 數據尋找貼文內容 - 更全面的搜索
             threads_data = []
             json_parse_errors = []
             thread_items_found = []
             
-            for i, dataset_str in enumerate(hidden_datasets):
+            for i, dataset_info in enumerate(hidden_datasets):
                 try:
-                    debug_info.append(f"✓ 正在解析第 {i+1} 個數據集，長度：{len(dataset_str)} 字元")
+            dataset_str = dataset_info['content']
+                    dataset_index = dataset_info['index']
+                    
+                    debug_info.append(f"✓ 正在解析第 {i+1} 個數據集 (腳本索引 {dataset_index})，長度：{len(dataset_str)} 字元")
+                    debug_info.append(f"   特徵：thread_items={dataset_info['hasThreadItems']}, threads={dataset_info['hasThreads']}, posts={dataset_info['hasPosts']}, feed_items={dataset_info['hasFeedItems']}")
+                    
                     dataset = json.loads(dataset_str)
                     
-                    # 遞迴搜尋 thread_items
-                    def find_thread_items(obj, path=""):
+                    # 更全面的遞迴搜尋 - 尋找多種可能的數據結構
+                    def find_all_thread_data(obj, path="", found_items=[]):
                         if isinstance(obj, dict):
-                            if 'thread_items' in obj:
-                                return obj['thread_items']
+                            # 尋找各種可能的貼文數據鍵
+                            for target_key in ['thread_items', 'feed_items', 'threads', 'posts', 'items', 'data']:
+                                if target_key in obj and obj[target_key]:
+                                    found_items.append({
+                                        'key': target_key,
+                                        'data': obj[target_key],
+                                        'path': f"{path}.{target_key}",
+                                        'type': type(obj[target_key])
+                                    })
+                            
+                            # 繼續遞迴搜尋
                             for key, value in obj.items():
-                                result = find_thread_items(value, f"{path}.{key}")
-                                if result:
-                                    return result
+                                find_all_thread_data(value, f"{path}.{key}", found_items)
+                                
                         elif isinstance(obj, list):
                             for i, item in enumerate(obj):
-                                result = find_thread_items(item, f"{path}[{i}]")
-                                if result:
-                                    return result
-                        return None
-                    
-                    thread_items = find_thread_items(dataset)
-                    
-                    if thread_items:
-                        thread_items_found.append(f"數據集{i+1}：找到thread_items，類型：{type(thread_items)}")
-                        debug_info.append(f"✓ 數據集 {i+1} 找到 thread_items：{len(thread_items) if isinstance(thread_items, list) else '非列表類型'}")
+                                find_all_thread_data(item, f"{path}[{i}]", found_items)
                         
-                        # 詳細分析 thread_items 結構
-                        debug_info.append(f"🔍 深度分析 thread_items 結構：{type(thread_items)}")
-                        if isinstance(thread_items, dict):
-                            debug_info.append(f"🔍 字典鍵數量：{len(thread_items.keys())}")
-                            debug_info.append(f"🔍 字典鍵列表：{list(thread_items.keys())[:10]}")  # 只顯示前10個鍵
-                            
-                            # 分析每個鍵的值類型和長度
-                            for key, value in list(thread_items.items())[:5]:  # 只分析前5個鍵
-                                debug_info.append(f"🔍 鍵 '{key}': 類型={type(value)}, 長度={len(value) if hasattr(value, '__len__') else 'N/A'}")
-                        elif isinstance(thread_items, list):
-                            debug_info.append(f"🔍 列表長度：{len(thread_items)}")
-                            if len(thread_items) > 0:
-                                debug_info.append(f"🔍 第一個元素類型：{type(thread_items[0])}")
+                        return found_items
+                    
+                    all_thread_data = find_all_thread_data(dataset)
+                    
+                    debug_info.append(f"✓ 在數據集 {i+1} 中找到 {len(all_thread_data)} 個潛在的貼文數據結構")
+                    
+                    for thread_data_info in all_thread_data:
+                        key = thread_data_info['key']
+                        thread_items = thread_data_info['data']
+                        path = thread_data_info['path']
                         
-                        # 處理不同的 thread_items 結構
+                        debug_info.append(f"🔍 處理 {key} (位置: {path})：類型={type(thread_items)}")
+                        
+                        if isinstance(thread_items, list):
+                            debug_info.append(f"   📋 列表長度：{len(thread_items)}")
+                        elif isinstance(thread_items, dict):
+                            debug_info.append(f"   📋 字典鍵數量：{len(thread_items.keys())}")
+                            debug_info.append(f"   📋 字典鍵樣本：{list(thread_items.keys())[:5]}")
+                        
+                        # 處理不同的數據結構
                         if isinstance(thread_items, list):
                             # thread_items 是列表，直接處理每個元素
                             threads_to_process = thread_items
@@ -389,158 +505,63 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                         elif isinstance(thread_items, dict):
                             # thread_items 是字典，需要找到包含貼文的鍵
                             threads_to_process = []
-                            for key, value in thread_items.items():
+                            for dict_key, value in thread_items.items():
                                 if isinstance(value, list) and len(value) > 0:
-                                    debug_info.append(f"✓ 在字典鍵 '{key}' 中找到列表，包含 {len(value)} 個項目")
+                                    debug_info.append(f"✓ 在字典鍵 '{dict_key}' 中找到列表，包含 {len(value)} 個項目")
                                     # 檢查列表中的元素類型
                                     if len(value) > 0:
-                                        debug_info.append(f"📝 鍵 '{key}' 列表第一個元素類型：{type(value[0])}")
-                                        if isinstance(value[0], dict) and any(k in value[0] for k in ['post', 'thread', 'content', 'text']):
-                                            debug_info.append(f"✅ 鍵 '{key}' 包含貼文相關數據，添加到處理隊列")
+                                        debug_info.append(f"📝 鍵 '{dict_key}' 列表第一個元素類型：{type(value[0])}")
+                                        if isinstance(value[0], dict) and any(k in value[0] for k in ['post', 'thread', 'content', 'text', 'caption']):
+                                            debug_info.append(f"✅ 鍵 '{dict_key}' 包含貼文相關數據，添加到處理隊列")
                                             threads_to_process.extend(value)
                                         else:
-                                            debug_info.append(f"❌ 鍵 '{key}' 不包含貼文數據，跳過")
+                                            debug_info.append(f"❌ 鍵 '{dict_key}' 不包含貼文數據，跳過")
                                 elif isinstance(value, dict):
-                                    debug_info.append(f"✓ 在字典鍵 '{key}' 中找到字典數據")
+                                    debug_info.append(f"✓ 在字典鍵 '{dict_key}' 中找到字典數據")
                                     if any(k in value for k in ['post', 'thread', 'content', 'text', 'caption']):
-                                        debug_info.append(f"✅ 鍵 '{key}' 包含貼文相關字段，添加到處理隊列")
+                                        debug_info.append(f"✅ 鍵 '{dict_key}' 包含貼文相關字段，添加到處理隊列")
                                         threads_to_process.append(value)
                                     else:
-                                        debug_info.append(f"❌ 鍵 '{key}' 不包含貼文字段，跳過")
+                                        debug_info.append(f"❌ 鍵 '{dict_key}' 不包含貼文字段，跳過")
                                 else:
-                                    debug_info.append(f"➖ 鍵 '{key}': 類型 {type(value)}，不是列表或字典")
+                                    debug_info.append(f"➖ 鍵 '{dict_key}': 類型 {type(value)}，不是列表或字典")
                             
                             debug_info.append(f"📋 字典模式處理完成，總共找到 {len(threads_to_process)} 個項目待處理")
                         else:
-                            debug_info.append(f"✗ thread_items 類型不支持：{type(thread_items)}")
+                            debug_info.append(f"✗ 數據結構類型不支援：{type(thread_items)}")
                             continue
                         
+                        # 處理找到的貼文數據
+                        processed_count = 0
                         for thread_item in threads_to_process:
                             # 處理列表中的每個項目
                             if isinstance(thread_item, list):
                                 # 如果是列表，處理列表中的每個貼文
                                 debug_info.append(f"✓ 處理貼文列表，包含 {len(thread_item)} 個項目")
                                 for thread in thread_item:
-                                    try:
-                                        # 提取貼文基本資訊
-                                        if isinstance(thread, dict) and 'post' in thread:
-                                            post = thread['post']
-                                            
-                                            # 提取內容文字
-                                            content = ""
-                                            if 'caption' in post and post['caption'] and 'text' in post['caption']:
-                                                content = post['caption']['text']
-                                            
-                                            # 提取作者資訊
-                                            author = "未知用戶"
-                                            if 'user' in post and post['user'] and 'username' in post['user']:
-                                                author = post['user']['username']
-                                            
-                                            # 提取時間 (Unix 時間戳)
-                                            post_time = "最近"
-                                            if 'taken_at' in post and post['taken_at']:
-                                                try:
-                                                    timestamp = int(post['taken_at'])
-                                                    from datetime import datetime
-                                                    dt = datetime.fromtimestamp(timestamp)
-                                                    post_time = dt.strftime("%Y-%m-%d %H:%M")
-                                                except:
-                                                    pass
-                                            
-                                            # 提取互動數據
-                                            like_count = post.get('like_count', 0)
-                                            
-                                            # 降低內容長度限制，並加入調試信息
-                                            debug_info.append(f"📝 檢查貼文內容：長度={len(content.strip()) if content else 0}，作者=@{author}")
-                                            
-                                            if content and len(content.strip()) > 5:  # 降低從10到5
-                                                threads_data.append({
-                                                    'author': f"@{author}",
-                                                    'content': content.strip(),
-                                                    'time': post_time,
-                                                    'likes': like_count,
-                                                    'index': len(threads_data) + 1
-                                                })
-                                                debug_info.append(f"✅ 成功提取貼文 {len(threads_data)}：@{author}")
-                                            else:
-                                                debug_info.append(f"❌ 跳過貼文：內容太短或為空")
-                                    except Exception as e:
-                                        debug_info.append(f"✗ 解析個別貼文失敗：{str(e)}")
-                                        continue
+                                if _extract_single_thread(thread, threads_data, debug_info):
+                                    processed_count += 1
                                         
-                                debug_info.append(f"📊 此列表處理完成，已提取 {len(threads_data)} 筆貼文")
-                                
                             elif isinstance(thread_item, dict):
                                 # 如果是字典，直接處理這個貼文
-                                debug_info.append(f"✓ 處理單個貼文字典")
-                                try:
-                                    # 檢查是否直接包含 post 數據
-                                    if 'post' in thread_item:
-                                        post = thread_item['post']
-                                        debug_info.append(f"📝 字典包含post結構")
-                                    elif 'caption' in thread_item and 'user' in thread_item:
-                                        # 可能這個字典本身就是 post 數據
-                                        post = thread_item
-                                        debug_info.append(f"📝 字典本身為post數據")
-                                    else:
-                                        debug_info.append(f"✗ 字典結構不符合預期，鍵有：{list(thread_item.keys())[:5]}")
-                                        continue
-                                    
-                                    # 提取內容文字
-                                    content = ""
-                                    if 'caption' in post and post['caption'] and 'text' in post['caption']:
-                                        content = post['caption']['text']
-                                    
-                                    # 提取作者資訊
-                                    author = "未知用戶"
-                                    if 'user' in post and post['user'] and 'username' in post['user']:
-                                        author = post['user']['username']
-                                    
-                                    # 提取時間 (Unix 時間戳)
-                                    post_time = "最近"
-                                    if 'taken_at' in post and post['taken_at']:
-                                        try:
-                                            timestamp = int(post['taken_at'])
-                                            from datetime import datetime
-                                            dt = datetime.fromtimestamp(timestamp)
-                                            post_time = dt.strftime("%Y-%m-%d %H:%M")
-                                        except:
-                                            pass
-                                    
-                                    # 提取互動數據
-                                    like_count = post.get('like_count', 0)
-                                    
-                                    # 降低內容長度限制，並加入調試信息
-                                    debug_info.append(f"📝 檢查字典貼文內容：長度={len(content.strip()) if content else 0}，作者=@{author}")
-                                    
-                                    if content and len(content.strip()) > 5:  # 降低從10到5
-                                        threads_data.append({
-                                            'author': f"@{author}",
-                                            'content': content.strip(),
-                                            'time': post_time,
-                                            'likes': like_count,
-                                            'index': len(threads_data) + 1
-                                        })
-                                        debug_info.append(f"✅ 成功提取字典貼文 {len(threads_data)}：@{author}")
-                                    else:
-                                        debug_info.append(f"❌ 跳過字典貼文：內容太短或為空")
-                                        
-                                except Exception as e:
-                                    debug_info.append(f"✗ 解析字典貼文失敗：{str(e)}")
-                                    continue
+                                if _extract_single_thread(thread_item, threads_data, debug_info):
+                                    processed_count += 1
                             else:
                                 debug_info.append(f"✗ 未知的貼文項目類型：{type(thread_item)}")
                         
-                        debug_info.append(f"📊 數據集 {i+1} 處理完成，目前總計 {len(threads_data)} 筆貼文")
+                        debug_info.append(f"📊 {key} 處理完成，提取了 {processed_count} 筆貼文，目前總計 {len(threads_data)} 筆")
                         
-                        # 只有在達到最大結果數時才跳出，讓它處理完所有數據
+                        # 達到最大結果數時停止處理這個數據集
                         if len(threads_data) >= max_results:
-                            debug_info.append(f"🔄 已達到最大結果數 {max_results}，停止處理")
+                            debug_info.append(f"🔄 已達到最大結果數 {max_results}，停止處理當前數據集")
                             break
-                    else:
-                        debug_info.append(f"✗ 數據集 {i+1} 沒有找到 thread_items")
                     
+                    # 總結這個數據集的處理結果
+                    debug_info.append(f"📊 數據集 {i+1} 處理完成，目前總計 {len(threads_data)} 筆貼文")
+                    
+                    # 達到最大結果數時停止處理後續數據集
                     if len(threads_data) >= max_results:
+                        debug_info.append(f"🔄 已達到最大結果數 {max_results}，停止處理後續數據集")
                         break
                         
                 except Exception as e:
