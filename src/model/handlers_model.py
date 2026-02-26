@@ -43,9 +43,9 @@ def register_handlers(app, config, db):
                 return
             
             # 檢查是否找到結果
-            if "沒有找到相關結果" in result:
-                say(f"🔍 在 Threads 上沒有找到包含「{query}」的相關內容")
-                return
+            #if "沒有找到相關結果" in result:
+                #say(f"🔍 在 Threads 上沒有找到包含「{query}」的相關內容")
+                #return
             
             # 直接回傳格式化後的結果
             say(result)
