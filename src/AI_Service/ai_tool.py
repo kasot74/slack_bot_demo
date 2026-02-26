@@ -367,20 +367,50 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                         thread_items_found.append(f"數據集{i+1}：找到thread_items，類型：{type(thread_items)}")
                         debug_info.append(f"✓ 數據集 {i+1} 找到 thread_items：{len(thread_items) if isinstance(thread_items, list) else '非列表類型'}")
                         
+                        # 詳細分析 thread_items 結構
+                        debug_info.append(f"🔍 深度分析 thread_items 結構：{type(thread_items)}")
+                        if isinstance(thread_items, dict):
+                            debug_info.append(f"🔍 字典鍵數量：{len(thread_items.keys())}")
+                            debug_info.append(f"🔍 字典鍵列表：{list(thread_items.keys())[:10]}")  # 只顯示前10個鍵
+                            
+                            # 分析每個鍵的值類型和長度
+                            for key, value in list(thread_items.items())[:5]:  # 只分析前5個鍵
+                                debug_info.append(f"🔍 鍵 '{key}': 類型={type(value)}, 長度={len(value) if hasattr(value, '__len__') else 'N/A'}")
+                        elif isinstance(thread_items, list):
+                            debug_info.append(f"🔍 列表長度：{len(thread_items)}")
+                            if len(thread_items) > 0:
+                                debug_info.append(f"🔍 第一個元素類型：{type(thread_items[0])}")
+                        
                         # 處理不同的 thread_items 結構
                         if isinstance(thread_items, list):
                             # thread_items 是列表，直接處理每個元素
                             threads_to_process = thread_items
+                            debug_info.append(f"📋 使用列表模式，包含 {len(threads_to_process)} 個項目")
                         elif isinstance(thread_items, dict):
                             # thread_items 是字典，需要找到包含貼文的鍵
                             threads_to_process = []
                             for key, value in thread_items.items():
-                                if isinstance(value, list):
+                                if isinstance(value, list) and len(value) > 0:
                                     debug_info.append(f"✓ 在字典鍵 '{key}' 中找到列表，包含 {len(value)} 個項目")
-                                    threads_to_process.extend(value)
+                                    # 檢查列表中的元素類型
+                                    if len(value) > 0:
+                                        debug_info.append(f"📝 鍵 '{key}' 列表第一個元素類型：{type(value[0])}")
+                                        if isinstance(value[0], dict) and any(k in value[0] for k in ['post', 'thread', 'content', 'text']):
+                                            debug_info.append(f"✅ 鍵 '{key}' 包含貼文相關數據，添加到處理隊列")
+                                            threads_to_process.extend(value)
+                                        else:
+                                            debug_info.append(f"❌ 鍵 '{key}' 不包含貼文數據，跳過")
                                 elif isinstance(value, dict):
                                     debug_info.append(f"✓ 在字典鍵 '{key}' 中找到字典數據")
-                                    threads_to_process.append(value)
+                                    if any(k in value for k in ['post', 'thread', 'content', 'text', 'caption']):
+                                        debug_info.append(f"✅ 鍵 '{key}' 包含貼文相關字段，添加到處理隊列")
+                                        threads_to_process.append(value)
+                                    else:
+                                        debug_info.append(f"❌ 鍵 '{key}' 不包含貼文字段，跳過")
+                                else:
+                                    debug_info.append(f"➖ 鍵 '{key}': 類型 {type(value)}，不是列表或字典")
+                            
+                            debug_info.append(f"📋 字典模式處理完成，總共找到 {len(threads_to_process)} 個項目待處理")
                         else:
                             debug_info.append(f"✗ thread_items 類型不支持：{type(thread_items)}")
                             continue
