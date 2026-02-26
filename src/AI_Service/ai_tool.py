@@ -207,9 +207,10 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
         # 1. 驗證關鍵字
         if not keyword or not keyword.strip():
             return "錯誤：搜索關鍵字不能為空。"
-            
+        
         keyword = keyword.strip()
-        search_url = f"https://www.threads.net/search?q={requests.utils.quote(keyword)}"
+        search_url = f"https://www.threads.net/search?q={requests.utils.quote(keyword)}&serp_type=tags"
+        search_type = f"搜索關鍵字: {keyword}"
 
         with sync_playwright() as p:
             # 2. 簡化的瀏覽器設定 (基於 Scrapfly 建議)
@@ -522,36 +523,38 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
             
             if not threads_data:
                 error_detail = f"""
-🔍 **Threads 搜索調試報告**
-【關鍵字】：{keyword}
-【搜索URL】：{search_url}
+                🔍 **Threads 搜索調試報告**
+                【搜索類型】：{search_type}
+                【搜索URL】：{search_url}
 
-📋 **執行步驟詳情：**
-{debug_summary}
+                📋 **執行步驟詳情：**
+                {debug_summary}
 
-❌ **最終結果：** 未找到有效貼文數據
+                ❌ **最終結果：** 未找到有效貼文數據
 
-💡 **可能原因分析：**
-1. 如果 JSON Script 標籤數量為 0：頁面結構可能已改變
-2. 如果找不到 ScheduledServerJS：Threads 可能更新了數據載入方式  
-3. 如果找不到 thread_items：搜索結果可能為空或需要登入
-4. 如果有 JSON 解析錯誤：數據格式可能已變更
+                💡 **可能原因分析：**
+                1. 如果 JSON Script 標籤數量為 0：頁面結構可能已改變
+                2. 如果找不到 ScheduledServerJS：Threads 可能更新了數據載入方式  
+                3. 如果找不到 thread_items：搜索結果可能為空或需要登入
+                4. 如果有 JSON 解析錯誤：數據格式可能已變更
 
-🔧 **建議解決方案：**
-- 檢查是否需要登入 Threads 帳號
-- 嘗試其他關鍵字進行搜索
-- 確認搜索URL是否正確載入
-"""
+                🔧 **建議解決方案：**
+                - 檢查是否需要登入 Threads 帳號
+                - 嘗試其他關鍵字進行搜索
+                - 確認搜索URL是否正確載入
+                """
                 return error_detail
             
             result_text = f"🧵 **Threads 搜索結果** (Scrapfly 方法)\n"
-            result_text += f"【關鍵字】：{keyword}\n"
+            result_text += f"【搜索類型】：{search_type}\n"
             result_text += f"【找到】：{len(threads_data)} 筆結果\n"
             result_text += f"【來源】：{search_url}\n"
             result_text += f"\n📋 **執行摘要：**\n"
             result_text += f"- 頁面載入：✓ {page_title}\n" 
             result_text += f"- JSON數據集：{hidden_datasets_info['foundValidDatasets']} 個\n"
             result_text += f"- 提取貼文：{len(threads_data)} 筆\n"
+            result_text += f"\n🔍 **詳細調試信息：**\n"
+            result_text += f"{debug_summary}\n"
             result_text += f"{'=' * 50}\n\n"
             
             for post in threads_data:
