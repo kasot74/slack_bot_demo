@@ -31,9 +31,7 @@ def register_handlers(app, config, db):
     def handle_threads_search(message, say):
         query = re.match(r"^!threads\s+(.+)$", message['text']).group(1).strip()
         
-        try:
-            say("🔍 正在搜尋 Threads 中...")
-                        
+        try:                                    
             result = search_threads(query, max_results=10)
             # 直接回傳格式化後的結果
             say(f"{result}", thread_ts=message['ts'])                        
