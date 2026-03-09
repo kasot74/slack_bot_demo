@@ -97,6 +97,7 @@ def register_crypto_handlers(app, config, db):
 
     def sync_orders_from_api():
         """同步API資料到DB"""
+        sync_message = ""
         try:
             orders_collection = db.orders
             
@@ -173,9 +174,9 @@ def register_crypto_handlers(app, config, db):
                                 )
                                 
                 except Exception as e:
-                    print(f"同步市場 {market} 時發生錯誤: {e}")
+                    sync_message += f"同步市場 {market} 時發生錯誤: {e}\n"
                     continue
-            return "資料同步完成"
+            return sync_message or "資料同步完成"
         except Exception as e:
             return f"同步API資料時發生錯誤: {e}"
             
