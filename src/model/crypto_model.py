@@ -107,7 +107,7 @@ def register_crypto_handlers(app, config, db):
             }))
             
             if not wait_orders:
-                return
+                return "無待同步的訂單"
             
             # 按交易對分組處理
             markets = {}
@@ -128,7 +128,7 @@ def register_crypto_handlers(app, config, db):
                     
                     # 找到該交易對的最小訂單ID作為from_id參數
                     min_order_id = min([int(order.get('id', 0)) for order in orders if order.get('id')])
-                    
+                    sync_message += f"同步市場 {market} 的訂單資料，從ID {min_order_id} 開始...\n"
                     # 調用API查詢訂單狀態
                     api_url = f"https://herry537.sytes.net/max_api/orders/history"
                     params = {
@@ -137,16 +137,16 @@ def register_crypto_handlers(app, config, db):
                         'from_id': min_order_id,
                         'limit': 100  # 增加限制以確保涵蓋所有訂單
                     }
-                    
+                    sync_message += f"API請求URL: {api_url} 參數: {params}\n"
                     response = requests.get(api_url, params=params, timeout=10)
-                    
+                    sync_message += f"API回應狀態碼: {response.status_code}\n"
                     if response.status_code == 200:
                         api_orders = response.json()
                         
                         # 如果回傳是單個物件，轉換為列表
                         if isinstance(api_orders, dict):
                             api_orders = [api_orders]
-                        
+                        sync_message += f"同步市場 {market} 的訂單資料...\n"
                         # 更新DB中的訂單
                         for api_order in api_orders:
                             api_order_id = str(api_order.get('id', ''))
@@ -176,7 +176,8 @@ def register_crypto_handlers(app, config, db):
                 except Exception as e:
                     sync_message += f"同步市場 {market} 時發生錯誤: {e}\n"
                     continue
-            return sync_message or "資料同步完成"
+            sync_message += "訂單資料同步完成！"
+            return sync_message 
         except Exception as e:
             return f"同步API資料時發生錯誤: {e}"
             
@@ -241,7 +242,7 @@ def register_crypto_handlers(app, config, db):
                 except:
                     created_str = "N/A"
                 
-                response += f"{symbol} {quantity} {price} {created_str}\n"
+                response += f"{symbol} 數量:{quantity} 價格:{price} 建立日:{created_str}\n"
             
             # 添加統計資訊
             total_orders = len(pending_orders)
