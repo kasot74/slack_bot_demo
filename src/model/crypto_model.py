@@ -154,6 +154,16 @@ def register_crypto_handlers(app, config, db):
                             sync_message += f"處理API訂單ID {api_order_id}...\n"
                             if api_order_id in order_ids:
                                 sync_message += f"同步訂單ID {api_order_id}...\n"
+                                sync_message += f"API狀態: {api_order.get('state')}\n"
+                                
+                                # 先查詢DB中現有記錄
+                                existing_order = orders_collection.find_one({'id': int(api_order_id)})
+                                if existing_order:
+                                    sync_message += f"DB中找到現有記錄，當前狀態: {existing_order.get('max_state')}\n"
+                                else:
+                                    sync_message += f"⚠️ DB中找不到ID為 {api_order_id} 的記錄\n"
+                                    continue
+                                
                                 # 更新DB中的訂單資料
                                 update_data = {
                                     'max_state': api_order.get('state', 'wait'),
@@ -169,11 +179,22 @@ def register_crypto_handlers(app, config, db):
                                 if api_order.get('volume'):
                                     update_data['quantity'] = float(api_order.get('volume'))
                                 
+                                sync_message += f"準備更新資料: {update_data}\n"
+                                
                                 # 更新DB
-                                orders_collection.update_one(
+                                result = orders_collection.update_one(
                                     {'id': int(api_order_id)},
                                     {'$set': update_data}
                                 )
+                                
+                                sync_message += f"更新結果: matched={result.matched_count}, modified={result.modified_count}\n"
+                                
+                                # 再次查詢確認更新後的狀態
+                                updated_order = orders_collection.find_one({'id': int(api_order_id)})
+                                if updated_order:
+                                    sync_message += f"更新後狀態: {updated_order.get('max_state')}\n"
+                                else:
+                                    sync_message += f"❌ 更新後查詢不到記錄\n"
                                 
                 except Exception as e:
                     sync_message += f"同步市場 {market} 時發生錯誤: {e}\n"
