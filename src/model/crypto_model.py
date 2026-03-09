@@ -123,11 +123,15 @@ def register_crypto_handlers(app, config, db):
                     if not order_ids:
                         continue
                     
+                    # 找到該交易對的最小訂單ID作為from_id參數
+                    min_order_id = min([int(order.get('id', 0)) for order in orders if order.get('id')])
+                    
                     # 調用API查詢訂單狀態
                     api_url = f"https://herry537.sytes.net/max_api/orders/history"
                     params = {
                         'wallet_type': 'spot',
                         'market': market,
+                        'from_id': min_order_id,
                         'limit': 100  # 增加限制以確保涵蓋所有訂單
                     }
                     
@@ -169,9 +173,10 @@ def register_crypto_handlers(app, config, db):
                 except Exception as e:
                     print(f"同步市場 {market} 時發生錯誤: {e}")
                     continue
-                    
+            return "資料同步完成"
         except Exception as e:
-            print(f"同步API資料時發生錯誤: {e}")
+            return f"同步API資料時發生錯誤: {e}"
+            
 
     # user_info
     @app.message(re.compile(r"!me$"))
@@ -196,8 +201,8 @@ def register_crypto_handlers(app, config, db):
             orders_collection = db.orders
             
             # 先同步API資料
-            sync_orders_from_api()
-            
+            sync_message = sync_orders_from_api()
+            say(sync_message)
             # 查詢目前Wait狀態的掛單
             pending_orders_data = list(orders_collection.find({
                 "max_state": "wait"
