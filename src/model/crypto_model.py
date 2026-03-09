@@ -142,16 +142,18 @@ def register_crypto_handlers(app, config, db):
                     sync_message += f"API回應狀態碼: {response.status_code}\n"
                     if response.status_code == 200:
                         api_orders = response.json()
-                        
+                        sync_message += f"API回應資料: {json.dumps(api_orders, indent=4)}\n"
                         # 如果回傳是單個物件，轉換為列表
                         if isinstance(api_orders, dict):
                             api_orders = [api_orders]
+                            
                         sync_message += f"同步市場 {market} 的訂單資料...\n"
                         # 更新DB中的訂單
                         for api_order in api_orders:
                             api_order_id = str(api_order.get('id', ''))
-                            
+                            sync_message += f"處理API訂單ID {api_order_id}...\n"
                             if api_order_id in order_ids:
+                                sync_message += f"同步訂單ID {api_order_id}...\n"
                                 # 更新DB中的訂單資料
                                 update_data = {
                                     'max_state': api_order.get('state', 'wait'),
