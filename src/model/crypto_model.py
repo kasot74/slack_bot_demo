@@ -119,11 +119,7 @@ def register_crypto_handlers(app, config, db):
             
             # 逐個交易對查詢API
             for market, orders in markets.items():
-                try:
-                    # 檢查並顯示訂單的所有ID字段
-                    sync_message += f"檢查訂單的ID字段：\n"
-                    for order in orders:
-                        sync_message += f"  _id: {order.get('_id')}, id: {order.get('id')}, max_order_id: {order.get('max_order_id')}\n"
+                try:                    
                     
                     # 取得該市場的order IDs - 可能需要用max_order_id
                     order_ids = []
@@ -135,9 +131,7 @@ def register_crypto_handlers(app, config, db):
                     
                     if not order_ids:
                         sync_message += "沒有找到有效的訂單ID\n"
-                        continue
-                    
-                    sync_message += f"待同步訂單IDs: {order_ids}\n"
+                        continue                                        
                     
                     # 檢查DB中實際存在的記錄 - 嘗試不同的ID字段
                     existing_ids = []
@@ -152,13 +146,10 @@ def register_crypto_handlers(app, config, db):
                         elif existing_order_by_max_id:
                             existing_ids.append(f"{order_id}(用max_order_id字段找到)")
                         else:
-                            sync_message += f"❌ DB中用兩種ID字段都找不到 {order_id}\n"
-                    
-                    sync_message += f"DB中實際存在的IDs: {existing_ids}\n"
+                            sync_message += f"❌ DB中用兩種ID字段都找不到 {order_id}\n"                                        
                     
                     # 找到該交易對的最小訂單ID作為from_id參數
-                    min_order_id = min([int(order.get('id', 0)) for order in orders if order.get('id')])
-                    sync_message += f"同步市場 {market} 的訂單資料，從ID {min_order_id} 開始...\n"
+                    min_order_id = min([int(order.get('id', 0)) for order in orders if order.get('id')])                    
                     # 調用API查詢訂單狀態
                     api_url = f"https://herry537.sytes.net/max_api/orders/history"
                     params = {
@@ -167,44 +158,21 @@ def register_crypto_handlers(app, config, db):
                         'from_id': min_order_id,
                         'limit': 100  # 增加限制以確保涵蓋所有訂單
                     }
-                    sync_message += f"API請求URL: {api_url} 參數: {params}\n"
+                    
                     response = requests.get(api_url, params=params, timeout=10)
-                    sync_message += f"API回應狀態碼: {response.status_code}\n"
+                    
                     if response.status_code == 200:
                         api_orders = response.json()
-                        sync_message += f"API回應資料: {json.dumps(api_orders, indent=4)}\n"
+                        
                         # 如果回傳是單個物件，轉換為列表
                         if isinstance(api_orders, dict):
                             api_orders = [api_orders]
-                            
-                        sync_message += f"同步市場 {market} 的訂單資料...\n"
+                                                    
                         # 更新DB中的訂單
                         for api_order in api_orders:
-                            api_order_id = str(api_order.get('id', ''))
-                            sync_message += f"處理API訂單ID {api_order_id}...\n"
-                            if api_order_id in order_ids:
-                                sync_message += f"同步訂單ID {api_order_id}...\n"
-                                sync_message += f"API狀態: {api_order.get('state')}\n"
-                                
-                                # 先查詢DB中現有記錄 - 嘗試不同的ID字段
-                                existing_order = None
-                                query_field = None
-                                
-                                # 嘗試用id字段查詢
-                                existing_order = orders_collection.find_one({'id': int(api_order_id)})
-                                if existing_order:
-                                    query_field = 'id'
-                                    sync_message += f"DB中用id字段找到記錄，當前狀態: {existing_order.get('max_state')}\n"
-                                else:
-                                    # 嘗試用max_order_id字段查詢
-                                    existing_order = orders_collection.find_one({'max_order_id': int(api_order_id)})
-                                    if existing_order:
-                                        query_field = 'max_order_id'
-                                        sync_message += f"DB中用max_order_id字段找到記錄，當前狀態: {existing_order.get('max_state')}\n"
-                                    else:
-                                        sync_message += f"⚠️ DB中用兩種ID字段都找不到 {api_order_id} 的記錄\n"
-                                        continue
-                                
+                            api_order_id = str(api_order.get('id', ''))                            
+                            if api_order_id in order_ids:                                                                
+                                                                                                                                                                
                                 # 更新DB中的訂單資料
                                 update_data = {
                                     'max_state': api_order.get('state', 'wait'),
@@ -218,25 +186,14 @@ def register_crypto_handlers(app, config, db):
                                 if api_order.get('price'):
                                     update_data['price'] = float(api_order.get('price'))
                                 if api_order.get('volume'):
-                                    update_data['quantity'] = float(api_order.get('volume'))
-                                
-                                sync_message += f"準備更新資料: {update_data}\n"
+                                    update_data['quantity'] = float(api_order.get('volume'))                                                                
                                 
                                 # 更新DB - 使用正確的查詢字段
-                                update_query = {query_field: int(api_order_id)}
+                                update_query = {'max_order_id': int(api_order_id)}
                                 result = orders_collection.update_one(
                                     update_query,
                                     {'$set': update_data}
-                                )
-                                
-                                sync_message += f"使用{query_field}字段更新，結果: matched={result.matched_count}, modified={result.modified_count}\n"
-                                
-                                # 再次查詢確認更新後的狀態
-                                updated_order = orders_collection.find_one(update_query)
-                                if updated_order:
-                                    sync_message += f"更新後狀態: {updated_order.get('max_state')}\n"
-                                else:
-                                    sync_message += f"❌ 更新後查詢不到記錄\n"
+                                )                                                                                                
                                 
                 except Exception as e:
                     sync_message += f"同步市場 {market} 時發生錯誤: {e}\n"
