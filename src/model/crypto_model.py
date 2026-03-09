@@ -244,13 +244,11 @@ def register_crypto_handlers(app, config, db):
             # 格式化訂單資訊 - 表格格式
             response = "📋 **目前掛單**\n"
             response += "```\n"
-            response += f"{'交易對':<10} {'類型':<4} {'數量':<10} {'價格':<12} {'建立時間'}\n"
-            response += "-" * 55 + "\n"
             
             for order in pending_orders:
                 symbol = order.symbol or ''
                 quantity = str(order.quantity) if order.quantity else "0"
-                price = f"{order.price:.4f}" if order.price else "0.0000"
+                price = f"{order.price:.2f}" if order.price else "0.00"
                 
                 # 判斷買單或賣單
                 order_type = "買" if order.is_buy_order() else "賣" if order.is_sell_order() else "?"
@@ -269,7 +267,7 @@ def register_crypto_handlers(app, config, db):
                         created_str = "N/A"
                 except:
                     created_str = "N/A"
-                
+                    
                 response += f"{symbol:<10} {order_type:<4} {quantity:<10} {price:<12} {created_str}\n"
             
             response += "```\n"
