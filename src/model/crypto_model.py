@@ -1,0 +1,247 @@
+import re
+import random
+import json
+import requests
+from datetime import datetime, timedelta
+from pymongo import MongoClient
+
+class Order:
+    """訂單資料模型"""
+    
+    def __init__(self, data=None):
+        """初始化訂單物件"""
+        if data is None:
+            data = {}
+        
+        self._id = data.get('_id')
+        self.id = data.get('id')
+        self.created_at = data.get('created_at')
+        self.executed_price = data.get('executed_price', 0)
+        self.executed_quantity = data.get('executed_quantity', 0)
+        self.max_order_id = data.get('max_order_id')
+        self.max_state = data.get('max_state')
+        self.order_type = data.get('order_type')  # buy or sell
+        self.price = data.get('price', 0)
+        self.quantity = data.get('quantity', 0)
+        self.saved_at = data.get('saved_at')
+        self.status = data.get('status')  # pending, completed, cancelled
+        self.symbol = data.get('symbol')
+        
+        # 額外的使用者相關欄位
+        self.user_id = data.get('user_id')
+    
+    def to_dict(self):
+        """轉換為字典格式"""
+        return {
+            '_id': self._id,
+            'id': self.id,
+            'created_at': self.created_at,
+            'executed_price': self.executed_price,
+            'executed_quantity': self.executed_quantity,
+            'max_order_id': self.max_order_id,
+            'max_state': self.max_state,
+            'order_type': self.order_type,
+            'price': self.price,
+            'quantity': self.quantity,
+            'saved_at': self.saved_at,
+            'status': self.status,
+            'symbol': self.symbol,
+            'user_id': self.user_id
+        }
+    
+    def is_pending(self):
+        """檢查是否為掛單狀態"""
+        return self.status == 'pending'
+    
+    def is_buy_order(self):
+        """檢查是否為買單"""
+        return self.order_type == 'buy'
+    
+    def is_sell_order(self):
+        """檢查是否為賣單"""
+        return self.order_type == 'sell'
+    
+    def get_total_value(self):
+        """計算訂單總價值"""
+        return float(self.price) * float(self.quantity)
+    
+    def get_executed_value(self):
+        """計算已執行價值"""
+        return float(self.executed_price) * float(self.executed_quantity)
+    
+    def format_created_time(self):
+        """格式化創建時間"""
+        try:
+            if isinstance(self.created_at, str):
+                dt = datetime.fromisoformat(self.created_at.replace('Z', '+00:00'))
+                return dt.strftime("%Y-%m-%d %H:%M:%S")
+            return str(self.created_at)
+        except:
+            return str(self.created_at)
+    
+    def __str__(self):
+        """字串表示"""
+        return f"Order(id={self.id}, {self.symbol}, {self.order_type}, {self.price}@{self.quantity}, {self.status})"
+    
+    def __repr__(self):
+        return self.__str__()
+
+COMMANDS_HELP = [    
+    ("!order", "查詢目前掛單的訂單"),
+    ("!me", "查詢使用者的 Slack 資訊")
+]
+
+def register_crypto_handlers(app, config, db):
+
+    def sync_orders_from_api():
+        """同步API資料到DB"""
+        try:
+            orders_collection = db.orders
+            
+            # 取得所有wait狀態的訂單
+            wait_orders = list(orders_collection.find({
+                "max_state": "wait"
+            }))
+            
+            if not wait_orders:
+                return
+            
+            # 按交易對分組處理
+            markets = {}
+            for order in wait_orders:
+                market = order.get('symbol', '').lower()
+                if market not in markets:
+                    markets[market] = []
+                markets[market].append(order)
+            
+            # 逐個交易對查詢API
+            for market, orders in markets.items():
+                try:
+                    # 取得該市場的order IDs
+                    order_ids = [str(order.get('id', '')) for order in orders if order.get('id')]
+                    
+                    if not order_ids:
+                        continue
+                    
+                    # 調用API查詢訂單狀態
+                    api_url = f"https://herry537.sytes.net/max_api/orders/history"
+                    params = {
+                        'wallet_type': 'spot',
+                        'market': market,
+                        'limit': 100  # 增加限制以確保涵蓋所有訂單
+                    }
+                    
+                    response = requests.get(api_url, params=params, timeout=10)
+                    
+                    if response.status_code == 200:
+                        api_orders = response.json()
+                        
+                        # 如果回傳是單個物件，轉換為列表
+                        if isinstance(api_orders, dict):
+                            api_orders = [api_orders]
+                        
+                        # 更新DB中的訂單
+                        for api_order in api_orders:
+                            api_order_id = str(api_order.get('id', ''))
+                            
+                            if api_order_id in order_ids:
+                                # 更新DB中的訂單資料
+                                update_data = {
+                                    'max_state': api_order.get('state', 'wait'),
+                                    'status': api_order.get('state', 'pending'),
+                                    'executed_price': float(api_order.get('avg_price', 0)),
+                                    'executed_quantity': float(api_order.get('executed_volume', 0)),
+                                    'saved_at': datetime.now().isoformat() + 'Z'
+                                }
+                                
+                                # 如果有新的價格或數量資訊，也更新
+                                if api_order.get('price'):
+                                    update_data['price'] = float(api_order.get('price'))
+                                if api_order.get('volume'):
+                                    update_data['quantity'] = float(api_order.get('volume'))
+                                
+                                # 更新DB
+                                orders_collection.update_one(
+                                    {'id': int(api_order_id)},
+                                    {'$set': update_data}
+                                )
+                                
+                except Exception as e:
+                    print(f"同步市場 {market} 時發生錯誤: {e}")
+                    continue
+                    
+        except Exception as e:
+            print(f"同步API資料時發生錯誤: {e}")
+
+    # user_info
+    @app.message(re.compile(r"!me$"))
+    def get_user_info(message, say, client):                
+        try:        
+            # 獲取發送指令的用戶 ID
+            user_id = message['user']
+            
+            # 使用 Slack API 獲取用戶信息
+            user_info = client.users_info(user=user_id)            
+            user_info_str = json.dumps(user_info["user"], indent=4, ensure_ascii=False)
+            user_Presence = client.users_getPresence(user=user_id)                        
+            say(f"使用者信息:\n```{user_info_str}```\n \n使用者狀態:\n```{user_Presence}```")
+        except Exception as e:        
+            say(f"非預期性問題 {e}")    
+
+
+    # !order 查詢掛單
+    @app.message(re.compile(r"^!order$"))
+    def handle_order_command(message, say):
+        try:
+            orders_collection = db.orders
+            
+            # 先同步API資料
+            sync_orders_from_api()
+            
+            # 查詢目前Wait狀態的掛單
+            pending_orders_data = list(orders_collection.find({
+                "max_state": "wait"
+            }).sort("created_at", -1).limit(20))
+            
+            if not pending_orders_data:
+                say("目前沒有掛單")
+                return
+            
+            # 轉換為Order物件
+            pending_orders = [Order(order_data) for order_data in pending_orders_data]
+            
+            # 格式化訂單資訊 - 簡潔格式
+            response = "📋 **目前掛單**\n"
+            
+            for order in pending_orders:
+                symbol = order.symbol or ''
+                quantity = str(order.quantity) if order.quantity else "0"
+                price = f"{order.price:.4f}" if order.price else "0.0000"
+                
+                # 格式化創建時間
+                try:
+                    if order.created_at:
+                        if isinstance(order.created_at, str):
+                            dt = datetime.fromisoformat(order.created_at.replace('Z', '+00:00'))
+                            created_str = dt.strftime("%m-%d %H:%M")
+                        else:
+                            created_str = str(order.created_at)[:16]
+                    else:
+                        created_str = "N/A"
+                except:
+                    created_str = "N/A"
+                
+                response += f"{symbol} {quantity} {price} {created_str}\n"
+            
+            # 添加統計資訊
+            total_orders = len(pending_orders)
+            buy_orders = len([o for o in pending_orders if o.is_buy_order()])
+            sell_orders = len([o for o in pending_orders if o.is_sell_order()])
+            total_value = sum([o.get_total_value() for o in pending_orders])
+            
+            response += f"\n📊 **統計**: 總計 {total_orders} 筆 | 買單 {buy_orders} 筆 | 賣單 {sell_orders} 筆 | 總價值 {total_value:.2f}"
+            
+            say(response)
+            
+        except Exception as e:
+            say(f"查詢掛單時發生錯誤: {e}")

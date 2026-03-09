@@ -6,14 +6,14 @@ from .model.coin_model import register_coin_handlers
 from .model.stock_model import register_stock_handlers
 from .model.shop_model import register_shop_handlers
 from .model.ai_model import register_handlers as register_ai_handlers
-
+from .model.crypto_model import register_crypto_handlers
 
 from .model.handlers_model import COMMANDS_HELP as HANDLER_COMMANDS
 from .model.coin_model import COMMANDS_HELP as COIN_COMMANDS
 from .model.stock_model import COMMANDS_HELP as STOCK_COMMANDS
 from .model.shop_model import COMMANDS_HELP as SHOP_COMMANDS
 from .model.ai_model import COMMANDS_HELP as AI_COMMANDS
-
+from .model.crypto_model import COMMANDS_HELP as CRYPTO_COMMANDS
 
 from .utilities import read_config
 from .database import con_db
@@ -194,6 +194,10 @@ register_stock_handlers(app, config, db)
 # AI 模組
 ALL_COMMANDS += AI_COMMANDS
 register_ai_handlers(app, config, db)
+
+# 加密貨幣模組
+ALL_COMMANDS += CRYPTO_COMMANDS
+register_crypto_handlers(app, config, db)
 
 # 註冊其他處理器
 ALL_COMMANDS += HANDLER_COMMANDS
