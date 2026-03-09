@@ -74,7 +74,9 @@ class Order:
         try:
             if isinstance(self.created_at, str):
                 dt = datetime.fromisoformat(self.created_at.replace('Z', '+00:00'))
-                return dt.strftime("%Y-%m-%d %H:%M:%S")
+                # 轉換為 UTC+8 時區
+                dt_utc8 = dt + timedelta(hours=8)
+                return dt_utc8.strftime("%Y-%m-%d %H:%M:%S")
             return str(self.created_at)
         except:
             return str(self.created_at)
@@ -228,7 +230,9 @@ def register_crypto_handlers(app, config, db):
                     if order.created_at:
                         if isinstance(order.created_at, str):
                             dt = datetime.fromisoformat(order.created_at.replace('Z', '+00:00'))
-                            created_str = dt.strftime("%m-%d %H:%M")
+                            # 轉換為 UTC+8 時區
+                            dt_utc8 = dt + timedelta(hours=8)
+                            created_str = dt_utc8.strftime("%m-%d %H:%M")
                         else:
                             created_str = str(order.created_at)[:16]
                     else:
