@@ -96,8 +96,7 @@ COMMANDS_HELP = [
 def register_crypto_handlers(app, config, db):
     
     # 授權的使用者 ID
-    AUTHORIZED_USER_ID = "123456789"
-    #AUTHORIZED_USER_ID = "U09482DTM8F"
+    AUTHORIZED_USER_ID = "U09482DTM8F"    
     
     def check_user_permission(user_id):
         """檢查使用者是否有權限使用此模組"""
@@ -221,6 +220,7 @@ def register_crypto_handlers(app, config, db):
             
             # 檢查使用者權限
             if not check_user_permission(user_id):                
+                say("你沒有權限使用此指令")
                 return
             
             # 使用 Slack API 獲取用戶信息
@@ -239,6 +239,7 @@ def register_crypto_handlers(app, config, db):
             # 檢查使用者權限
             user_id = message['user']
             if not check_user_permission(user_id):                
+                say("你沒有權限使用此指令")
                 return
                 
             orders_collection = db.orders
