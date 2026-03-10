@@ -14,8 +14,8 @@ from ..utilities import read_config
 from ..database import con_db
 from ..AI_Service.openai import painting
 from ..AI_Service.ai_tool import read_url_content, get_technical_indicators
-from ..stock import get_stock_info, get_historical_data, get_crypto_prices, get_current_date
-
+from ..stock import get_stock_info, get_historical_data, get_current_date
+from ..crypto import get_crypto_prices
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
 ai_db = con_db(config)
