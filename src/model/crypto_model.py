@@ -94,6 +94,14 @@ COMMANDS_HELP = [
 ]
 
 def register_crypto_handlers(app, config, db):
+    
+    # 授權的使用者 ID
+    AUTHORIZED_USER_ID = "123456789"
+    #AUTHORIZED_USER_ID = "U09482DTM8F"
+    
+    def check_user_permission(user_id):
+        """檢查使用者是否有權限使用此模組"""
+        return user_id == AUTHORIZED_USER_ID
 
     def sync_orders_from_api():
         """同步API資料到DB"""
@@ -211,6 +219,10 @@ def register_crypto_handlers(app, config, db):
             # 獲取發送指令的用戶 ID
             user_id = message['user']
             
+            # 檢查使用者權限
+            if not check_user_permission(user_id):                
+                return
+            
             # 使用 Slack API 獲取用戶信息
             user_info = client.users_info(user=user_id)            
             user_info_str = json.dumps(user_info["user"], indent=4, ensure_ascii=False)
@@ -224,6 +236,11 @@ def register_crypto_handlers(app, config, db):
     @app.message(re.compile(r"^!order$"))
     def handle_order_command(message, say):
         try:
+            # 檢查使用者權限
+            user_id = message['user']
+            if not check_user_permission(user_id):                
+                return
+                
             orders_collection = db.orders
             
             # 先同步API資料
