@@ -87,28 +87,3 @@ def format_historical_data(data):
     except Exception as e:
         return f"發生錯誤: {e}"
 
-def get_crypto_prices():
-    """取得 MAX 交易所的加密貨幣即時價格。"""
-    url = "https://max-api.maicoin.com/api/v3/wallet/m/index_prices"
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        data = response.json()
-        
-        # 抓出指定幣別的價格
-        btc_usdt = data.get("btcusdt")
-        btc_twd = data.get("btctwd")
-        usdt_twd = data.get("usdttwd")
-        bnb_twd = data.get("bnbtwd")
-
-        # 組成易懂字串
-        result = (
-            f"MAX 交易所 幣價資訊：\n"
-            f"BTC 對 USDT：{btc_usdt} 美元\n"
-            f"BTC 對 TWD：{btc_twd} 台幣\n"
-            f"USDT 對 TWD：{usdt_twd} 台幣\n"
-            f"BNB 對 TWD：{bnb_twd} 台幣\n"
-        )
-        return result        
-    else:
-        return f"請求失敗，狀態碼：{response.status_code}"

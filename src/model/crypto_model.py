@@ -2,6 +2,7 @@ import re
 import random
 import json
 import requests
+from ..crypto import get_crypto_prices, get_pending_orders
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 
@@ -90,6 +91,7 @@ class Order:
 
 COMMANDS_HELP = [    
     ("!order", "查詢目前掛單的訂單"),
+    ("!MAX", "MAX 交易所加密貨幣即時價格"),
     ("!me", "查詢使用者的 Slack 資訊")
 ]
 
@@ -102,114 +104,11 @@ def register_crypto_handlers(app, config, db):
         """檢查使用者是否有權限使用此模組"""
         return user_id == AUTHORIZED_USER_ID
 
-    def sync_orders_from_api():
-        """同步API資料到DB"""
-        sync_message = ""
-        try:
-            orders_collection = db.orders
-            
-            # 取得所有wait狀態的訂單
-            wait_orders = list(orders_collection.find({
-                "max_state": "wait"
-            }))
-            
-            if not wait_orders:
-                return "無待同步的訂單"
-            
-            # 按交易對分組處理
-            markets = {}
-            for order in wait_orders:
-                market = order.get('symbol', '').lower()
-                if market not in markets:
-                    markets[market] = []
-                markets[market].append(order)
-            
-            # 逐個交易對查詢API
-            for market, orders in markets.items():
-                try:                    
-                    
-                    # 取得該市場的order IDs - 可能需要用max_order_id
-                    order_ids = []
-                    for order in orders:
-                        if order.get('max_order_id'):
-                            order_ids.append(str(order.get('max_order_id')))
-                        elif order.get('id'):
-                            order_ids.append(str(order.get('id')))
-                    
-                    if not order_ids:
-                        sync_message += "沒有找到有效的訂單ID\n"
-                        continue                                        
-                    
-                    # 檢查DB中實際存在的記錄 - 嘗試不同的ID字段
-                    existing_ids = []
-                    for order_id in order_ids:
-                        # 嘗試用id字段查詢
-                        existing_order_by_id = orders_collection.find_one({'id': int(order_id)})
-                        # 嘗試用max_order_id字段查詢  
-                        existing_order_by_max_id = orders_collection.find_one({'max_order_id': int(order_id)})
-                        
-                        if existing_order_by_id:
-                            existing_ids.append(f"{order_id}(用id字段找到)")
-                        elif existing_order_by_max_id:
-                            existing_ids.append(f"{order_id}(用max_order_id字段找到)")
-                        else:
-                            sync_message += f"❌ DB中用兩種ID字段都找不到 {order_id}\n"                                        
-                    
-                    # 找到該交易對的最小訂單ID作為from_id參數
-                    min_order_id = min([int(order.get('id', 0)) for order in orders if order.get('id')])                    
-                    # 調用API查詢訂單狀態
-                    api_url = f"https://herry537.sytes.net/max_api/orders/history"
-                    params = {
-                        'wallet_type': 'spot',
-                        'market': market,
-                        'from_id': min_order_id,
-                        'limit': 100  # 增加限制以確保涵蓋所有訂單
-                    }
-                    
-                    response = requests.get(api_url, params=params, timeout=10)
-                    
-                    if response.status_code == 200:
-                        api_orders = response.json()
-                        
-                        # 如果回傳是單個物件，轉換為列表
-                        if isinstance(api_orders, dict):
-                            api_orders = [api_orders]
-                                                    
-                        # 更新DB中的訂單
-                        for api_order in api_orders:
-                            api_order_id = str(api_order.get('id', ''))                            
-                            if api_order_id in order_ids:                                                                
-                                                                                                                                                                
-                                # 更新DB中的訂單資料
-                                update_data = {
-                                    'max_state': api_order.get('state', 'wait'),
-                                    'status': api_order.get('state', 'pending'),
-                                    'executed_price': float(api_order.get('avg_price', 0)),
-                                    'executed_quantity': float(api_order.get('executed_volume', 0)),
-                                    'saved_at': datetime.now().isoformat() + 'Z'
-                                }
-                                
-                                # 如果有新的價格或數量資訊，也更新
-                                if api_order.get('price'):
-                                    update_data['price'] = float(api_order.get('price'))
-                                if api_order.get('volume'):
-                                    update_data['quantity'] = float(api_order.get('volume'))                                                                
-                                
-                                # 更新DB - 使用正確的查詢字段
-                                update_query = {'max_order_id': int(api_order_id)}
-                                result = orders_collection.update_one(
-                                    update_query,
-                                    {'$set': update_data}
-                                )                                                                                                
-                                
-                except Exception as e:
-                    sync_message += f"同步市場 {market} 時發生錯誤: {e}\n"
-                    continue
-            sync_message += "訂單資料同步完成！"
-            return sync_message 
-        except Exception as e:
-            return f"同步API資料時發生錯誤: {e}"
-            
+    # !MAX    
+    @app.message(re.compile(r"^!MAX$"))
+    def get_max_price(message, say):        
+        say(get_crypto_prices())
+
 
     # user_info
     @app.message(re.compile(r"!me$"))
@@ -241,64 +140,10 @@ def register_crypto_handlers(app, config, db):
             if not check_user_permission(user_id):                
                 say("你沒有權限使用此指令")
                 return
-                
-            orders_collection = db.orders
             
-            # 先同步API資料
-            sync_message = sync_orders_from_api()
-            say(sync_message)
-            # 查詢目前Wait狀態的掛單
-            pending_orders_data = list(orders_collection.find({
-                "max_state": "wait"
-            }).sort("created_at", -1).limit(20))
-            
-            if not pending_orders_data:
-                say("目前沒有掛單")
-                return
-            
-            # 轉換為Order物件
-            pending_orders = [Order(order_data) for order_data in pending_orders_data]
-            
-            # 格式化訂單資訊 - 表格格式
-            response = "📋 **目前掛單**\n"
-            response += "```\n"
-            
-            for order in pending_orders:
-                symbol = order.symbol or ''
-                quantity = str(order.quantity) if order.quantity else "0"
-                price = f"{order.price:.2f}" if order.price else "0.00"
-                
-                # 判斷買單或賣單
-                order_type = "買" if order.is_buy_order() else "賣" if order.is_sell_order() else "?"
-                
-                # 格式化創建時間
-                try:
-                    if order.created_at:
-                        if isinstance(order.created_at, str):
-                            dt = datetime.fromisoformat(order.created_at.replace('Z', '+00:00'))
-                            # 轉換為 UTC+8 時區
-                            dt_utc8 = dt + timedelta(hours=8)
-                            created_str = dt_utc8.strftime("%m-%d %H:%M")
-                        else:
-                            created_str = str(order.created_at)[:16]
-                    else:
-                        created_str = "N/A"
-                except:
-                    created_str = "N/A"
-                    
-                response += f"{symbol:<10} {order_type:<4} {quantity:<10} {price:<12} {created_str}\n"
-            
-            response += "```\n"
-            
-            # 添加統計資訊
-            total_orders = len(pending_orders)
-            buy_orders = len([o for o in pending_orders if o.is_buy_order()])
-            sell_orders = len([o for o in pending_orders if o.is_sell_order()])
-            total_value = sum([o.get_total_value() for o in pending_orders])
-            
-            response += f"\n📊 **統計**: 總計 {total_orders} 筆 | 買單 {buy_orders} 筆 | 賣單 {sell_orders} 筆 | 總價值 {total_value:.2f}"
-            
-            say(response)
+            # 使用 get_pending_orders 函數查詢等待中的訂單
+            result = get_pending_orders("wait")
+            say(result)
             
         except Exception as e:
             say(f"查詢掛單時發生錯誤: {e}")
