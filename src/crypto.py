@@ -1,6 +1,6 @@
 import requests
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def get_crypto_prices():
     """取得 MAX 交易所的加密貨幣即時價格。"""
@@ -61,18 +61,15 @@ def get_pending_orders(status="wait"):
                 try:
                     if created_at:
                         dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                        formatted_time = dt.strftime("%m-%d %H:%M")
+                        # 轉換為 UTC+8 時區
+                        dt_utc8 = dt + timedelta(hours=8)
+                        formatted_time = dt_utc8.strftime("%m-%d %H:%M")
                     else:
                         formatted_time = "N/A"
                 except:
                     formatted_time = created_at[:16] if created_at else "N/A"
                 
-                result += (
-                    f"訂單 {order_id}**\n"
-                    f"幣種: {symbol} | {order_type}\n"
-                    f"價格: {price:,.0f} | 數量: {quantity}\n"
-                    f"時間: {formatted_time}\n\n"
-                )
+                result += (f"幣種:{symbol}|{order_type}|價格:{price:,.2f}|數量:{quantity}|時間:{formatted_time}\n")
             
             return result
             
