@@ -2,7 +2,7 @@ import re
 import random
 import json
 import requests
-from ..crypto import get_crypto_prices, get_pending_orders
+from ..crypto import get_crypto_prices, get_pending_orders, get_trading_volume_stats
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 
@@ -92,6 +92,7 @@ class Order:
 COMMANDS_HELP = [    
     ("!order", "查詢目前掛單的訂單"),
     ("!MAX", "MAX 交易所加密貨幣即時價格"),
+    ("!volume", "顯示各交易對成交量與利潤統計"),
     ("!me", "查詢使用者的 Slack 資訊")
 ]
 
@@ -147,3 +148,20 @@ def register_crypto_handlers(app, config, db):
             
         except Exception as e:
             say(f"查詢掛單時發生錯誤: {e}")
+
+
+    # !volume 查詢成交量統計
+    @app.message(re.compile(r"^!ord_sum$"))
+    def handle_volume_command(message, say):
+        try:
+            # 檢查使用者權限
+            user_id = message['user']
+            if not check_user_permission(user_id):                
+                say("你沒有權限使用此指令")
+                return                                    
+            # 使用 get_trading_volume_stats
+            result = get_trading_volume_stats()
+            say(result)
+            
+        except Exception as e:
+            say(f"查詢成交量統計時發生錯誤: {e}")
