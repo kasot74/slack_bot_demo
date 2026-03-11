@@ -2,7 +2,7 @@ import re
 import random
 import json
 import requests
-from ..crypto import get_crypto_prices, get_pending_orders, get_trading_volume_stats, get_order_depth_analysis
+from ..crypto import get_crypto_prices, get_pending_orders, get_trading_volume_stats, get_market_analysis
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 
@@ -93,7 +93,7 @@ COMMANDS_HELP = [
     ("!order", "查詢目前掛單的訂單"),
     ("!MAX", "MAX 交易所加密貨幣即時價格"),
     ("!volume", "顯示各交易對成交量與利潤統計"),
-    ("!depth [symbol]", "分析訂單簿深度圖 (預設MAXTWD)"),
+    ("!analysis [symbol]", "綜合市場分析 (訂單深度+成交記錄+大單警報)"),
     ("!me", "查詢使用者的 Slack 資訊")
 ]
 
@@ -152,7 +152,7 @@ def register_crypto_handlers(app, config, db):
 
 
     # !volume 查詢成交量統計
-    @app.message(re.compile(r"^!ord_sum$"))
+    @app.message(re.compile(r"^!volume$"))
     def handle_volume_command(message, say):
         try:
             # 檢查使用者權限
@@ -168,9 +168,9 @@ def register_crypto_handlers(app, config, db):
             say(f"查詢成交量統計時發生錯誤: {e}")
 
 
-    # !depth 分析訂單簿深度圖
-    @app.message(re.compile(r"^!depth(?:\s+(\w+))?$"))
-    def handle_depth_command(message, say):
+    # !analysis 綜合市場分析
+    @app.message(re.compile(r"^!analysis(?:\s+(\w+))?$"))
+    def handle_analysis_command(message, say):
         try:
             # 檢查使用者權限
             user_id = message['user']
@@ -179,12 +179,12 @@ def register_crypto_handlers(app, config, db):
                 return
             
             # 提取交易對參數，預設為BTCTWD
-            match = re.search(r"^!depth(?:\s+(\w+))?$", message['text'])
+            match = re.search(r"^!analysis(?:\s+(\w+))?$", message['text'])
             symbol = match.group(1).upper() if match and match.group(1) else "BTCTWD"
             
-            # 使用 get_order_depth_analysis 函數分析訂單簿深度
-            result = get_order_depth_analysis(symbol)
+            # 使用 get_market_analysis 函數進行綜合市場分析
+            result = get_market_analysis(symbol)
             say(result)
             
         except Exception as e:
-            say(f"分析訂單簿深度時發生錯誤: {e}")
+            say(f"綜合市場分析時發生錯誤: {e}")
