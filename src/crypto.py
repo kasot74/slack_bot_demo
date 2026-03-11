@@ -169,3 +169,126 @@ def get_trading_volume_stats():
         return f"網路請求錯誤：{e}"
     except Exception as e:
         return f"處理訂單資料時發生錯誤：{e}"
+
+
+def get_order_depth_analysis(symbol="BTCTWD"):
+    """分析指定交易對的訂單簿深度圖。
+    
+    Args:
+        symbol (str): 交易對符號，如 BTCTWD
+        
+    Returns:
+        str: 格式化的深度分析報告
+    """
+    url = f"https://herry537.sytes.net/max_api/trading/orderdepth/{symbol}"
+    headers = {
+        'accept': 'application/json'
+    }
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            if not data.get("success"):
+                return f"API回傳錯誤：無法獲取 {symbol} 的訂單簿數據"
+            
+            order_depth = data.get("order_depth", {})
+            asks = order_depth.get("asks", [])
+            bids = order_depth.get("bids", [])
+            
+            if not asks or not bids:
+                return f"{symbol} 訂單簿數據不完整"
+            
+            # 轉換數據格式
+            asks_data = [[float(price), float(qty)] for price, qty in asks]
+            bids_data = [[float(price), float(qty)] for price, qty in bids]
+            
+            # 基本價格資訊
+            best_ask = asks_data[0][0]  # 最佳賣價
+            best_bid = bids_data[0][0]  # 最佳買價
+            spread = best_ask - best_bid
+            spread_percentage = (spread / best_bid) * 100 if best_bid > 0 else 0
+            
+            # 計算深度統計
+            def calculate_depth_stats(orders, levels=10):
+                total_qty = 0
+                total_value = 0
+                for i, (price, qty) in enumerate(orders[:levels]):
+                    total_qty += qty
+                    total_value += price * qty
+                avg_price = total_value / total_qty if total_qty > 0 else 0
+                return total_qty, total_value, avg_price
+            
+            # 買賣單深度統計
+            ask_qty_10, ask_value_10, ask_avg_10 = calculate_depth_stats(asks_data, 10)
+            bid_qty_10, bid_value_10, bid_avg_10 = calculate_depth_stats(bids_data, 10)
+            
+            ask_qty_20, ask_value_20, ask_avg_20 = calculate_depth_stats(asks_data, 20)
+            bid_qty_20, bid_value_20, bid_avg_20 = calculate_depth_stats(bids_data, 20)
+            
+            # 計算流動性指標
+            total_ask_depth = sum([qty for _, qty in asks_data[:50]])
+            total_bid_depth = sum([qty for _, qty in bids_data[:50]])
+            
+            # 尋找大單 (數量 > 平均值的 3倍)
+            avg_ask_qty = sum([qty for _, qty in asks_data[:20]]) / 20
+            avg_bid_qty = sum([qty for _, qty in bids_data[:20]]) / 20
+            
+            large_asks = [(price, qty) for price, qty in asks_data[:20] if qty > avg_ask_qty * 3]
+            large_bids = [(price, qty) for price, qty in bids_data[:20] if qty > avg_bid_qty * 3]
+            
+            # 格式化結果
+            result = f"📊 **{symbol} 訂單簿深度分析**\n\n"
+            result += f"💰 **價格資訊：**\n"
+            result += f"最佳買價：{best_bid:,.4f}\n"
+            result += f"最佳賣價：{best_ask:,.4f}\n"
+            result += f"價差：{spread:,.4f} ({spread_percentage:.3f}%)\n\n"
+            
+            result += f"📈 **深度統計 (前10檔)：**\n"
+            result += f"賣單量：{ask_qty_10:,.2f} | 平均:{ask_avg_10:,.4f}\n"
+            result += f"買單量：{bid_qty_10:,.2f} | 平均:{bid_avg_10:,.4f}\n"
+            result += f"買賣比：{(bid_qty_10/ask_qty_10):,.2f}\n\n"
+            
+            result += f"📊 **深度統計 (前20檔)：**\n"
+            result += f"賣單量：{ask_qty_20:,.2f} | 價值:{ask_value_20:,.0f}\n"
+            result += f"買單量：{bid_qty_20:,.2f} | 價值:{bid_value_20:,.0f}\n\n"
+            
+            # 流動性分析
+            liquidity_ratio = bid_value_20 / ask_value_20 if ask_value_20 > 0 else 0
+            result += f"🌊 **流動性分析：**\n"
+            result += f"總深度(50檔)：賣{total_ask_depth:,.0f} | 買{total_bid_depth:,.0f}\n"
+            result += f"流動性比率：{liquidity_ratio:.3f}\n\n"
+            
+            # 大單分析
+            if large_asks or large_bids:
+                result += f"🎯 **大單警報：**\n"
+                if large_asks:
+                    result += f"大賣單：\n"
+                    for price, qty in large_asks[:3]:
+                        result += f"  {price:,.4f} @ {qty:,.1f}\n"
+                if large_bids:
+                    result += f"大買單：\n"
+                    for price, qty in large_bids[:3]:
+                        result += f"  {price:,.4f} @ {qty:,.1f}\n"
+                result += "\n"
+            
+            # 支撐阻力分析
+            price_range = best_ask - best_bid
+            support_level = best_bid - (price_range * 2)
+            resistance_level = best_ask + (price_range * 2)
+            
+            result += f"📍 **技術分析：**\n"
+            result += f"支撐位：{support_level:,.4f}\n"
+            result += f"阻力位：{resistance_level:,.4f}\n"
+            
+            return result
+            
+        else:
+            return f"訂單簿API請求失敗，狀態碼：{response.status_code}"
+            
+    except requests.exceptions.RequestException as e:
+        return f"網路請求錯誤：{e}"
+    except Exception as e:
+        return f"處理訂單簿數據時發生錯誤：{e}"
