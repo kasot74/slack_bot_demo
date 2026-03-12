@@ -4,24 +4,43 @@ from datetime import datetime, timedelta
 
 def get_crypto_prices():
     """取得 MAX 交易所的加密貨幣即時價格。"""
-    url = "https://max-api.maicoin.com/api/v3/wallet/m/index_prices"
+    url = "https://max-api.maicoin.com/api/v3/tickers?markets[]=btcusdt&markets[]=btctwd&markets[]=maxtwd&markets[]=usdttwd"
     response = requests.get(url)
 
     if response.status_code == 200:
         data = response.json()
         
-        # 抓出指定幣別的價格
-        btc_usdt = data.get("btcusdt")
-        btc_twd = data.get("btctwd")
-        usdt_twd = data.get("usdttwd")        
+        # 初始化價格變數
+        btc_usdt = btc_twd = max_twd = usdt_twd = None
+        
+        # 從陣列中提取各市場價格
+        for market_data in data:
+            market = market_data.get("market")
+            last_price = market_data.get("last")
+            buy_price = market_data.get("buy") 
+            sell_price = market_data.get("sell")
+            vol = market_data.get("vol")
+            
+            if market == "btcusdt":
+                btc_usdt = f"`{float(last_price):,.2f}美元` (買:{float(buy_price):,.2f} | 賣:{float(sell_price):,.2f})"
+            elif market == "btctwd":
+                btc_twd = f"`{float(last_price):,.0f}台幣` (買:{float(buy_price):,.0f} | 賣:{float(sell_price):,.0f})"
+            elif market == "maxtwd":
+                max_twd = f"`{float(last_price):,.4f}台幣` (買:{float(buy_price):,.4f} | 賣:{float(sell_price):,.4f})"
+            elif market == "usdttwd":
+                usdt_twd = f"`{float(last_price):,.3f}台幣` (買:{float(buy_price):,.3f} | 賣:{float(sell_price):,.3f})"
 
         # 組成易懂字串
-        result = (
-            f"MAX 交易所 幣價資訊：\n"
-            f"BTC 對 USDT：{btc_usdt} 美元\n"
-            f"BTC 對 TWD：{btc_twd} 台幣\n"
-            f"USDT 對 TWD：{usdt_twd} 台幣\n"            
-        )
+        result = f"MAX 交易所 幣價資訊：\n"
+        if btc_usdt:
+            result += f"BTC/USDT：{btc_usdt}\n"
+        if btc_twd:
+            result += f"BTC/TWD：{btc_twd}\n"
+        if max_twd:
+            result += f"MAX/TWD：{max_twd}\n"
+        if usdt_twd:
+            result += f"USDT/TWD：{usdt_twd}\n"
+            
         return result        
     else:
         return f"請求失敗，狀態碼：{response.status_code}"
@@ -570,10 +589,46 @@ def get_market_analysis(symbol="BTCTWD"):
         result += f"流動性狀況：{liquidity_status} ({liquidity_ratio:.2f})\n\n"
         
         # 交易活躍度
-        activity_level = "高" if len(recent_trades) > 15 else "中" if len(recent_trades) > 8 else "低"
+        current_time = datetime.now()
+        five_minutes_ago = current_time - timedelta(minutes=5)
+        
+        # 計算5分鐘內的交易數量
+        recent_5min_trades = 0
+        analysis_trades = recent_trades[:50]  # 分析前50筆交易
+        
+        for trade in analysis_trades:
+            try:
+                timestamp = int(trade.get("created_at", 0))
+                trade_time = datetime.fromtimestamp(timestamp / 1000)  # 毫秒轉秒
+                trade_time_utc8 = trade_time + timedelta(hours=8)  # 轉換為UTC+8
+                
+                if trade_time_utc8 >= five_minutes_ago:
+                    recent_5min_trades += 1
+            except:
+                continue
+        
+        # 計算活躍度比重
+        activity_ratio = recent_5min_trades / len(analysis_trades) if len(analysis_trades) > 0 else 0
+        
+        # 根據比重判斷活躍度等級
+        if activity_ratio >= 0.7:  # 70%以上的交易在5分鐘內
+            activity_level = "高"
+            activity_desc = "🔥 市場非常活躍"
+        elif activity_ratio >= 0.4:  # 40-70%的交易在5分鐘內  
+            activity_level = "中"
+            activity_desc = "📈 市場適度活躍"
+        elif activity_ratio >= 0.2:  # 20-40%的交易在5分鐘內
+            activity_level = "低"
+            activity_desc = "📊 市場活躍度偏低"
+        else:  # 少於20%的交易在5分鐘內
+            activity_level = "極低"
+            activity_desc = "💤 市場交易冷清"
+        
         result += f"⚡ **交易活躍度：{activity_level}**\n"
-        result += f"近期成交：{len(recent_trades)}筆\n"
-        result += f"成交量：{recent_volume:.6f}\n"
+        result += f"{activity_desc}\n"
+        result += f"分析範圍：前{len(analysis_trades)}筆交易\n"
+        result += f"5分鐘內：{recent_5min_trades}筆 ({activity_ratio*100:.1f}%)\n"
+        result += f"總成交量：{recent_volume:.6f}\n"
         
         # 買賣力道對比
         if buy_volume + sell_volume > 0:
