@@ -68,7 +68,7 @@ def get_pending_orders(status="wait"):
             
             for order in orders:
                 order_id = order.get("id", "N/A")
-                symbol = order.get("symbol", "N/A")
+                symbol = order.get("symbol", "N/A").upper()  # 統一轉為大寫
                 order_type = "買單" if order.get("order_type") == "buy" else "賣單"
                 price = order.get("price", 0)
                 quantity = order.get("quantity", 0)
@@ -121,7 +121,7 @@ def get_trading_volume_stats():
             total_volume = 0
             
             for order in orders:
-                symbol = order.get("symbol", "N/A")
+                symbol = order.get("symbol", "N/A").upper()  # 統一轉為大寫
                 order_type = order.get("order_type")
                 executed_price = float(order.get("executed_price", 0))
                 executed_quantity = float(order.get("executed_quantity", 0))
@@ -197,6 +197,7 @@ def get_order_depth_analysis(symbol="BTCTWD"):
     Returns:
         str: 格式化的深度分析報告
     """
+    symbol = symbol.upper()  # 統一轉為大寫
     url = f"https://herry537.sytes.net/max_api/trading/orderdepth/{symbol}"
     headers = {
         'accept': 'application/json'
@@ -323,6 +324,7 @@ def get_recent_trades(symbol="BTCTWD", limit=15):
     Returns:
         str: 格式化的近期成交報告
     """
+    symbol = symbol.upper()  # 統一轉為大寫
     url = f"https://herry537.sytes.net/max_api/trading/ordertrades/{symbol}"
     headers = {
         'accept': 'application/json'
@@ -472,6 +474,7 @@ def get_market_analysis(symbol="BTCTWD"):
         str: 格式化的綜合市場分析報告
     """
     try:
+        symbol = symbol.upper()  # 統一轉為大寫
         # 同時獲取訂單深度和成交記錄數據
         depth_url = f"https://herry537.sytes.net/max_api/trading/orderdepth/{symbol}"
         trades_url = f"https://herry537.sytes.net/max_api/trading/ordertrades/{symbol}"
