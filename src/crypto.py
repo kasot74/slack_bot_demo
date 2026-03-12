@@ -594,7 +594,7 @@ def get_market_analysis(symbol="BTCTWD"):
         
         # 計算5分鐘內的交易數量
         recent_5min_trades = 0
-        analysis_trades = recent_trades[:50]  # 分析前50筆交易
+        analysis_trades = recent_trades
         
         for trade in analysis_trades:
             try:
@@ -627,6 +627,13 @@ def get_market_analysis(symbol="BTCTWD"):
         result += f"⚡ **交易活躍度：{activity_level}**\n"
         result += f"{activity_desc}\n"
         result += f"分析範圍：前{len(analysis_trades)}筆交易\n"
+        
+        # 顯示5分鐘時間範圍
+        current_time_utc8 = current_time + timedelta(hours=8)
+        five_minutes_ago_utc8 = five_minutes_ago + timedelta(hours=8)
+        time_range = f"{five_minutes_ago_utc8.strftime('%m-%d %H:%M:%S')} ~ {current_time_utc8.strftime('%m-%d %H:%M:%S')}"
+        
+        result += f"時間範圍：{time_range}\n"
         result += f"5分鐘內：{recent_5min_trades}筆 ({activity_ratio*100:.1f}%)\n"
         result += f"總成交量：{recent_volume:.6f}\n"
         
@@ -674,13 +681,12 @@ def get_market_analysis(symbol="BTCTWD"):
         
         # 大單提醒
         if large_trades:
-            result += f"\n🚨 **成交大單詳情** (措測到 {len(large_trades)} 筆)\n"
+            result += f"\n🚨 **成交大單詳情** ( {len(large_trades)} 筆)\n"
             for trade in large_trades:
                 try:
                     timestamp = int(trade.get("created_at", 0))
-                    dt = datetime.fromtimestamp(timestamp / 1000)
-                    dt_utc8 = dt + timedelta(hours=8)
-                    formatted_time = dt_utc8.strftime("%H:%M:%S")
+                    dt = datetime.fromtimestamp(timestamp / 1000)                    
+                    formatted_time = dt.strftime("%H:%M:%S")
                 except:
                     formatted_time = "N/A"
                 
