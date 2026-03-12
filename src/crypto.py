@@ -247,15 +247,15 @@ def get_order_depth_analysis(symbol="BTCTWD"):
             bid_qty_20, bid_value_20, bid_avg_20 = calculate_depth_stats(bids_data, 20)
             
             # 計算流動性指標
-            total_ask_depth = sum([qty for _, qty in asks_data[:50]])
-            total_bid_depth = sum([qty for _, qty in bids_data[:50]])
+            total_ask_depth = sum([qty for _, qty in asks_data])
+            total_bid_depth = sum([qty for _, qty in bids_data])
             
             # 尋找大單 (數量 > 平均值的 2.5倍)
-            avg_ask_qty = sum([qty for _, qty in asks_data[:20]]) / 20
-            avg_bid_qty = sum([qty for _, qty in bids_data[:20]]) / 20
+            avg_ask_qty = sum([qty for _, qty in asks_data]) / len(asks_data) if len(asks_data) > 0 else 0
+            avg_bid_qty = sum([qty for _, qty in bids_data]) / len(bids_data) if len(bids_data) > 0 else 0
             
-            large_asks = [(price, qty) for price, qty in asks_data[:20] if qty > avg_ask_qty * 2.5]
-            large_bids = [(price, qty) for price, qty in bids_data[:20] if qty > avg_bid_qty * 2.5]
+            large_asks = [(price, qty) for price, qty in asks_data if qty > avg_ask_qty * 2.5]
+            large_bids = [(price, qty) for price, qty in bids_data if qty > avg_bid_qty * 2.5]
             
             # 格式化結果
             result = f"📊 **{symbol} 訂單簿深度分析**\n\n"
@@ -276,7 +276,7 @@ def get_order_depth_analysis(symbol="BTCTWD"):
             # 流動性分析
             liquidity_ratio = bid_value_20 / ask_value_20 if ask_value_20 > 0 else 0
             result += f"🌊 **流動性分析：**\n"
-            result += f"總深度(50檔)：賣{total_ask_depth:,.0f} | 買{total_bid_depth:,.0f}\n"
+            result += f"總深度(全部)：賣{total_ask_depth:,.0f} | 買{total_bid_depth:,.0f}\n"
             result += f"流動性比率：{liquidity_ratio:.3f}\n\n"
             
             # 大單分析
@@ -506,8 +506,8 @@ def get_market_analysis(symbol="BTCTWD"):
         if not asks or not bids:
             return f"{symbol} 訂單簿數據不完整"
         
-        asks_data = [[float(price), float(qty)] for price, qty in asks[:20]]
-        bids_data = [[float(price), float(qty)] for price, qty in bids[:20]]
+        asks_data = [[float(price), float(qty)] for price, qty in asks]
+        bids_data = [[float(price), float(qty)] for price, qty in bids]
         
         best_ask = asks_data[0][0]
         best_bid = bids_data[0][0]
@@ -564,12 +564,16 @@ def get_market_analysis(symbol="BTCTWD"):
         resistance_levels = []
         support_levels = []
         
-        for price, qty in asks_data[:5]:
-            if qty > ask_liquidity / 20:  # 大於平均掛單量
+        # 計算全部訂單的平均掛單量
+        avg_ask_all = sum([qty for _, qty in asks_data]) / len(asks_data) if len(asks_data) > 0 else 0
+        avg_bid_all = sum([qty for _, qty in bids_data]) / len(bids_data) if len(bids_data) > 0 else 0
+        
+        for price, qty in asks_data:  
+            if qty > avg_ask_all * 2.5:  # 大於全部平均掛單量的2.5倍
                 resistance_levels.append((price, qty))
         
-        for price, qty in bids_data[:5]:
-            if qty > bid_liquidity / 20:
+        for price, qty in bids_data:  
+            if qty > avg_bid_all * 2.5:  # 大於全部平均掛單量的2.5倍
                 support_levels.append((price, qty))
         
         # === 格式化結果 ===
