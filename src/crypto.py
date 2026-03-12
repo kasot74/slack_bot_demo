@@ -591,7 +591,7 @@ def get_market_analysis(symbol="BTCTWD"):
         
         # 計算5分鐘內的交易數量
         recent_5min_trades = 0
-        analysis_trades = recent_trades
+        analysis_trades = trades
         
         for trade in analysis_trades:
             try:
@@ -621,8 +621,7 @@ def get_market_analysis(symbol="BTCTWD"):
             activity_desc = "💤 市場交易冷清"
         
         result += f"⚡ **交易活躍度：{activity_level}**\n"
-        result += f"{activity_desc}\n"
-        result += f"分析範圍：前{len(analysis_trades)}筆交易\n"
+        result += f"{activity_desc}\n"        
                 
         time_range = f"{five_minutes_ago.strftime('%m-%d %H:%M:%S')} ~ {current_time.strftime('%m-%d %H:%M:%S')}"
         
