@@ -622,17 +622,44 @@ def search_threads(keyword: str, max_results: int = 5, days_back: int = 3) -> st
         return f"錯誤：Threads 搜索失敗 (近日篩選)。關鍵字：{keyword}，時間範圍：近 {days_back} 天，錯誤：{error_message}\n\n"
 
 
-def get_maicoin_competition_table() -> str:
-    """抓取 MaiCoin 2026 交易競賽頁面中特定排行榜數據。
+def get_maicoin_competition_table(ranking_type: str = "volume") -> str:
+    """抓取 MaiCoin 2026 交易競賽頁面中不同類型的排行榜數據。
     
-    目標頁面：https://campaign.maicoin.com/2026-trading-competition
-    目標元素：id="w-tabs-1-data-w-pane-1" 內的競賽排行榜
+    Args:
+        ranking_type (str): 排行榜類型
+            - "volume": API 交易量排行榜 (預設)
+            - "profit_pct": 利潤百分比排行榜  
+            - "profit_amount": 利潤金額排行榜
     
     Returns:
-        str: 格式化的交易競賽排行榜數據，如果失敗則返回錯誤訊息
+        str: 格式化的競賽排行榜數據，如果失敗則返回錯誤訊息
     """
     target_url = "https://campaign.maicoin.com/2026-trading-competition"
-    target_id = "w-tabs-1-data-w-pane-1"
+    
+    # 根據排行榜類型設定目標元素ID和標題
+    ranking_configs = {
+        "volume": {
+            "target_id": "w-tabs-1-data-w-pane-1",
+            "title": "API 交易量排行榜",
+            "unit_label": "交易量"
+        },
+        "profit_pct": {
+            "target_id": "w-tabs-2-data-w-pane-0", 
+            "title": "利潤百分比排行榜",
+            "unit_label": "利潤％"
+        },
+        "profit_amount": {
+            "target_id": "w-tabs-2-data-w-pane-1",
+            "title": "利潤金額排行榜", 
+            "unit_label": "利潤 (台幣)"
+        }
+    }
+    
+    if ranking_type not in ranking_configs:
+        return f"錯誤：無效的排行榜類型 '{ranking_type}'\n可用類型: volume, profit_pct, profit_amount"
+    
+    config = ranking_configs[ranking_type]
+    target_id = config["target_id"]
     
     try:
         with sync_playwright() as p:
@@ -702,7 +729,7 @@ def get_maicoin_competition_table() -> str:
                 # 即使目標元素不存在也繼續嘗試提取
                 pass
             
-            # 8. 提取排行榜數據 - 針對特定結構設計
+            # 8. 提取排行榜數據 - 支持兩種不同的容器結構
             ranking_data = page.evaluate(f"""() => {{
                 const targetElement = document.getElementById('{target_id}');
                 if (!targetElement) {{
@@ -720,14 +747,24 @@ def get_maicoin_competition_table() -> str:
                 }};
                 
                 try {{
-                    // 尋找表頭結構 - 先找到 div.div-block-215
-                    const tableContainer = targetElement.querySelector('.div-block-215');
+                    let tableContainer = null;
+                    
+                    // 尋找排行榜容器 - 支持兩種結構
+                    tableContainer = targetElement.querySelector('.div-block-215');
                     if (!tableContainer) {{
-                        result.errorMsg = '找不到排行榜容器 (.div-block-215)';
+                        // 如果找不到 .div-block-215，嘗試直接在目標元素中尋找
+                        const headerLayout = targetElement.querySelector('.w-layout-layout.quick-stack_title');
+                        if (headerLayout) {{
+                            tableContainer = targetElement;
+                        }}
+                    }}
+                    
+                    if (!tableContainer) {{
+                        result.errorMsg = '找不到排行榜容器';
                         return result;
                     }}
                     
-                    // 提取表頭 - 第一個 w-layout-layout 結構
+                    // 提取表頭
                     const headerLayout = tableContainer.querySelector('.w-layout-layout.quick-stack_title');
                     if (headerLayout) {{
                         const headerCells = headerLayout.querySelectorAll('.w-layout-cell .text-block-259');
@@ -737,7 +774,7 @@ def get_maicoin_competition_table() -> str:
                         }});
                     }}
                     
-                    // 提取排行榜數據 - w-dyn-list 中的所有項目
+                    // 提取排行榜數據
                     const dynList = tableContainer.querySelector('.w-dyn-list .w-dyn-items');
                     if (dynList) {{
                         const rankItems = dynList.querySelectorAll('.w-dyn-item');
@@ -758,13 +795,13 @@ def get_maicoin_competition_table() -> str:
                                         rank: rowData[0],
                                         prize: rowData[1], 
                                         participant: rowData[2],
-                                        volume: rowData[3]
+                                        value: rowData[3]
                                     }});
                                 }}
                             }}
                         }});
                     }} else {{
-                        result.errorMsg = '找不到排行榜數據容器 (.w-dyn-list)';
+                        result.errorMsg = '找不到排行榜數據容器';
                     }}
                     
                 }} catch (error) {{
@@ -778,74 +815,56 @@ def get_maicoin_competition_table() -> str:
             
             # 9. 處理提取結果
             if not ranking_data['success']:
-                return f"❌ 錯誤：{ranking_data['error']}"
+                return f"錯誤：{ranking_data['error']}"
                 
             if ranking_data['errorMsg']:
-                return f"❌ 解析錯誤：{ranking_data['errorMsg']}"
+                return f"解析錯誤：{ranking_data['errorMsg']}"
             
-            # 10. 格式化輸出結果
-            result_text = f"🏆 **MaiCoin 2026 交易競賽排行榜**\n"
-            result_text += f"【來源】：{target_url}\n"
-            result_text += f"【更新時間】：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-            result_text += f"【排行榜人數】：{len(ranking_data['rankings'])} 名參賽者\n"
-            result_text += f"{'=' * 60}\n\n"
+            # 10. 簡化格式輸出
+            result_text = f"**{config['title']}**\n"
+            result_text += f"更新時間：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            result_text += f"參賽人數：{len(ranking_data['rankings'])} 名\n"
+            result_text += f"{'=' * 50}\n\n"
             
-            # 表頭
-            if ranking_data['headers']:
-                result_text += f"📋 **排行榜數據** ({' | '.join(ranking_data['headers'])})\n"
-                result_text += f"{'-' * 60}\n"
-            
-            # 排行榜數據
+            # 排行榜數據 - 簡潔格式
             if ranking_data['rankings']:
-                for i, rank in enumerate(ranking_data['rankings']):
+                # 表頭
+                if ranking_data['headers'] and len(ranking_data['headers']) >= 4:
+                    result_text += f"{'排名':<4} {'獎金':<20} {'參賽者':<25} {config['unit_label']}\n"
+                    result_text += f"{'-' * 70}\n"
+                
+                for rank in ranking_data['rankings']:
                     rank_num = rank['rank']
                     prize = rank['prize']
                     participant = rank['participant']
-                    volume = rank['volume']
+                    value = rank['value']
                     
-                    # 為前三名添加特殊標記
-                    if rank_num == "01":
-                        emoji = "🥇"
-                    elif rank_num == "02":
-                        emoji = "🥈"
-                    elif rank_num == "03":
-                        emoji = "🥉"
-                    else:
-                        emoji = f"#{rank_num}"
+                    # 截短過長的參賽者名稱
+                    short_participant = participant[:22] + "..." if len(participant) > 25 else participant
                     
-                    result_text += f"{emoji} **第 {rank_num} 名**\n"
-                    result_text += f"   💰 獎金：{prize}\n"
-                    result_text += f"   👤 參賽者：{participant}\n"
-                    result_text += f"   📊 API 交易量：{volume}\n"
-                    
-                    # 每5個排名後增加分隔線
-                    if (i + 1) % 5 == 0 and i < len(ranking_data['rankings']) - 1:
-                        result_text += f"\n{'-' * 30}\n"
-                    else:
-                        result_text += f"\n"
+                    result_text += f"{rank_num:<4} {prize:<20} {short_participant:<25} {value}\n"
                 
-                # 統計信息
-                result_text += f"{'=' * 60}\n"
-                result_text += f"📈 **統計摘要**\n"
-                result_text += f"• 總參賽人數：{len(ranking_data['rankings'])} 名\n"
-                
-                # 計算有獎金的人數 (前10名)
+                # 簡要統計
+                result_text += f"\n{'=' * 50}\n"
                 prize_winners = [r for r in ranking_data['rankings'] if '元' in r['prize']]
-                result_text += f"• 獲獎人數：{len(prize_winners)} 名 (有獎金)\n"
+                result_text += f"獲獎人數：{len(prize_winners)} 名\n"
                 
-                # 第一名交易量
                 if len(ranking_data['rankings']) > 0:
-                    top_volume = ranking_data['rankings'][0]['volume']
-                    result_text += f"• 第一名交易量：{top_volume}\n"
+                    top_value = ranking_data['rankings'][0]['value']
+                    result_text += f"第一名{config['unit_label']}：{top_value}\n"
                     
+                # 特別說明（針對利潤金額組）
+                if ranking_type == "profit_amount":
+                    result_text += f"\n* 註：以台幣計算。USDT 交易對以 MAX 交易所匯率換算\n"
+                        
             else:
-                result_text += "⚠️ 暫時沒有排行榜數據\n"
+                result_text += "暫時沒有排行榜數據\n"
             
             return result_text
             
     except Exception as e:
         error_message = str(e)
-        return f"錯誤：無法提取 MaiCoin 競賽排行榜數據，原因：{error_message}"
+        return f"錯誤：無法提取競賽排行榜數據，原因：{error_message}"
 
 
 def get_technical_indicators(market: str, period: int = 15, limit: int = 500) -> str:
