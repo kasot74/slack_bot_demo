@@ -22,13 +22,13 @@ def get_crypto_prices():
             vol = market_data.get("vol")
             
             if market == "btcusdt":
-                btc_usdt = f"`{float(last_price):,.2f}` (買：{float(buy_price):,.2f} 賣：{float(sell_price):,.2f})"
+                btc_usdt = f"{float(last_price):,.2f} (買：{float(buy_price):,.2f} 賣：{float(sell_price):,.2f})"
             elif market == "btctwd":
-                btc_twd = f"`{float(last_price):,.0f}` (買：{float(buy_price):,.0f} 賣：{float(sell_price):,.0f})"
+                btc_twd = f"{float(last_price):,.0f} (買：{float(buy_price):,.0f} 賣：{float(sell_price):,.0f})"
             elif market == "maxtwd":
-                max_twd = f"`{float(last_price):,.4f}` (買：{float(buy_price):,.4f} 賣：{float(sell_price):,.4f})"
+                max_twd = f"{float(last_price):,.4f} (買：{float(buy_price):,.4f} 賣：{float(sell_price):,.4f})"
             elif market == "usdttwd":
-                usdt_twd = f"`{float(last_price):,.3f}` (買：{float(buy_price):,.3f} 賣：{float(sell_price):,.3f})"
+                usdt_twd = f"{float(last_price):,.3f} (買：{float(buy_price):,.3f} 賣：{float(sell_price):,.3f})"
 
         # 組成易懂字串
         result = f"MAX 交易所 幣價資訊：\n"
