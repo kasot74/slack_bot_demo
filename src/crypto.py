@@ -592,6 +592,7 @@ def get_market_analysis(symbol="BTCTWD"):
         # 計算5分鐘內的交易數量
         recent_5min_trades = 0
         analysis_trades = trades
+        five_min_trade_details = []  # 儲存5分鐘內的交易詳情
         
         for trade in analysis_trades:
             try:
@@ -600,6 +601,13 @@ def get_market_analysis(symbol="BTCTWD"):
                 
                 if trade_time >= five_minutes_ago:
                     recent_5min_trades += 1
+                    # 收集交易詳情
+                    five_min_trade_details.append({
+                        'time': trade_time,
+                        'price': float(trade.get("price", 0)),
+                        'volume': float(trade.get("volume", 0)),
+                        'side': trade.get("side")
+                    })
             except:
                 continue
         
@@ -628,6 +636,25 @@ def get_market_analysis(symbol="BTCTWD"):
         result += f"時間範圍：{time_range}\n"
         result += f"5分鐘內：{recent_5min_trades}筆 ({activity_ratio*100:.1f}%)\n"
         result += f"總成交量：{recent_volume:.6f}\n"
+        
+        # 顯示5分鐘內的交易詳情
+        if five_min_trade_details:
+            result += f"\n📋 **5分鐘內成交詳情** (共 {len(five_min_trade_details)} 筆)：\n"
+            # 按時間排序 (最新的在前)
+            five_min_trade_details.sort(key=lambda x: x['time'], reverse=True)
+            
+            for trade_detail in five_min_trade_details[:10]:  # 只顯示最新10筆
+                trade_time_str = trade_detail['time'].strftime("%H:%M:%S")
+                price = trade_detail['price']
+                volume = trade_detail['volume']
+                side = "🟢買" if trade_detail['side'] == "bid" else "🔴賣"
+                
+                result += f"{trade_time_str} {side} {price:,.1f} @ {volume:.6f} = {price*volume:,.0f}\n"
+            
+            if len(five_min_trade_details) > 10:
+                result += f"... 另有 {len(five_min_trade_details)-10} 筆交易\n"
+            
+            result += "\n"
         
         # 買賣力道對比
         if buy_volume + sell_volume > 0:
