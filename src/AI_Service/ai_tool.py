@@ -622,6 +622,232 @@ def search_threads(keyword: str, max_results: int = 5, days_back: int = 3) -> st
         return f"錯誤：Threads 搜索失敗 (近日篩選)。關鍵字：{keyword}，時間範圍：近 {days_back} 天，錯誤：{error_message}\n\n"
 
 
+def get_maicoin_competition_table() -> str:
+    """抓取 MaiCoin 2026 交易競賽頁面中特定排行榜數據。
+    
+    目標頁面：https://campaign.maicoin.com/2026-trading-competition
+    目標元素：id="w-tabs-1-data-w-pane-1" 內的競賽排行榜
+    
+    Returns:
+        str: 格式化的交易競賽排行榜數據，如果失敗則返回錯誤訊息
+    """
+    target_url = "https://campaign.maicoin.com/2026-trading-competition"
+    target_id = "w-tabs-1-data-w-pane-1"
+    
+    try:
+        with sync_playwright() as p:
+            # 1. 簡化的瀏覽器設定 (基於隱蔽模式)
+            browser = p.chromium.launch(
+                headless=True,
+                args=[
+                    '--disable-gpu',
+                    '--no-sandbox', 
+                    '--disable-dev-shm-usage',
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-extensions',
+                    '--disable-plugins'
+                ]
+            )
+            
+            # 2. 建立新頁面並設定真實瀏覽器特徵
+            page = browser.new_page(
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                viewport={'width': 1920, 'height': 1080},
+                locale='zh-TW',
+                timezone_id='Asia/Taipei'
+            )
+            
+            # 3. 隱藏 webdriver 標識
+            page.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined,
+                });
+                
+                window.chrome = {
+                    runtime: {},
+                    app: { isInstalled: false }
+                };
+                
+                // 偽造其他瀏覽器特徵
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5],
+                });
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['zh-TW', 'zh', 'en'],
+                });
+            """)
+            
+            # 4. 攔截不需要的資源以提高速度
+            page.route("**/*.{png,jpg,gif,mp4,ads,analytics,woff,woff2,ttf}", lambda route: route.abort())
+            
+            # 5. 導航至目標頁面
+            response = page.goto(target_url, wait_until='domcontentloaded', timeout=30000)
+            
+            # 檢查響應狀態
+            if response and response.status >= 400:
+                browser.close()
+                return f"錯誤：網頁響應錯誤 (HTTP {response.status})，無法獲取頁面內容。"
+            
+            # 6. 等待頁面載入完成並模擬用戶行為
+            page.wait_for_timeout(3000)  # 等待3秒讓動態內容載入
+            
+            # 模擬滾動到目標區域
+            page.evaluate("window.scrollTo(0, 500)")
+            time.sleep(random.uniform(1.0, 2.0))
+            
+            # 7. 等待目標元素出現
+            try:
+                page.wait_for_selector(f"#{target_id}", timeout=15000)
+            except:
+                # 即使目標元素不存在也繼續嘗試提取
+                pass
+            
+            # 8. 提取排行榜數據 - 針對特定結構設計
+            ranking_data = page.evaluate(f"""() => {{
+                const targetElement = document.getElementById('{target_id}');
+                if (!targetElement) {{
+                    return {{
+                        success: false,
+                        error: '找不到目標元素 ID: {target_id}'
+                    }};
+                }}
+                
+                const result = {{
+                    success: true,
+                    headers: [],
+                    rankings: [],
+                    errorMsg: null
+                }};
+                
+                try {{
+                    // 尋找表頭結構 - 先找到 div.div-block-215
+                    const tableContainer = targetElement.querySelector('.div-block-215');
+                    if (!tableContainer) {{
+                        result.errorMsg = '找不到排行榜容器 (.div-block-215)';
+                        return result;
+                    }}
+                    
+                    // 提取表頭 - 第一個 w-layout-layout 結構
+                    const headerLayout = tableContainer.querySelector('.w-layout-layout.quick-stack_title');
+                    if (headerLayout) {{
+                        const headerCells = headerLayout.querySelectorAll('.w-layout-cell .text-block-259');
+                        headerCells.forEach(cell => {{
+                            const headerText = cell.innerText.replace(/\\n/g, ' ').trim();
+                            result.headers.push(headerText);
+                        }});
+                    }}
+                    
+                    // 提取排行榜數據 - w-dyn-list 中的所有項目
+                    const dynList = tableContainer.querySelector('.w-dyn-list .w-dyn-items');
+                    if (dynList) {{
+                        const rankItems = dynList.querySelectorAll('.w-dyn-item');
+                        
+                        rankItems.forEach(item => {{
+                            const layout = item.querySelector('.w-layout-layout.quick-stack_title');
+                            if (layout) {{
+                                const cells = layout.querySelectorAll('.w-layout-cell .text-block-259');
+                                const rowData = [];
+                                
+                                cells.forEach(cell => {{
+                                    let cellText = cell.innerText.replace(/\\n/g, ' ').trim();
+                                    rowData.push(cellText);
+                                }});
+                                
+                                if (rowData.length >= 4) {{
+                                    result.rankings.push({{
+                                        rank: rowData[0],
+                                        prize: rowData[1], 
+                                        participant: rowData[2],
+                                        volume: rowData[3]
+                                    }});
+                                }}
+                            }}
+                        }});
+                    }} else {{
+                        result.errorMsg = '找不到排行榜數據容器 (.w-dyn-list)';
+                    }}
+                    
+                }} catch (error) {{
+                    result.errorMsg = '解析排行榜時發生錯誤: ' + error.message;
+                }}
+                
+                return result;
+            }}""")
+            
+            browser.close()
+            
+            # 9. 處理提取結果
+            if not ranking_data['success']:
+                return f"❌ 錯誤：{ranking_data['error']}"
+                
+            if ranking_data['errorMsg']:
+                return f"❌ 解析錯誤：{ranking_data['errorMsg']}"
+            
+            # 10. 格式化輸出結果
+            result_text = f"🏆 **MaiCoin 2026 交易競賽排行榜**\n"
+            result_text += f"【來源】：{target_url}\n"
+            result_text += f"【更新時間】：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            result_text += f"【排行榜人數】：{len(ranking_data['rankings'])} 名參賽者\n"
+            result_text += f"{'=' * 60}\n\n"
+            
+            # 表頭
+            if ranking_data['headers']:
+                result_text += f"📋 **排行榜數據** ({' | '.join(ranking_data['headers'])})\n"
+                result_text += f"{'-' * 60}\n"
+            
+            # 排行榜數據
+            if ranking_data['rankings']:
+                for i, rank in enumerate(ranking_data['rankings']):
+                    rank_num = rank['rank']
+                    prize = rank['prize']
+                    participant = rank['participant']
+                    volume = rank['volume']
+                    
+                    # 為前三名添加特殊標記
+                    if rank_num == "01":
+                        emoji = "🥇"
+                    elif rank_num == "02":
+                        emoji = "🥈"
+                    elif rank_num == "03":
+                        emoji = "🥉"
+                    else:
+                        emoji = f"#{rank_num}"
+                    
+                    result_text += f"{emoji} **第 {rank_num} 名**\n"
+                    result_text += f"   💰 獎金：{prize}\n"
+                    result_text += f"   👤 參賽者：{participant}\n"
+                    result_text += f"   📊 API 交易量：{volume}\n"
+                    
+                    # 每5個排名後增加分隔線
+                    if (i + 1) % 5 == 0 and i < len(ranking_data['rankings']) - 1:
+                        result_text += f"\n{'-' * 30}\n"
+                    else:
+                        result_text += f"\n"
+                
+                # 統計信息
+                result_text += f"{'=' * 60}\n"
+                result_text += f"📈 **統計摘要**\n"
+                result_text += f"• 總參賽人數：{len(ranking_data['rankings'])} 名\n"
+                
+                # 計算有獎金的人數 (前10名)
+                prize_winners = [r for r in ranking_data['rankings'] if '元' in r['prize']]
+                result_text += f"• 獲獎人數：{len(prize_winners)} 名 (有獎金)\n"
+                
+                # 第一名交易量
+                if len(ranking_data['rankings']) > 0:
+                    top_volume = ranking_data['rankings'][0]['volume']
+                    result_text += f"• 第一名交易量：{top_volume}\n"
+                    
+            else:
+                result_text += "⚠️ 暫時沒有排行榜數據\n"
+            
+            return result_text
+            
+    except Exception as e:
+        error_message = str(e)
+        return f"錯誤：無法提取 MaiCoin 競賽排行榜數據，原因：{error_message}"
+
+
 def get_technical_indicators(market: str, period: int = 15, limit: int = 500) -> str:
     """
     獲取加密貨幣的技術指標數據 
