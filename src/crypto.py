@@ -77,10 +77,8 @@ def get_pending_orders(status="wait"):
                 # 格式化時間
                 try:
                     if created_at:
-                        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
-                        # 轉換為 UTC+8 時區
-                        dt_utc8 = dt + timedelta(hours=8)
-                        formatted_time = dt_utc8.strftime("%m-%d %H:%M")
+                        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))                        
+                        formatted_time = dt.strftime("%m-%d %H:%M")
                     else:
                         formatted_time = "N/A"
                 except:
@@ -440,9 +438,8 @@ def get_recent_trades(symbol="BTCTWD", limit=15):
                 try:
                     # 轉換時間戳
                     timestamp = int(trade.get("created_at", 0))
-                    dt = datetime.fromtimestamp(timestamp / 1000)  # 毫秒轉秒
-                    dt_utc8 = dt + timedelta(hours=8)  # 轉換為UTC+8
-                    formatted_time = dt_utc8.strftime("%H:%M")
+                    dt = datetime.fromtimestamp(timestamp / 1000)  # 毫秒轉秒                    
+                    formatted_time = dt.strftime("%H:%M")
                 except:
                     formatted_time = "N/A"
                 
@@ -599,10 +596,9 @@ def get_market_analysis(symbol="BTCTWD"):
         for trade in analysis_trades:
             try:
                 timestamp = int(trade.get("created_at", 0))
-                trade_time = datetime.fromtimestamp(timestamp / 1000)  # 毫秒轉秒
-                trade_time_utc8 = trade_time + timedelta(hours=8)  # 轉換為UTC+8
+                trade_time = datetime.fromtimestamp(timestamp / 1000)  # 毫秒轉秒                
                 
-                if trade_time_utc8 >= five_minutes_ago:
+                if trade_time >= five_minutes_ago:
                     recent_5min_trades += 1
             except:
                 continue
@@ -627,11 +623,8 @@ def get_market_analysis(symbol="BTCTWD"):
         result += f"⚡ **交易活躍度：{activity_level}**\n"
         result += f"{activity_desc}\n"
         result += f"分析範圍：前{len(analysis_trades)}筆交易\n"
-        
-        # 顯示5分鐘時間範圍
-        current_time_utc8 = current_time + timedelta(hours=8)
-        five_minutes_ago_utc8 = five_minutes_ago + timedelta(hours=8)
-        time_range = f"{five_minutes_ago_utc8.strftime('%m-%d %H:%M:%S')} ~ {current_time_utc8.strftime('%m-%d %H:%M:%S')}"
+                
+        time_range = f"{five_minutes_ago.strftime('%m-%d %H:%M:%S')} ~ {current_time.strftime('%m-%d %H:%M:%S')}"
         
         result += f"時間範圍：{time_range}\n"
         result += f"5分鐘內：{recent_5min_trades}筆 ({activity_ratio*100:.1f}%)\n"
