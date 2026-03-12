@@ -4,6 +4,7 @@ import re
 import time
 import random
 from playwright.sync_api import sync_playwright
+from datetime import datetime, timedelta
 
 def read_url_content(url: str) -> str:
     """使用 Playwright 隱蔽模式讀取指定 URL 的內容，並進行清理與格式化。
@@ -187,18 +188,20 @@ def read_url_content(url: str) -> str:
         error_message = str(e)
         return f"錯誤：無法讀取 {url} 的內容，原因: {error_message}"        
 
-def search_threads(keyword: str, max_results: int = 10) -> str:
-    """使用 Scrapfly 方法搜索 Meta Threads 平台上的關鍵字內容。
+def search_threads(keyword: str, max_results: int = 5, days_back: int = 3) -> str:
+    """使用 Scrapfly 方法搜索 Meta Threads 平台上的關鍵字內容，只顯示近日貼文。
     
     基於 Scrapfly 建議的方法：
     - 提取隱藏的 JSON 數據而非 DOM 元素
     - 尋找 script[type="application/json"][data-sjs] 標籤
     - 解析 thread_items 結構獲取貼文數據
     - 使用簡化的瀏覽器設定減少檢測風險
+    - 過濾出指定天數內的近日貼文
     
     Args:
         keyword (str): 要搜索的關鍵字
         max_results (int): 最大返回結果數量，預設為 10
+        days_back (int): 篩選多少天內的貼文，預設為 3 天
         
     Returns:
         str: 格式化的 Threads 搜索結果，包含貼文內容、作者、時間等資訊
@@ -248,7 +251,7 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
             page.route("**/*.{png,jpg,gif,css,woff,woff2,ttf}", lambda route: route.abort())
             
             # 6. 導航至搜索頁面
-            page.goto(search_url, wait_until='domcontentloaded', timeout=30000)
+            page.goto(search_url, wait_until='domcontentloaded', timeout=15000)
             
             # 初始化調試信息
             debug_info = []
@@ -263,25 +266,16 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
             debug_info.append("🔄 開始滾動載入更多貼文...")
             
             # 先等待初始內容載入
-            time.sleep(3)
+            time.sleep(1000)
             
             # 多次滾動以載入更多內容
-            for scroll_round in range(8):  # 增加到8輪滾動
+            for scroll_round in range(3):  # 增加到5輪滾動
                 # 滾動到底部
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                time.sleep(random.uniform(1.5, 2.5))
-                
+                time.sleep(random.uniform(200, 500))                
                 # 檢查是否有新內容載入
                 content_length = page.evaluate("document.body.innerText.length")
-                debug_info.append(f"🔄 第 {scroll_round + 1} 輪滾動，頁面內容長度：{content_length}")
-                
-                # 滾動到一半位置，模擬用戶瀏覽
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2)")
-                time.sleep(random.uniform(1.0, 1.5))
-                
-                # 再滾動到底部
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                time.sleep(random.uniform(2.0, 3.0))
+                debug_info.append(f"🔄 第 {scroll_round + 1} 輪滾動，頁面內容長度：{content_length}")                                
             
             # 9. 檢查頁面載入狀況
             page_title = page.title() or "無標題"
@@ -373,9 +367,13 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
             
             browser.close()
             
+            # 計算時間篩選的基準            
+            cutoff_time = datetime.now() - timedelta(days=days_back)
+            cutoff_timestamp = int(cutoff_time.timestamp())
+            
             # 內部函數：提取單個貼文的數據
             def _extract_single_thread(thread, threads_data, debug_info):
-                """提取單個貼文的數據"""
+                """提取單個貼文的數據，只保留近日貼文"""
                 try:
                     # 檢查是否直接包含 post 數據
                     if 'post' in thread:
@@ -407,24 +405,34 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                     elif 'author' in post:
                         author = post['author']
                     
-                    # 提取時間 (Unix 時間戳)
+                    # 提取時間 (Unix 時間戳) 並進行近日篩選
                     post_time = "最近"
+                    post_timestamp = None
                     if 'taken_at' in post and post['taken_at']:
                         try:
-                            timestamp = int(post['taken_at'])
-                            from datetime import datetime
-                            dt = datetime.fromtimestamp(timestamp)
+                            post_timestamp = int(post['taken_at'])
+                            dt = datetime.fromtimestamp(post_timestamp)
                             post_time = dt.strftime("%Y-%m-%d %H:%M")
+                            
+                            # 檢查是否在指定天數範圍內
+                            if post_timestamp < cutoff_timestamp:
+                                debug_info.append(f"⏰ 跳過舊貼文：{post_time} (超過 {days_back} 天)")
+                                return False
                         except:
                             pass
                     elif 'created_at' in post:
                         post_time = str(post['created_at'])
                     
+                    # 如果無法確定時間且不是"最近"，則跳過
+                    if post_time == "最近" and post_timestamp is None:
+                        debug_info.append(f"⏰ 跳過無時間資訊的貼文")
+                        return False
+                    
                     # 提取互動數據
                     like_count = post.get('like_count', 0)
                     
                     # 檢查內容有效性
-                    debug_info.append(f"📝 檢查貼文內容：長度={len(content.strip()) if content else 0}，作者=@{author}")
+                    debug_info.append(f"📝 檢查貼文內容：長度={len(content.strip()) if content else 0}，作者=@{author}，時間={post_time}")
                     
                     if content and len(content.strip()) > 3:  # 降低到3個字元
                         threads_data.append({
@@ -432,9 +440,10 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                             'content': content.strip(),
                             'time': post_time,
                             'likes': like_count,
-                            'index': len(threads_data) + 1
+                            'index': len(threads_data) + 1,
+                            'timestamp': post_timestamp
                         })
-                        debug_info.append(f"✅ 成功提取貼文 {len(threads_data)}：@{author}")
+                        debug_info.append(f"✅ 成功提取近日貼文 {len(threads_data)}：@{author} ({post_time})")
                         return True
                     else:
                         debug_info.append(f"❌ 跳過貼文：內容太短或為空")
@@ -576,45 +585,33 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
             
             if not threads_data:
                 error_detail = f"""
-                🔍 **Threads 搜索調試報告**
+                🔍 **Threads 搜索調試報告 (近日篩選)**
                 【搜索類型】：{search_type}
+                【時間範圍】：近 {days_back} 天內的貼文
                 【搜索URL】：{search_url}
 
                 📋 **執行步驟詳情：**
                 {debug_summary}
 
-                ❌ **最終結果：** 未找到有效貼文數據
-
-                💡 **可能原因分析：**
-                1. 如果 JSON Script 標籤數量為 0：頁面結構可能已改變
-                2. 如果找不到 ScheduledServerJS：Threads 可能更新了數據載入方式  
-                3. 如果找不到 thread_items：搜索結果可能為空或需要登入
-                4. 如果有 JSON 解析錯誤：數據格式可能已變更
-
-                🔧 **建議解決方案：**
-                - 檢查是否需要登入 Threads 帳號
-                - 嘗試其他關鍵字進行搜索
-                - 確認搜索URL是否正確載入
+                ❌ **最終結果：** 未找到符合條件的近日貼文數據                
                 """
                 return error_detail
             
-            result_text = f"🧵 **Threads 搜索結果** (Scrapfly 方法)\n"
+            result_text = f"🧵 **Threads 搜索結果** (Scrapfly 方法 + 近日篩選)\n"
             result_text += f"【搜索類型】：{search_type}\n"
+            result_text += f"【時間範圍】：近 {days_back} 天內的貼文\n"
             result_text += f"【找到】：{len(threads_data)} 筆結果\n"
             result_text += f"【來源】：{search_url}\n"
             result_text += f"\n📋 **執行摘要：**\n"
             result_text += f"- 頁面載入：✓ {page_title}\n" 
             result_text += f"- JSON數據集：{hidden_datasets_info['foundValidDatasets']} 個\n"
-            result_text += f"- 提取貼文：{len(threads_data)} 筆\n"
-            #result_text += f"\n🔍 **詳細調試信息：**\n"
-            #result_text += f"{debug_summary}\n"
+            result_text += f"- 提取貼文：{len(threads_data)} 筆 (已篩選近 {days_back} 天)\n"            
             result_text += f"{'=' * 50}\n\n"
             
             for post in threads_data:
                 result_text += f"▶ **貼文 {post['index']}**\n"
                 result_text += f"👤 **作者**：{post['author']}\n"
-                result_text += f"⏰ **時間**：{post['time']}\n"
-                #result_text += f"❤️ **讚數**：{post['likes']}\n"
+                result_text += f"⏰ **時間**：{post['time']}\n"                
                 result_text += f"💬 **內容**：{post['content'][:300]}{'...' if len(post['content']) > 300 else ''}\n"
                 result_text += f"{'-' * 40}\n\n"
             
@@ -622,7 +619,7 @@ def search_threads(keyword: str, max_results: int = 10) -> str:
                 
     except Exception as e:
         error_message = str(e)
-        return f"錯誤：Threads 搜索失敗。關鍵字：{keyword}，錯誤：{error_message}\n\n"
+        return f"錯誤：Threads 搜索失敗 (近日篩選)。關鍵字：{keyword}，時間範圍：近 {days_back} 天，錯誤：{error_message}\n\n"
 
 
 def get_technical_indicators(market: str, period: int = 15, limit: int = 500) -> str:
