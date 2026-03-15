@@ -622,12 +622,13 @@ def search_threads(keyword: str, max_results: int = 5, days_back: int = 3) -> st
         return f"錯誤：Threads 搜索失敗 (近日篩選)。關鍵字：{keyword}，時間範圍：近 {days_back} 天，錯誤：{error_message}\n\n"
 
 
-def get_maicoin_competition_table(ranking_type: str = "volume") -> str:
+def get_maicoin_competition_table(ranking_type: str = "all") -> str:
     """抓取 MaiCoin 2026 交易競賽頁面中不同類型的排行榜數據。
     
     Args:
         ranking_type (str): 排行榜類型
-            - "volume": API 交易量排行榜 (預設)
+            - "all": 抓取所有排行榜 (預設)
+            - "volume": API 交易量排行榜
             - "profit_pct": 利潤百分比排行榜  
             - "profit_amount": 利潤金額排行榜
     
@@ -655,8 +656,22 @@ def get_maicoin_competition_table(ranking_type: str = "volume") -> str:
         }
     }
     
+    # 如果是 "all"，則遍歷所有排行榜
+    if ranking_type == "all":
+        all_results = []
+        for rtype in ["volume", "profit_pct", "profit_amount"]:
+            result = get_maicoin_competition_table(rtype)
+            all_results.append(result)
+        
+        # 合併所有結果
+        combined_result = f"🏆 **MaiCoin 2026 交易競賽 - 完整排行榜**\n"
+        combined_result += f"抓取時間：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        combined_result += f"{'=' * 70}\n\n"
+        combined_result += "\n\n".join(all_results)
+        return combined_result
+    
     if ranking_type not in ranking_configs:
-        return f"錯誤：無效的排行榜類型 '{ranking_type}'\n可用類型: volume, profit_pct, profit_amount"
+        return f"錯誤：無效的排行榜類型 '{ranking_type}'\n可用類型: all, volume, profit_pct, profit_amount"
     
     config = ranking_configs[ranking_type]
     target_id = config["target_id"]
@@ -845,17 +860,11 @@ def get_maicoin_competition_table(ranking_type: str = "volume") -> str:
                     result_text += f"{rank_num:<4} {prize:<20} {short_participant:<25} {value}\n"
                 
                 # 簡要統計
-                result_text += f"\n{'=' * 50}\n"
-                prize_winners = [r for r in ranking_data['rankings'] if '元' in r['prize']]
-                result_text += f"獲獎人數：{len(prize_winners)} 名\n"
+                result_text += f"\n{'=' * 50}\n"                
                 
                 if len(ranking_data['rankings']) > 0:
                     top_value = ranking_data['rankings'][0]['value']
-                    result_text += f"第一名{config['unit_label']}：{top_value}\n"
-                    
-                # 特別說明（針對利潤金額組）
-                if ranking_type == "profit_amount":
-                    result_text += f"\n* 註：以台幣計算。USDT 交易對以 MAX 交易所匯率換算\n"
+                    result_text += f"第一名{config['unit_label']}：{top_value}\n"                    
                         
             else:
                 result_text += "暫時沒有排行榜數據\n"

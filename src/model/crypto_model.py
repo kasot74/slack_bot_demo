@@ -143,34 +143,20 @@ def register_crypto_handlers(app, config, db):
             if not check_user_permission(user_id):                
                 say("你沒有權限使用此指令")
                 return
-            
-            # 使用 get_pending_orders 函數查詢等待中的訂單
+                        
             result = get_pending_orders("wait")
+            result += "\n"
+            result += get_trading_volume_stats()
+            result += get_pending_orders("done")
+            result += "\n"
             say(result)
             
         except Exception as e:
             say(f"查詢掛單時發生錯誤: {e}")
 
 
-    # !volume 查詢成交量統計
-    @app.message(re.compile(r"^!volume$"))
-    def handle_volume_command(message, say):
-        try:
-            # 檢查使用者權限
-            user_id = message['user']
-            if not check_user_permission(user_id):                
-                say("你沒有權限使用此指令")
-                return                                    
-            # 使用 get_trading_volume_stats
-            result = get_trading_volume_stats()
-            say(result)
-            
-        except Exception as e:
-            say(f"查詢成交量統計時發生錯誤: {e}")
-
-
-    # !analysis 綜合市場分析
-    @app.message(re.compile(r"^!analysis(?:\s+(\w+))?$"))
+    # !市場分析 綜合市場分析
+    @app.message(re.compile(r"^!市場分析(?:\s+(\w+))?$"))
     def handle_analysis_command(message, say):
         try:
             # 檢查使用者權限
@@ -178,21 +164,19 @@ def register_crypto_handlers(app, config, db):
             if not check_user_permission(user_id):                
                 say("你沒有權限使用此指令")
                 return
-            
-            # 提取交易對參數，預設為BTCTWD
-            match = re.search(r"^!analysis(?:\s+(\w+))?$", message['text'])
+                        
+            match = re.search(r"^!市場分析(?:\s+(\w+))?$", message['text'])
             symbol = match.group(1).upper() if match and match.group(1) else "BTCTWD"
-            
-            # 使用 get_market_analysis 函數進行綜合市場分析
+                        
             result = get_market_analysis(symbol)
             say(result)
             
         except Exception as e:
-            say(f"綜合市場分析時發生錯誤: {e}")
+            say(f"市場分析時發生錯誤: {e}")
 
 
     # !交易量 API 交易量排行榜
-    @app.message(re.compile(r"^!交易量$"))
+    @app.message(re.compile(r"^!排行榜$"))
     def handle_volume_ranking_command(message, say):
         try:
             user_id = message['user']
@@ -200,40 +184,9 @@ def register_crypto_handlers(app, config, db):
                 say("你沒有權限使用此指令")
                 return
             
-            result = get_maicoin_competition_table("volume")
+            result = get_maicoin_competition_table("all")
             say(result)
             
         except Exception as e:
             say(f"查詢 API 交易量排行榜時發生錯誤: {e}")
 
-
-    # !利潤率 利潤百分比排行榜
-    @app.message(re.compile(r"^!利潤率$"))
-    def handle_profit_pct_ranking_command(message, say):
-        try:
-            user_id = message['user']
-            if not check_user_permission(user_id):                
-                say("你沒有權限使用此指令")
-                return
-            
-            result = get_maicoin_competition_table("profit_pct")
-            say(result)
-            
-        except Exception as e:
-            say(f"查詢利潤百分比排行榜時發生錯誤: {e}")
-
-
-    # !利潤金額 利潤金額排行榜
-    @app.message(re.compile(r"^!利潤金額$"))
-    def handle_profit_amount_ranking_command(message, say):
-        try:
-            user_id = message['user']
-            if not check_user_permission(user_id):                
-                say("你沒有權限使用此指令")
-                return
-            
-            result = get_maicoin_competition_table("profit_amount")
-            say(result)
-            
-        except Exception as e:
-            say(f"查詢利潤金額排行榜時發生錯誤: {e}")
