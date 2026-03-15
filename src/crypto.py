@@ -119,6 +119,8 @@ def get_trading_volume_stats():
             trading_pairs = {}
             total_profit = 0
             total_volume = 0
+            total_fee = 0
+            FEE_RATE = 0.0004  # 每次交易手續費 0.04%
             
             for order in orders:
                 symbol = order.get("symbol", "N/A").upper()  # 統一轉為大寫
@@ -135,7 +137,8 @@ def get_trading_volume_stats():
                         'total_sell_value': 0,
                         'total_buy_quantity': 0,
                         'total_sell_quantity': 0,
-                        'profit': 0
+                        'profit': 0,
+                        'total_fee': 0
                     }
                 
                 # 累加總交易量
@@ -159,15 +162,19 @@ def get_trading_volume_stats():
                     trading_pairs[symbol]['total_sell_value'] += order_value
                     trading_pairs[symbol]['total_sell_quantity'] += executed_quantity
             
-            # 計算各交易對的利潤（簡化計算：賣出總價值 - 買入總價值）
+            # 計算各交易對的利潤（賣出總價值 - 買入總價值 - 手續費）
             for symbol, data in trading_pairs.items():
-                pair_profit = data['total_sell_value'] - data['total_buy_value']
+                pair_fee = (data['total_buy_value'] + data['total_sell_value']) * FEE_RATE
+                pair_profit = data['total_sell_value'] - data['total_buy_value'] - pair_fee
                 data['profit'] = pair_profit
+                data['total_fee'] = pair_fee
                 total_profit += pair_profit
+                total_fee += pair_fee
             
             # 格式化結果
             result = f"💰 **交易利潤統計** ({count}筆)\n\n"
             result += f"  總交易量：{total_volume:,.2f} \n"
+            result += f"總手續費：-{total_fee:,.2f} (0.04%/次)\n"
             result += f"總利潤：{total_profit:,.2f} \n\n"
             
             # 按利潤排序顯示各交易對
@@ -175,7 +182,7 @@ def get_trading_volume_stats():
             
             for symbol, data in sorted_pairs:
                 profit_percentage = (data['profit'] / data['total_buy_value'] * 100) if data['total_buy_value'] > 0 else 0
-                result += f"🪙 {symbol}: {data['profit']:+.2f}  ({profit_percentage:+.1f}%)\n"
+                result += f"🪙 {symbol}: {data['profit']:+.2f}  ({profit_percentage:+.1f}%) [費:{data['total_fee']:.2f}]\n"
             
             return result
             
