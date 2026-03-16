@@ -227,45 +227,61 @@ def get_trading_volume_stats():
             
             # 計算假設 wait 訂單成交後的利潤
             for symbol, wait_data_pair in wait_pairs.items():
-                if symbol in trading_pairs:
-                    buy_orders = sorted(wait_data_pair['buy_orders'], key=lambda x: x['created_at'])
-                    sell_orders = sorted(wait_data_pair['sell_orders'], key=lambda x: x['created_at'])
+                # 如果交易對不在 trading_pairs 中，則創建新條目
+                if symbol not in trading_pairs:
+                    trading_pairs[symbol] = {
+                        'buy_orders': [],
+                        'sell_orders': [],
+                        'total_buy_value': 0,
+                        'total_sell_value': 0,
+                        'total_buy_quantity': 0,
+                        'total_sell_quantity': 0,
+                        'profit': 0,
+                        'total_fee': 0,
+                        'hypothetical_profit': 0,
+                        'hypothetical_fee': 0,
+                        'wait_buy_count': 0,
+                        'wait_sell_count': 0
+                    }
+                
+                buy_orders = sorted(wait_data_pair['buy_orders'], key=lambda x: x['created_at'])
+                sell_orders = sorted(wait_data_pair['sell_orders'], key=lambda x: x['created_at'])
+                
+                # 配對 wait 訂單
+                buy_idx = 0
+                sell_idx = 0
+                pair_profit = 0
+                pair_fee = 0
+                matched_count = 0
+                
+                while buy_idx < len(buy_orders) and sell_idx < len(sell_orders):
+                    buy_order = buy_orders[buy_idx]
+                    sell_order = sell_orders[sell_idx]
                     
-                    # 配對 wait 訂單
-                    buy_idx = 0
-                    sell_idx = 0
-                    pair_profit = 0
-                    pair_fee = 0
-                    matched_count = 0
+                    match_qty = min(buy_order['quantity'], sell_order['quantity'])
+                    buy_cost = buy_order['price'] * match_qty
+                    sell_revenue = sell_order['price'] * match_qty
+                    match_fee = (buy_cost + sell_revenue) * FEE_RATE
+                    match_profit = sell_revenue - buy_cost - match_fee
                     
-                    while buy_idx < len(buy_orders) and sell_idx < len(sell_orders):
-                        buy_order = buy_orders[buy_idx]
-                        sell_order = sell_orders[sell_idx]
-                        
-                        match_qty = min(buy_order['quantity'], sell_order['quantity'])
-                        buy_cost = buy_order['price'] * match_qty
-                        sell_revenue = sell_order['price'] * match_qty
-                        match_fee = (buy_cost + sell_revenue) * FEE_RATE
-                        match_profit = sell_revenue - buy_cost - match_fee
-                        
-                        pair_profit += match_profit
-                        pair_fee += match_fee
-                        matched_count += 1
-                        
-                        buy_order['quantity'] -= match_qty
-                        sell_order['quantity'] -= match_qty
-                        
-                        if buy_order['quantity'] == 0:
-                            buy_idx += 1
-                        if sell_order['quantity'] == 0:
-                            sell_idx += 1
+                    pair_profit += match_profit
+                    pair_fee += match_fee
+                    matched_count += 1
                     
-                    trading_pairs[symbol]['hypothetical_profit'] = pair_profit
-                    trading_pairs[symbol]['hypothetical_fee'] = pair_fee
-                    trading_pairs[symbol]['wait_buy_count'] = len(wait_data_pair['buy_orders'])
-                    trading_pairs[symbol]['wait_sell_count'] = len(wait_data_pair['sell_orders'])
-                    hypothetical_total_profit += pair_profit
-                    hypothetical_total_fee += pair_fee
+                    buy_order['quantity'] -= match_qty
+                    sell_order['quantity'] -= match_qty
+                    
+                    if buy_order['quantity'] == 0:
+                        buy_idx += 1
+                    if sell_order['quantity'] == 0:
+                        sell_idx += 1
+                
+                trading_pairs[symbol]['hypothetical_profit'] = pair_profit
+                trading_pairs[symbol]['hypothetical_fee'] = pair_fee
+                trading_pairs[symbol]['wait_buy_count'] = len(wait_data_pair['buy_orders'])
+                trading_pairs[symbol]['wait_sell_count'] = len(wait_data_pair['sell_orders'])
+                hypothetical_total_profit += pair_profit
+                hypothetical_total_fee += pair_fee
         
         # 格式化結果
         result = f"💰 **交易利潤統計** (已成交:{done_count}筆 | 待成交:{wait_count}筆)\n\n"
