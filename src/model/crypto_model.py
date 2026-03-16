@@ -93,9 +93,9 @@ class Order:
 COMMANDS_HELP = [    
     ("!order", "查詢目前掛單的訂單"),
     ("!MAX", "MAX 交易所加密貨幣即時價格"),
-    ("!volume", "顯示各交易對成交量與利潤統計"),
-    ("!analysis [symbol]", "綜合市場分析 (訂單深度+成交記錄+大單警報)"),    
-    ("!me", "查詢使用者的 Slack 資訊")
+    ("!me", "查詢使用者的 Slack 資訊"),
+    ("!排行榜", "API 交易量排行榜顯示各交易對成交量與利潤統計"),
+    ("!市場分析 [symbol]", "綜合市場分析 (訂單深度+成交記錄)")
 ]
 
 def register_crypto_handlers(app, config, db):
@@ -175,7 +175,7 @@ def register_crypto_handlers(app, config, db):
             say(f"市場分析時發生錯誤: {e}")
 
 
-    # !交易量 API 交易量排行榜
+    # !排行榜 API 交易量排行榜
     @app.message(re.compile(r"^!排行榜$"))
     def handle_volume_ranking_command(message, say):
         try:
