@@ -98,98 +98,208 @@ def get_pending_orders(status="wait"):
         return f"處理訂單資料時發生錯誤：{e}"
 
 def get_trading_volume_stats():
-    """取得交易成交量統計資料，計算各交易對的利潤統計。                
+    """取得交易成交量統計資料，計算各交易對的利潤統計，並包含待成交訂單的假設利潤。                
     """
-    url = f"https://herry537.sytes.net/max_api/trading/orders?status=done"
     headers = {
         'accept': 'application/json'
     }
     
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        # 並發請求 done 和 wait 訂單
+        done_url = f"https://herry537.sytes.net/max_api/trading/orders?status=done"
+        wait_url = f"https://herry537.sytes.net/max_api/trading/orders?status=wait"
         
-        if response.status_code == 200:
-            data = response.json()
-            orders = data.get("orders", [])
-            count = data.get("count", 0)
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            done_future = executor.submit(requests.get, done_url, headers=headers, timeout=10)
+            wait_future = executor.submit(requests.get, wait_url, headers=headers, timeout=10)
             
-            if not orders:
-                return f"目前沒有狀態為 done 的訂單"
+            done_response = done_future.result(timeout=15)
+            wait_response = wait_future.result(timeout=15)
+        
+        if done_response.status_code != 200:
+            return f"API請求失敗，狀態碼：{done_response.status_code}"
             
-            # 按交易對分組並計算利潤
-            trading_pairs = {}
-            total_profit = 0
-            total_volume = 0
-            total_fee = 0
-            FEE_RATE = 0.0004  # 每次交易手續費 0.04%
+        done_data = done_response.json()
+        done_orders = done_data.get("orders", [])
+        done_count = done_data.get("count", 0)
+        
+        if not done_orders:
+            return f"目前沒有狀態為 done 的訂單"
+        
+        FEE_RATE = 0.0004  # 每次交易手續費 0.04%
+        
+        # ===== 第一部分：已成交訂單分析 =====
+        trading_pairs = {}
+        total_profit = 0
+        total_volume = 0
+        total_fee = 0
+        
+        for order in done_orders:
+            symbol = order.get("symbol", "N/A").upper()
+            order_type = order.get("order_type")
+            executed_price = float(order.get("executed_price", 0))
+            executed_quantity = float(order.get("executed_quantity", 0))
+            order_value = executed_price * executed_quantity
             
-            for order in orders:
-                symbol = order.get("symbol", "N/A").upper()  # 統一轉為大寫
-                order_type = order.get("order_type")
-                executed_price = float(order.get("executed_price", 0))
-                executed_quantity = float(order.get("executed_quantity", 0))
-                order_value = executed_price * executed_quantity
+            if symbol not in trading_pairs:
+                trading_pairs[symbol] = {
+                    'buy_orders': [],
+                    'sell_orders': [],
+                    'total_buy_value': 0,
+                    'total_sell_value': 0,
+                    'total_buy_quantity': 0,
+                    'total_sell_quantity': 0,
+                    'profit': 0,
+                    'total_fee': 0,
+                    'hypothetical_profit': 0,
+                    'hypothetical_fee': 0,
+                    'wait_buy_count': 0,
+                    'wait_sell_count': 0
+                }
+            
+            total_volume += order_value
+            
+            if order_type == "buy":
+                trading_pairs[symbol]['buy_orders'].append({
+                    'price': executed_price,
+                    'quantity': executed_quantity,
+                    'value': order_value
+                })
+                trading_pairs[symbol]['total_buy_value'] += order_value
+                trading_pairs[symbol]['total_buy_quantity'] += executed_quantity
                 
-                if symbol not in trading_pairs:
-                    trading_pairs[symbol] = {
+            elif order_type == "sell":
+                trading_pairs[symbol]['sell_orders'].append({
+                    'price': executed_price,
+                    'quantity': executed_quantity,
+                    'value': order_value
+                })
+                trading_pairs[symbol]['total_sell_value'] += order_value
+                trading_pairs[symbol]['total_sell_quantity'] += executed_quantity
+        
+        # 計算已成交訂單的利潤
+        for symbol, data in trading_pairs.items():
+            pair_fee = (data['total_buy_value'] + data['total_sell_value']) * FEE_RATE
+            pair_profit = data['total_sell_value'] - data['total_buy_value'] - pair_fee
+            data['profit'] = pair_profit
+            data['total_fee'] = pair_fee
+            total_profit += pair_profit
+            total_fee += pair_fee
+        
+        # ===== 第二部分：待成交訂單假設分析 =====
+        wait_orders = []
+        wait_count = 0
+        hypothetical_total_profit = 0
+        hypothetical_total_fee = 0
+        
+        if wait_response.status_code == 200:
+            wait_data = wait_response.json()
+            wait_orders = wait_data.get("orders", [])
+            wait_count = wait_data.get("count", 0)
+            
+            # 按交易對分組 wait 訂單
+            wait_pairs = {}
+            for order in wait_orders:
+                symbol = order.get("symbol", "N/A").upper()
+                order_type = order.get("order_type")
+                price = float(order.get("price", 0))
+                quantity = float(order.get("quantity", 0))
+                created_at = order.get("created_at", "")
+                
+                if symbol not in wait_pairs:
+                    wait_pairs[symbol] = {
                         'buy_orders': [],
-                        'sell_orders': [],
-                        'total_buy_value': 0,
-                        'total_sell_value': 0,
-                        'total_buy_quantity': 0,
-                        'total_sell_quantity': 0,
-                        'profit': 0,
-                        'total_fee': 0
+                        'sell_orders': []
                     }
                 
-                # 累加總交易量
-                total_volume += order_value
-                
                 if order_type == "buy":
-                    trading_pairs[symbol]['buy_orders'].append({
-                        'price': executed_price,
-                        'quantity': executed_quantity,
-                        'value': order_value
+                    wait_pairs[symbol]['buy_orders'].append({
+                        'price': price,
+                        'quantity': quantity,
+                        'created_at': created_at
                     })
-                    trading_pairs[symbol]['total_buy_value'] += order_value
-                    trading_pairs[symbol]['total_buy_quantity'] += executed_quantity
-                    
                 elif order_type == "sell":
-                    trading_pairs[symbol]['sell_orders'].append({
-                        'price': executed_price,
-                        'quantity': executed_quantity,
-                        'value': order_value
+                    wait_pairs[symbol]['sell_orders'].append({
+                        'price': price,
+                        'quantity': quantity,
+                        'created_at': created_at
                     })
-                    trading_pairs[symbol]['total_sell_value'] += order_value
-                    trading_pairs[symbol]['total_sell_quantity'] += executed_quantity
             
-            # 計算各交易對的利潤（賣出總價值 - 買入總價值 - 手續費）
-            for symbol, data in trading_pairs.items():
-                pair_fee = (data['total_buy_value'] + data['total_sell_value']) * FEE_RATE
-                pair_profit = data['total_sell_value'] - data['total_buy_value'] - pair_fee
-                data['profit'] = pair_profit
-                data['total_fee'] = pair_fee
-                total_profit += pair_profit
-                total_fee += pair_fee
+            # 計算假設 wait 訂單成交後的利潤
+            for symbol, wait_data_pair in wait_pairs.items():
+                if symbol in trading_pairs:
+                    buy_orders = sorted(wait_data_pair['buy_orders'], key=lambda x: x['created_at'])
+                    sell_orders = sorted(wait_data_pair['sell_orders'], key=lambda x: x['created_at'])
+                    
+                    # 配對 wait 訂單
+                    buy_idx = 0
+                    sell_idx = 0
+                    pair_profit = 0
+                    pair_fee = 0
+                    matched_count = 0
+                    
+                    while buy_idx < len(buy_orders) and sell_idx < len(sell_orders):
+                        buy_order = buy_orders[buy_idx]
+                        sell_order = sell_orders[sell_idx]
+                        
+                        match_qty = min(buy_order['quantity'], sell_order['quantity'])
+                        buy_cost = buy_order['price'] * match_qty
+                        sell_revenue = sell_order['price'] * match_qty
+                        match_fee = (buy_cost + sell_revenue) * FEE_RATE
+                        match_profit = sell_revenue - buy_cost - match_fee
+                        
+                        pair_profit += match_profit
+                        pair_fee += match_fee
+                        matched_count += 1
+                        
+                        buy_order['quantity'] -= match_qty
+                        sell_order['quantity'] -= match_qty
+                        
+                        if buy_order['quantity'] == 0:
+                            buy_idx += 1
+                        if sell_order['quantity'] == 0:
+                            sell_idx += 1
+                    
+                    trading_pairs[symbol]['hypothetical_profit'] = pair_profit
+                    trading_pairs[symbol]['hypothetical_fee'] = pair_fee
+                    trading_pairs[symbol]['wait_buy_count'] = len(wait_data_pair['buy_orders'])
+                    trading_pairs[symbol]['wait_sell_count'] = len(wait_data_pair['sell_orders'])
+                    hypothetical_total_profit += pair_profit
+                    hypothetical_total_fee += pair_fee
+        
+        # 格式化結果
+        result = f"💰 **交易利潤統計** (已成交:{done_count}筆 | 待成交:{wait_count}筆)\n\n"
+        result += f"━━━━ **已成交訂單** ━━━━\n"
+        result += f"  總交易量：{total_volume:,.2f} \n"
+        result += f"總手續費：-{total_fee:,.2f} (0.04%/次)\n"
+        result += f"總利潤：{total_profit:,.2f} \n\n"
+        
+        # 按利潤排序顯示各交易對的已成交利潤
+        sorted_pairs = sorted(trading_pairs.items(), key=lambda x: x[1]['profit'], reverse=True)
+        
+        for symbol, data in sorted_pairs:
+            profit_percentage = (data['profit'] / data['total_buy_value'] * 100) if data['total_buy_value'] > 0 else 0
+            wait_info = ""
+            if data['wait_buy_count'] > 0 or data['wait_sell_count'] > 0:
+                wait_info = f" [待:{data['wait_buy_count']}買|{data['wait_sell_count']}賣]"
+            result += f"🪙 {symbol}: {data['profit']:+.2f} ({profit_percentage:+.1f}%){wait_info}\n"
+        
+        # 假設利潤統計
+        if wait_count > 0:
+            result += f"\n━━━━ **假設待成交訂單成交後** ━━━━\n"
+            result += f"假設手續費：-{hypothetical_total_fee:,.2f}\n"
+            result += f"假設額外利潤：{hypothetical_total_profit:+,.2f}\n"
+            result += f"總計潛在利潤：{total_profit + hypothetical_total_profit:+,.2f}\n\n"
             
-            # 格式化結果
-            result = f"💰 **交易利潤統計** ({count}筆)\n\n"
-            result += f"  總交易量：{total_volume:,.2f} \n"
-            result += f"總手續費：-{total_fee:,.2f} (0.04%/次)\n"
-            result += f"總利潤：{total_profit:,.2f} \n\n"
-            
-            # 按利潤排序顯示各交易對
-            sorted_pairs = sorted(trading_pairs.items(), key=lambda x: x[1]['profit'], reverse=True)
-            
+            # 顯示有待成交訂單的交易對
             for symbol, data in sorted_pairs:
-                profit_percentage = (data['profit'] / data['total_buy_value'] * 100) if data['total_buy_value'] > 0 else 0
-                result += f"🪙 {symbol}: {data['profit']:+.2f}  ({profit_percentage:+.1f}%) [費:{data['total_fee']:.2f}]\n"
-            
-            return result
-            
-        else:
-            return f"API請求失敗，狀態碼：{response.status_code}"
-            
+                if data['wait_buy_count'] > 0 or data['wait_sell_count'] > 0:
+                    if data['hypothetical_profit'] != 0:
+                        hypo_percentage = (data['hypothetical_profit'] / max(data['total_buy_value'], 1) * 100)
+                        result += f"🪙 {symbol}: +{data['hypothetical_profit']:,.2f} ({hypo_percentage:+.1f}%)\n"
+        
+        return result
+        
     except requests.exceptions.RequestException as e:
         return f"網路請求錯誤：{e}"
     except Exception as e:
