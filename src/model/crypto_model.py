@@ -145,8 +145,8 @@ def register_crypto_handlers(app, config, db):
                 return
                         
             #result = get_pending_orders("wait")
-            #result += "\n"
-            result += get_trading_volume_stats()            
+            #result += "\n"            
+            result = get_trading_volume_stats()            
             result += "\n"
             say(result)
             
