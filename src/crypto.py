@@ -98,7 +98,7 @@ def get_pending_orders(status="wait"):
         return f"處理訂單資料時發生錯誤：{e}"
 
 def get_trading_volume_stats():
-    """取得交易成交量統計資料，計算各交易對的利潤統計（包含 DONE 和 WAIT 訂單）。"""
+    """取得交易成交量統計資料，計算目前收益（DONE）和預估收益（DONE+WAIT）。"""
     headers = {
         'accept': 'application/json'
     }
@@ -127,88 +127,138 @@ def get_trading_volume_stats():
         
         FEE_RATE = 0.0004  # 每次交易手續費 0.04%
         
-        # 累計所有訂單（DONE + WAIT）
-        all_orders = list(done_orders)
+        # 獲取 WAIT 訂單
+        wait_orders = []
         wait_count = 0
-        
         if wait_response.status_code == 200:
             wait_data = wait_response.json()
             wait_orders = wait_data.get("orders", [])
             wait_count = wait_data.get("count", 0)
-            all_orders.extend(wait_orders)
         
-        # ===== 統計訂單 =====
-        trading_pairs = {}
-        total_profit = 0
-        total_volume = 0
-        total_fee = 0
-        
-        for order in all_orders:
-            symbol = order.get("symbol", "N/A").upper()
-            order_type = order.get("order_type")
+        # ===== 計算現況（DONE 訂單） =====
+        def calculate_stats(orders_list):
+            trading_pairs = {}
+            total_profit = 0
+            total_volume = 0
+            total_fee = 0
             
-            # 區分處理 DONE 和 WAIT 訂單的價格和數量
-            if order.get("executed_price"):  # DONE 訂單
-                price = float(order.get("executed_price", 0))
-                quantity = float(order.get("executed_quantity", 0))
-            else:  # WAIT 訂單
-                price = float(order.get("price", 0))
-                quantity = float(order.get("quantity", 0))
-            
-            order_value = price * quantity
-            
-            if symbol not in trading_pairs:
-                trading_pairs[symbol] = {
-                    'buy_orders': [],
-                    'sell_orders': [],
-                    'total_buy_value': 0,
-                    'total_sell_value': 0,
-                    'total_buy_quantity': 0,
-                    'total_sell_quantity': 0,
-                    'profit': 0,
-                    'total_fee': 0
-                }
-            
-            total_volume += order_value
-            
-            if order_type == "buy":
-                trading_pairs[symbol]['buy_orders'].append({
-                    'price': price,
-                    'quantity': quantity,
-                    'value': order_value
-                })
-                trading_pairs[symbol]['total_buy_value'] += order_value
-                trading_pairs[symbol]['total_buy_quantity'] += quantity
+            for order in orders_list:
+                symbol = order.get("symbol", "N/A").upper()
+                order_type = order.get("order_type")
                 
-            elif order_type == "sell":
-                trading_pairs[symbol]['sell_orders'].append({
-                    'price': price,
-                    'quantity': quantity,
-                    'value': order_value
-                })
-                trading_pairs[symbol]['total_sell_value'] += order_value
-                trading_pairs[symbol]['total_sell_quantity'] += quantity
+                # 區分處理 DONE 和 WAIT 訂單的價格和數量
+                if order.get("executed_price"):  # DONE 訂單
+                    price = float(order.get("executed_price", 0))
+                    quantity = float(order.get("executed_quantity", 0))
+                else:  # WAIT 訂單
+                    price = float(order.get("price", 0))
+                    quantity = float(order.get("quantity", 0))
+                
+                order_value = price * quantity
+                
+                if symbol not in trading_pairs:
+                    trading_pairs[symbol] = {
+                        'buy_orders': [],
+                        'sell_orders': [],
+                        'total_buy_value': 0,
+                        'total_sell_value': 0,
+                        'total_buy_quantity': 0,
+                        'total_sell_quantity': 0,
+                        'profit': 0,
+                        'total_fee': 0
+                    }
+                
+                total_volume += order_value
+                
+                if order_type == "buy":
+                    trading_pairs[symbol]['buy_orders'].append({
+                        'price': price,
+                        'quantity': quantity,
+                        'value': order_value
+                    })
+                    trading_pairs[symbol]['total_buy_value'] += order_value
+                    trading_pairs[symbol]['total_buy_quantity'] += quantity
+                    
+                elif order_type == "sell":
+                    trading_pairs[symbol]['sell_orders'].append({
+                        'price': price,
+                        'quantity': quantity,
+                        'value': order_value
+                    })
+                    trading_pairs[symbol]['total_sell_value'] += order_value
+                    trading_pairs[symbol]['total_sell_quantity'] += quantity
+            
+            # 計算各交易對的利潤
+            for symbol, data in trading_pairs.items():
+                pair_fee = (data['total_buy_value'] + data['total_sell_value']) * FEE_RATE
+                pair_profit = data['total_sell_value'] - data['total_buy_value'] - pair_fee
+                data['profit'] = pair_profit
+                data['total_fee'] = pair_fee
+                total_profit += pair_profit
+                total_fee += pair_fee
+            
+            return trading_pairs, total_profit, total_volume, total_fee
         
-        # 計算各交易對的利潤
-        for symbol, data in trading_pairs.items():
-            pair_fee = (data['total_buy_value'] + data['total_sell_value']) * FEE_RATE
-            pair_profit = data['total_sell_value'] - data['total_buy_value'] - pair_fee
-            data['profit'] = pair_profit
-            data['total_fee'] = pair_fee
-            total_profit += pair_profit
-            total_fee += pair_fee
+        # 計算 DONE 訂單統計
+        done_pairs, done_profit, done_volume, done_fee = calculate_stats(done_orders)
+        
+        # 計算 DONE + WAIT 訂單統計
+        all_orders = list(done_orders) + list(wait_orders)
+        all_pairs, all_profit, all_volume, all_fee = calculate_stats(all_orders)
         
         # 格式化結果
         result = f"💰 **交易利潤統計** (已成交:{done_count}筆 | 待成交:{wait_count}筆)\n\n"
-        result += f"━━━━ **整體統計** ━━━━\n"
-        result += f"  總交易量：{total_volume:,.2f} \n"
-        result += f"總手續費：-{total_fee:,.2f} (0.04%/次)\n"
-        result += f"總利潤：{total_profit:+.2f} \n\n"
         
-        # 按利潤排序顯示各交易對
-        sorted_pairs = sorted(trading_pairs.items(), key=lambda x: x[1]['profit'], reverse=True)
+        # 目前收益（DONE）
+        result += f"━━━━ **目前收益** ━━━━\n"
+        result += f"總交易量：{done_volume:,.2f}\n"
+        result += f"總手續費：-{done_fee:,.2f} (0.04%/次)\n"
+        result += f"總利潤：{done_profit:+.2f}\n\n"
         
+        # 待成交訂單總計
+        if wait_count > 0:
+            result += f"━━━━ **待成交總計** ━━━━\n"
+            wait_volume = all_volume - done_volume
+            wait_fee = all_fee - done_fee
+            wait_profit = all_profit - done_profit
+            result += f"總交易量：{wait_volume:,.2f}\n"
+            result += f"總手續費：-{wait_fee:,.2f} (0.04%/次)\n"
+            result += f"假設利潤：{wait_profit:+.2f}\n\n"
+            
+            # 按交易對統計待成交訂單的買賣單
+            wait_pair_stats = {}
+            for order in wait_orders:
+                symbol = order.get("symbol", "N/A").upper()
+                order_type = order.get("order_type")
+                
+                if symbol not in wait_pair_stats:
+                    wait_pair_stats[symbol] = {'buy_count': 0, 'sell_count': 0}
+                
+                if order_type == "buy":
+                    wait_pair_stats[symbol]['buy_count'] += 1
+                elif order_type == "sell":
+                    wait_pair_stats[symbol]['sell_count'] += 1
+            
+            # 顯示各交易對的待成交單數
+            result += f"待成交訂單分佈：\n"
+            for symbol in sorted(wait_pair_stats.keys()):
+                stats = wait_pair_stats[symbol]
+                result += f"{symbol}: 買{stats['buy_count']}筆 | 賣{stats['sell_count']}筆\n"
+            
+            result += "\n"
+        
+        # 預估收益（DONE + WAIT）
+        if wait_count > 0:
+            result += f"━━━━ **預估收益** ━━━━\n"
+            result += f"總交易量：{all_volume:,.2f}\n"
+            result += f"總手續費：-{all_fee:,.2f} (0.04%/次)\n"
+            result += f"總利潤：{all_profit:+.2f}\n\n"
+        
+        # 各交易對統計（使用預估值，如果有 WAIT 訂單）
         result += f"━━━━ **各交易對統計** ━━━━\n"
+        display_pairs = all_pairs if wait_count > 0 else done_pairs
+        sorted_pairs = sorted(display_pairs.items(), key=lambda x: x[1]['profit'], reverse=True)
+        
         for symbol, data in sorted_pairs:
             profit_percentage = (data['profit'] / data['total_buy_value'] * 100) if data['total_buy_value'] > 0 else 0
             result += f"🪙 {symbol}: {data['profit']:+.2f} ({profit_percentage:+.1f}%)\n"
