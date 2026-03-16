@@ -1,5 +1,6 @@
 import requests
 import json
+import concurrent.futures
 from datetime import datetime, timedelta
 
 def get_crypto_prices():
@@ -488,13 +489,17 @@ def get_market_analysis(symbol="BTCTWD"):
         headers = {'accept': 'application/json'}
         
         # 並發請求兩個API
-        import concurrent.futures
         with concurrent.futures.ThreadPoolExecutor() as executor:
             depth_future = executor.submit(requests.get, depth_url, headers=headers, timeout=10)
             trades_future = executor.submit(requests.get, trades_url, headers=headers, timeout=10)
             
-            depth_response = depth_future.result()
-            trades_response = trades_future.result()
+            try:
+                depth_response = depth_future.result(timeout=15)
+                trades_response = trades_future.result(timeout=15)
+            except concurrent.futures.TimeoutError:
+                return f"{symbol} API請求超時，請稍後再試"
+            except Exception as e:
+                return f"{symbol} API請求發生錯誤：{e}"
         
         if depth_response.status_code != 200 or trades_response.status_code != 200:
             return f"API請求失敗，深度:{depth_response.status_code}, 成交:{trades_response.status_code}"
@@ -513,8 +518,23 @@ def get_market_analysis(symbol="BTCTWD"):
         if not asks or not bids:
             return f"{symbol} 訂單簿數據不完整"
         
-        asks_data = [[float(price), float(qty)] for price, qty in asks]
-        bids_data = [[float(price), float(qty)] for price, qty in bids]
+        # 安全地轉換訂單數據
+        asks_data = []
+        for price, qty in asks:
+            try:
+                asks_data.append([float(price), float(qty)])
+            except (ValueError, TypeError):
+                continue
+                
+        bids_data = []
+        for price, qty in bids:
+            try:
+                bids_data.append([float(price), float(qty)])
+            except (ValueError, TypeError):
+                continue
+                
+        if not asks_data or not bids_data:
+            return f"{symbol} 訂單數據格式錯誤"
         
         best_ask = asks_data[0][0]
         best_bid = bids_data[0][0]
@@ -524,50 +544,33 @@ def get_market_analysis(symbol="BTCTWD"):
         trades = trades_data.get("order_trades", [])
         if not trades:
             return f"{symbol} 成交記錄數據不完整"
+                        
+        # === 綜合分析 ===                
+                                
+        #買賣力道分析
+        buy_trades = [t for t in trades if t.get("side") == "bid"]
+        sell_trades = [t for t in trades if t.get("side") == "ask"]
         
-        recent_trades = trades[:20]
-        
-        # === 綜合分析 ===
-        
-        # 1. 成交價格vs訂單簿價格分析
-        recent_prices = [float(trade.get("price", 0)) for trade in recent_trades[:5]]
-        latest_price = recent_prices[0] if recent_prices else 0
-        
-        price_position = ""
-        if latest_price > best_ask:
-            price_position = "突破賣壓"
-        elif latest_price < best_bid:
-            price_position = "跌破支撐" 
-        else:
-            price_position = "區間整理"
-        
-        # 2. 流動性分析
-        ask_liquidity = sum([qty for _, qty in asks_data[:10]])
-        bid_liquidity = sum([qty for _, qty in bids_data[:10]])
-        liquidity_ratio = bid_liquidity / ask_liquidity if ask_liquidity > 0 else 0
-        
-        # 3. 成交量vs深度對比
-        recent_volume = sum([float(trade.get("volume", 0)) for trade in recent_trades[:10]])
-        
-        # 4. 買賣力道分析
-        buy_trades = [t for t in recent_trades[:15] if t.get("side") == "bid"]
-        sell_trades = [t for t in recent_trades[:15] if t.get("side") == "ask"]
-        buy_volume = sum([float(t.get("volume", 0)) for t in buy_trades])
-        sell_volume = sum([float(t.get("volume", 0)) for t in sell_trades])
-        
-        # 5. 大單檢測
-        avg_trade_size = recent_volume / len(recent_trades[:10]) if recent_trades else 0
-        large_trades = [t for t in recent_trades[:10] if float(t.get("volume", 0)) > avg_trade_size * 2.5]
-        
-        # 6. 趨勢分析
-        if len(recent_prices) >= 5:
-            price_trend = recent_prices[0] - recent_prices[4]
-            trend_strength = abs(price_trend / recent_prices[4] * 100) if recent_prices[4] > 0 else 0
-        else:
-            price_trend = 0
-            trend_strength = 0
-        
-        # 7. 關鍵價位分析
+        # 安全地處理數據轉換
+        buy_volume = 0
+        for t in buy_trades:
+            vol = t.get("volume")
+            if vol is not None:
+                try:
+                    buy_volume += float(vol)
+                except (ValueError, TypeError):
+                    continue
+                    
+        sell_volume = 0
+        for t in sell_trades:
+            vol = t.get("volume")
+            if vol is not None:
+                try:
+                    sell_volume += float(vol)
+                except (ValueError, TypeError):
+                    continue
+                                
+        #關鍵價位分析
         resistance_levels = []
         support_levels = []
         
@@ -576,100 +579,19 @@ def get_market_analysis(symbol="BTCTWD"):
         avg_bid_all = sum([qty for _, qty in bids_data]) / len(bids_data) if len(bids_data) > 0 else 0
         
         for price, qty in asks_data:  
-            if qty > avg_ask_all * 2.5:  # 大於全部平均掛單量的2.5倍
+            if qty > avg_ask_all * 2:  # 大於全部平均掛單量的2倍
                 resistance_levels.append((price, qty))
         
         for price, qty in bids_data:  
-            if qty > avg_bid_all * 2.5:  # 大於全部平均掛單量的2.5倍
+            if qty > avg_bid_all * 2:  # 大於全部平均掛單量的2倍
                 support_levels.append((price, qty))
         
         # === 格式化結果 ===
         result = f"🎯 **{symbol} 綜合市場分析**\n\n"
         
         # 市場概況
-        result += f"💎 **市場概況：**\n"
-        result += f"最新成交：{latest_price:,.2f}\n"
-        result += f"價格位置：{price_position}\n"
-        result += f"買賣價差：{spread:,.2f} ({spread/best_bid*100:.3f}%)\n\n"
-        
-        # 流動性分析
-        liquidity_status = "充足" if liquidity_ratio > 0.8 else "偏緊" if liquidity_ratio > 0.5 else "緊張"
-        result += f"💧 **流動性分析：**\n"
-        result += f"買盤深度：{bid_liquidity:,.2f}\n"
-        result += f"賣盤深度：{ask_liquidity:,.2f}\n"
-        result += f"流動性狀況：{liquidity_status} ({liquidity_ratio:.2f})\n\n"
-        
-        # 交易活躍度
-        current_time = datetime.now()
-        five_minutes_ago = current_time - timedelta(minutes=5)
-        
-        # 計算5分鐘內的交易數量
-        recent_5min_trades = 0
-        analysis_trades = trades
-        five_min_trade_details = []  # 儲存5分鐘內的交易詳情
-        
-        for trade in analysis_trades:
-            try:
-                timestamp = int(trade.get("created_at", 0))
-                trade_time = datetime.fromtimestamp(timestamp / 1000)  # 毫秒轉秒                
-                
-                if trade_time >= five_minutes_ago:
-                    recent_5min_trades += 1
-                    # 收集交易詳情
-                    five_min_trade_details.append({
-                        'time': trade_time,
-                        'price': float(trade.get("price", 0)),
-                        'volume': float(trade.get("volume", 0)),
-                        'side': trade.get("side")
-                    })
-            except:
-                continue
-        
-        # 計算活躍度比重
-        activity_ratio = recent_5min_trades / len(analysis_trades) if len(analysis_trades) > 0 else 0
-        
-        # 根據比重判斷活躍度等級
-        if activity_ratio >= 0.7:  # 70%以上的交易在5分鐘內
-            activity_level = "高"
-            activity_desc = "🔥 市場非常活躍"
-        elif activity_ratio >= 0.4:  # 40-70%的交易在5分鐘內  
-            activity_level = "中"
-            activity_desc = "📈 市場適度活躍"
-        elif activity_ratio >= 0.2:  # 20-40%的交易在5分鐘內
-            activity_level = "低"
-            activity_desc = "📊 市場活躍度偏低"
-        else:  # 少於20%的交易在5分鐘內
-            activity_level = "極低"
-            activity_desc = "💤 市場交易冷清"
-        
-        result += f"⚡ **交易活躍度：{activity_level}**\n"
-        result += f"{activity_desc}\n"        
-                
-        time_range = f"{five_minutes_ago.strftime('%m-%d %H:%M:%S')} ~ {current_time.strftime('%m-%d %H:%M:%S')}"
-        
-        result += f"時間範圍：{time_range}\n"
-        result += f"5分鐘內：{recent_5min_trades}筆 ({activity_ratio*100:.1f}%)\n"
-        result += f"總成交量：{recent_volume:.6f}\n"
-        
-        # 顯示5分鐘內的交易詳情
-        if five_min_trade_details:
-            result += f"\n📋 **5分鐘內成交詳情** (共 {len(five_min_trade_details)} 筆)：\n"
-            # 按時間排序 (最新的在前)
-            five_min_trade_details.sort(key=lambda x: x['time'], reverse=True)
-            
-            for trade_detail in five_min_trade_details[:10]:  # 只顯示最新10筆
-                trade_time_str = trade_detail['time'].strftime("%H:%M:%S")
-                price = trade_detail['price']
-                volume = trade_detail['volume']
-                side = "🟢買" if trade_detail['side'] == "bid" else "🔴賣"
-                
-                result += f"{trade_time_str} {side} {price:,.1f} @ {volume:.6f} = {price*volume:,.0f}\n"
-            
-            if len(five_min_trade_details) > 10:
-                result += f"... 另有 {len(five_min_trade_details)-10} 筆交易\n"
-            
-            result += "\n"
-        
+        result += f"💎 **市場概況：**\n"        
+        result += f"最佳買價：{best_bid:,.4f} | 最佳賣價：{best_ask:,.4f} | 價差：{spread:,.4f}\n\n"        
         # 買賣力道對比
         if buy_volume + sell_volume > 0:
             buy_pressure = buy_volume / (buy_volume + sell_volume) * 100
@@ -677,18 +599,7 @@ def get_market_analysis(symbol="BTCTWD"):
             result += f"買賣力道：{pressure_status} ({buy_pressure:.1f}%)\n\n"
         else:
             result += "\n"
-        
-        # 趨勢分析
-        if trend_strength > 0.2:
-            trend_desc = "🔥強勢上漲" if price_trend > 0 else "❄️強勢下跌"
-        elif trend_strength > 0.05:
-            trend_desc = "📈溫和上漲" if price_trend > 0 else "📉溫和下跌"
-        else:
-            trend_desc = "📊震盪整理"
-        
-        result += f"📊 **趨勢判斷：{trend_desc}**\n"
-        result += f"趨勢強度：{trend_strength:.2f}%\n\n"
-        
+                
         # 關鍵價位
         if resistance_levels or support_levels:
             result += f"🎯 **關鍵價位：**\n"
@@ -697,39 +608,7 @@ def get_market_analysis(symbol="BTCTWD"):
             if support_levels:
                 result += f"支撐位：{support_levels[0][0]:,.2f} (掛量:{support_levels[0][1]:.2f})\n"
             result += "\n"
-        
-        # 交易建議
-        if price_position == "突破賣壓" and buy_pressure > 55:
-            advice = "🚀 考慮追漲，注意風控"
-        elif price_position == "跌破支撐" and buy_pressure < 45:
-            advice = "⚠️ 謹慎操作，關注支撐"
-        elif liquidity_status == "緊張":
-            advice = "🔍 流動性不足，小心滑價"
-        elif trend_desc.__contains__("震盪"):
-            advice = "⏳ 震盪整理，等待方向"
-        else:
-            advice = "📖 持續觀察，順勢而為"
-        
-        result += f"💡 **交易建議：{advice}**\n"
-        
-        # 大單提醒
-        if large_trades:
-            result += f"\n🚨 **成交大單詳情** ( {len(large_trades)} 筆)\n"
-            for trade in large_trades:
-                try:
-                    timestamp = int(trade.get("created_at", 0))
-                    dt = datetime.fromtimestamp(timestamp / 1000)                    
-                    formatted_time = dt.strftime("%H:%M:%S")
-                except:
-                    formatted_time = "N/A"
-                
-                price = float(trade.get("price", 0))
-                volume = float(trade.get("volume", 0))
-                funds = float(trade.get("funds", 0))
-                side = "🔥買" if trade.get("side") == "bid" else "💸賣"
-                
-                result += f"{formatted_time} {side} {volume:.6f} @ {price:,.1f} = {funds:,.0f}\n"
-        
+                        
         return result
         
     except Exception as e:
