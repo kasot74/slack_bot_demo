@@ -144,9 +144,9 @@ def register_crypto_handlers(app, config, db):
                 say("你沒有權限使用此指令")
                 return
                         
-            result = get_pending_orders("wait")
-            result += "\n"
-            result += get_trading_volume_stats()            
+            #result = get_pending_orders("wait")
+            #result += "\n"            
+            result = get_trading_volume_stats()            
             result += "\n"
             say(result)
             
