@@ -276,7 +276,19 @@ def get_trading_volume_stats():
         
         for symbol, data in sorted_pairs:
             profit_percentage = (data['profit'] / data['total_buy_value'] * 100) if data['total_buy_value'] > 0 else 0
-            result += f"🪙 {symbol}: {data['profit']:+.2f} ({profit_percentage:+.1f}%)\n"
+            
+            # 構建基本利潤資訊
+            profit_info = f"🪙 {symbol}: {data['profit']:+.2f} ({profit_percentage:+.1f}%)"
+            
+            # 添加損益平衡價資訊
+            if data['net_holding'] > 0:
+                profit_info += f"\n   📊 持有:{data['net_holding']:.4f} | 平衡價:{data['breakeven_price']:,.2f}"
+            elif data['net_holding'] < 0:
+                profit_info += f"\n   📊 空倉:{abs(data['net_holding']):.4f} (已超額賣出)"
+            else:
+                profit_info += f"\n   📊 無持有 (已全部賣出)"
+                
+            result += profit_info + "\n"
         
         return result
         
