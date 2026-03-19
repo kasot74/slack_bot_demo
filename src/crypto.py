@@ -171,6 +171,21 @@ def get_trading_volume_stats():
                 data['total_fee'] = pair_fee
                 total_profit += pair_profit
                 total_fee += pair_fee
+                
+                # 計算損益平衡價
+                net_holding = data['total_buy_quantity'] - data['total_sell_quantity']  # 淨持有量
+                if net_holding > 0:  # 還有持有量
+                    # 已投入淨成本 = 買入總價值 + 所有手續費 - 賣出總價值
+                    net_cost = data['total_buy_value'] + pair_fee - data['total_sell_value']
+                    # 損益平衡價 = (淨成本 + 預期賣出手續費) / 剩餘持有量
+                    # 預期賣出手續費 = 賣出價值 * 費率，但賣出價值 = 損益平衡價 * 持有量
+                    # 所以：損益平衡價 = 淨成本 / (持有量 * (1 - 費率))
+                    breakeven_price = net_cost / (net_holding * (1 - FEE_RATE))
+                    data['breakeven_price'] = breakeven_price
+                    data['net_holding'] = net_holding
+                else:
+                    data['breakeven_price'] = 0  # 沒有持有量，無需計算損益平衡價
+                    data['net_holding'] = 0
             
             # 格式化結果
             result = f"💰 **交易利潤統計** ({count}筆)\n\n"
@@ -183,7 +198,19 @@ def get_trading_volume_stats():
             
             for symbol, data in sorted_pairs:
                 profit_percentage = (data['profit'] / data['total_buy_value'] * 100) if data['total_buy_value'] > 0 else 0
-                result += f"🪙 {symbol}: {data['profit']:+.2f}  ({profit_percentage:+.1f}%) [費:{data['total_fee']:.2f}]\n"
+                
+                # 構建基本利潤資訊
+                profit_info = f"🪙 {symbol}: {data['profit']:+.2f}  ({profit_percentage:+.1f}%)"
+                
+                # 添加損益平衡價資訊
+                if data['net_holding'] > 0:
+                    profit_info += f"\n   📊 持有:{data['net_holding']:.4f} | 平衡價:{data['breakeven_price']:,.2f}"
+                elif data['net_holding'] < 0:
+                    profit_info += f"\n   📊 空倉:{abs(data['net_holding']):.4f} (已全部賣出超額)"
+                else:
+                    profit_info += f"\n   📊 無持有 (已全部賣出)"
+                    
+                result += profit_info + "\n"
             
             return result
             
