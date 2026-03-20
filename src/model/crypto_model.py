@@ -95,7 +95,8 @@ COMMANDS_HELP = [
     ("!MAX", "MAX 交易所加密貨幣即時價格"),
     ("!me", "查詢使用者的 Slack 資訊"),
     ("!排行榜", "API 交易量排行榜顯示各交易對成交量與利潤統計"),
-    ("!市場分析 [symbol]", "綜合市場分析 (訂單深度+成交記錄)")
+    ("!市場分析 [symbol]", "綜合市場分析 (訂單深度+成交記錄)"),
+    ("!出場價 [進場價]", "計算最低出場價 (含手續費)")
 ]
 
 def register_crypto_handlers(app, config, db):
@@ -188,4 +189,50 @@ def register_crypto_handlers(app, config, db):
             
         except Exception as e:
             say(f"查詢 API 交易量排行榜時發生錯誤: {e}")
+
+
+    # !出場價 計算最低出場價
+    @app.message(re.compile(r"^!出場價\s+([\d.]+)$"))
+    def handle_exit_price_command(message, say):
+        try:
+            user_id = message['user']
+            if not check_user_permission(user_id):                
+                say("你沒有權限使用此指令")
+                return
+            
+            match = re.search(r"^!出場價\s+([\d.]+)$", message['text'])
+            if not match:
+                say("請提供進場價格，例如：`!出場價 50000`")
+                return
+                
+            entry_price = float(match.group(1))
+            
+            # 手續費率
+            # Post-only: 0.04% (0.0004)
+            # Limit: 0.09% (0.0009)
+            # 公式: 最低出場價 = 進場價 * (1 + 買入手續費) / (1 - 賣出手續費)
+            
+            # 情況 1: 買賣皆為 Post-only (0.04%)
+            post_only_exit = entry_price * (1 + 0.0004) / (1 - 0.0004)
+            
+            # 情況 2: 買賣皆為 Limit (0.09%)
+            limit_exit = entry_price * (1 + 0.0009) / (1 - 0.0009)
+            
+            # 情況 3: 買 Post-only (0.04%), 賣 Limit (0.09%)
+            mixed_exit = entry_price * (1 + 0.0004) / (1 - 0.0009)
+            
+            response = (
+                f"📈 *進場價：{entry_price:,.4f}*\n"
+                f"━━━━━━━━━━━━━━\n"
+                f"💰 *最低保本出場價 (Break-even):*\n"
+                f"🔹 雙邊 Post-only (0.04%): *{post_only_exit:,.4f}*\n"
+                f"🔸 雙邊 Limit (0.11%): *{limit_exit:,.4f}*\n"
+                f"⚖️ 買入 Post / 賣出 Limit: *{mixed_exit:,.4f}*\n"
+                f"━━━━━━━━━━━━━━\n"
+                f"💡 _公式: 進場價 × (1 + 買入手續費) ÷ (1 - 賣出手續費)_"
+            )
+            say(response)
+            
+        except Exception as e:
+            say(f"計算出場價時發生錯誤: {e}")
 
