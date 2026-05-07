@@ -3,7 +3,6 @@ import random
 import json
 import requests
 from ..crypto import get_crypto_prices, get_pending_orders, get_trading_volume_stats, get_market_analysis
-from ..AI_Service.ai_tool import get_maicoin_competition_table
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 
@@ -93,8 +92,7 @@ class Order:
 COMMANDS_HELP = [    
     ("!order", "查詢目前掛單的訂單"),
     ("!MAX", "MAX 交易所加密貨幣即時價格"),
-    ("!me", "查詢使用者的 Slack 資訊"),
-    ("!排行榜", "API 交易量排行榜顯示各交易對成交量與利潤統計"),
+    ("!me", "查詢使用者的 Slack 資訊"),    
     ("!市場分析 [symbol]", "綜合市場分析 (訂單深度+成交記錄)"),
     ("!出場價 [進場價]", "計算最低出場價 (含手續費)")
 ]
@@ -173,23 +171,6 @@ def register_crypto_handlers(app, config, db):
             
         except Exception as e:
             say(f"市場分析時發生錯誤: {e}")
-
-
-    # !排行榜 API 交易量排行榜
-    @app.message(re.compile(r"^!排行榜$"))
-    def handle_volume_ranking_command(message, say):
-        try:
-            user_id = message['user']
-            if not check_user_permission(user_id):                
-                say("你沒有權限使用此指令")
-                return
-            
-            result = get_maicoin_competition_table("all")
-            say(result)
-            
-        except Exception as e:
-            say(f"查詢 API 交易量排行榜時發生錯誤: {e}")
-
 
     # !出場價 計算最低出場價
     @app.message(re.compile(r"^!出場價\s+([\d.]+)$"))
