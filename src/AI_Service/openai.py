@@ -80,13 +80,13 @@ def painting(text):
     return response.choices[0].message.content.strip().lower()
 
 
-def create_image_dalle(prompt, quality="standard", size="1024x1024"):
+def create_image_dalle(prompt, quality="medium", size="1024x1024"):
     """
-    使用 OpenAI DALL-E 3 API 生成圖像
+    使用 OpenAI GPT-image-2 API 生成圖像
     
     Args:
         prompt (str): 圖像描述文本
-        quality (str): 圖像質量 - "standard" 或 "hd"，預設為 "standard"
+        quality (str): 圖像質量 - "low", "medium", "high" 或 "auto"，預設為 "medium"
         size (str): 圖像尺寸 - "1024x1024", "1792x1024", "1024x1792"，預設為 "1024x1024"
     
     Returns:
@@ -118,17 +118,17 @@ def create_image_dalle(prompt, quality="standard", size="1024x1024"):
         # 下載並保存圖像
         urllib.request.urlretrieve(image_url, file_path)
         
-        message = f"✅ DALL-E 3 圖像生成成功！\n提示詞：{prompt}"
+        message = f"✅ GPT-image-2 圖像生成成功！\n提示詞：{prompt}"
         return message, file_name
         
     except Exception as e:
-        error_message = f"❌ DALL-E 圖像生成失敗：{str(e)}"
+        error_message = f"❌ GPT-image-2 圖像生成失敗：{str(e)}"
         return error_message, None
 
 
 def create_image_dalle_hd(prompt, size="1024x1024"):
     """
-    使用 OpenAI DALL-E 3 API 生成高質量圖像
+    使用 OpenAI GPT-image-2 API 生成高質量圖像
     
     Args:
         prompt (str): 圖像描述文本
@@ -137,7 +137,7 @@ def create_image_dalle_hd(prompt, size="1024x1024"):
     Returns:
         tuple: (狀態訊息, 圖像檔案路徑)
     """
-    return create_image_dalle(prompt, quality="hd", size=size)
+    return create_image_dalle(prompt, quality="high", size=size)
 
 
 def translate_prompt_to_english(text):
