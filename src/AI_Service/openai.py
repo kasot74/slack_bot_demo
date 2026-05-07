@@ -2,6 +2,10 @@ import openai
 from openai import OpenAI
 from ..utilities import read_config
 from ..database import con_db
+import os
+import urllib.request
+import urllib.error
+from datetime import datetime
 
 
 # 從配置文件中讀取 tokens
@@ -10,7 +14,8 @@ ai_db = con_db(config)
 OpenAI_clice = OpenAI(    
     api_key=config['OPENAI_API_KEY']
 )
-model_target = "gpt-4o"
+model_target = "gpt-5.4"  # 更新為最新模型
+image_model = "gpt-image-2"  # 最新圖像生成模型
 collection = ai_db.ai_his
 
 
@@ -64,7 +69,7 @@ def analyze_sentiment(text):
     )       
     return response.choices[0].message.content.strip().lower()
 
-def  painting(text):
+def painting(text):
     response = OpenAI_clice.chat.completions.create(
         model="gpt-4o",
         messages=[
@@ -73,3 +78,83 @@ def  painting(text):
         ]
     )       
     return response.choices[0].message.content.strip().lower()
+
+
+def create_image_dalle(prompt, quality="standard", size="1024x1024"):
+    """
+    使用 OpenAI DALL-E 3 API 生成圖像
+    
+    Args:
+        prompt (str): 圖像描述文本
+        quality (str): 圖像質量 - "standard" 或 "hd"，預設為 "standard"
+        size (str): 圖像尺寸 - "1024x1024", "1792x1024", "1024x1792"，預設為 "1024x1024"
+    
+    Returns:
+        tuple: (狀態訊息, 圖像檔案路徑)
+    """
+    try:
+        # 確保 images 目錄存在
+        images_dir = "images"
+        if not os.path.exists(images_dir):
+            os.makedirs(images_dir)
+        
+        # 調用最新的 GPT-image-2 API
+        response = OpenAI_clice.images.generate(
+            model=image_model,  # 使用最新的 gpt-image-2 模型
+            prompt=prompt,
+            size=size,
+            quality=quality,
+            n=1
+        )
+        
+        # 獲取圖像 URL
+        image_url = response.data[0].url
+        
+        # 生成文件名
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        file_name = f"dalle_{timestamp}.png"
+        file_path = os.path.join(images_dir, file_name)
+        
+        # 下載並保存圖像
+        urllib.request.urlretrieve(image_url, file_path)
+        
+        message = f"✅ DALL-E 3 圖像生成成功！\n提示詞：{prompt}"
+        return message, file_name
+        
+    except Exception as e:
+        error_message = f"❌ DALL-E 圖像生成失敗：{str(e)}"
+        return error_message, None
+
+
+def create_image_dalle_hd(prompt, size="1024x1024"):
+    """
+    使用 OpenAI DALL-E 3 API 生成高質量圖像
+    
+    Args:
+        prompt (str): 圖像描述文本
+        size (str): 圖像尺寸 - "1024x1024", "1792x1024", "1024x1792"
+    
+    Returns:
+        tuple: (狀態訊息, 圖像檔案路徑)
+    """
+    return create_image_dalle(prompt, quality="hd", size=size)
+
+
+def translate_prompt_to_english(text):
+    """
+    將中文提示詞翻譯為英文用於 DALL-E
+    
+    Args:
+        text (str): 中文提示詞
+    
+    Returns:
+        str: 英文翻譯
+    """
+    response = OpenAI_clice.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "你是翻譯官，將用戶的中文圖像描述翻譯為英文，用於圖像生成API。保持描述的藝術性和準確性。"},
+            {"role": "user", "content": f"將以下描述翻譯為英文用於圖像生成：'{text}'"}
+        ]
+    )       
+    return response.choices[0].message.content.strip()

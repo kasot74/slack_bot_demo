@@ -14,6 +14,9 @@ from datetime import datetime, timedelta
 # openai imports
 from ..AI_Service.openai import generate_summary as generate_summary_openai
 from ..AI_Service.openai import look_conversation_history as openai_look_conversation_history
+from ..AI_Service.openai import create_image_dalle as openai_create_image_dalle
+from ..AI_Service.openai import create_image_dalle_hd as openai_create_image_dalle_hd
+from ..AI_Service.openai import translate_prompt_to_english as openai_translate_prompt
 
 # claude imports
 from ..AI_Service.claude import generate_summary as generate_summary_claude
@@ -35,7 +38,8 @@ COMMANDS_HELP = [
     ("!claude 內容", "詢問 Claude "),    
     ("!gemini 內容", "詢問 gemini"),    
     ("!ai 內容", "AI角色扮演"),    
-    ("!畫 內容", "用 Gemini Imagen 產生圖片"),    
+    ("!畫 內容", "用 Gemini Imagen 產生圖片"),
+    ("!dalle 內容", "用 OpenAI GPT-image-2 產生圖片 (加 -hd 為高質量)"),    
     ("!改圖 內容", "用 Gemini 進行圖片編輯"),
     ("!clearai", "清除 AI 聊天紀錄")
 ]
@@ -152,6 +156,32 @@ def register_handlers(app, config, db):
             say("AI 聊天紀錄清除成功！")
         except Exception as e:
             say(f"AI 聊天紀錄清除錯誤！{e}")
+
+    #!dalle - GPT-image-2 圖像生成（支援 -hd 高質量模式）
+    @app.message(re.compile(r"^!dalle\s+(.+)$"))
+    def create_image_dalle(message, say):
+        channel = message['channel']
+        msg_text = re.match(r"^!dalle\s+(.+)$", message['text']).group(1).strip()
+        
+        # 偵測是否為高質量模式
+        is_hd = msg_text.endswith("-hd")
+        quality = "hd" if is_hd else "standard"
+        
+        # 移除 -hd 標記
+        clean_prompt = msg_text.replace(" -hd", "").replace("-hd", "").strip()
+        
+        try:
+            # 回應用戶
+            quality_text = "高質量" if is_hd else "標準"
+            say(f"🎨 GPT-image-2 正在生成{quality_text}圖像，請稍候...")
+            
+            # 創建圖像
+            say_text, file_name = openai_create_image_dalle(clean_prompt, quality=quality, size="1024x1024")
+            
+            # 發送圖像到 Slack
+            send_image(channel, say_text, say, file_name)
+        except Exception as e:
+            say(f"❌ 圖像生成失敗：{e}")
    
     # !改圖
     @app.message(re.compile(r"^!改圖\s+(.+)$"))
