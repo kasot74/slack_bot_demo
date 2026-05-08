@@ -101,10 +101,9 @@ def create_image_dalle(prompt, quality="medium", size="1024x1024"):
         response = OpenAI_clice.images.generate(
             model=image_model,  # 使用最新的 gpt-image-2 模型
             prompt=prompt,
-            size=size,
-            quality=quality,
-            response_format="b64_json",
-            n=1
+            size="1024x1024",
+            quality="high",
+            n=1            
         )
         
         # 取得 base64 圖像資料
