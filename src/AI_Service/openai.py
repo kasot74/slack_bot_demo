@@ -108,7 +108,14 @@ def create_image_dalle(prompt, quality="medium", size="1024x1024"):
         )
         
         # 獲取圖像 URL
+        if not response or not response.data or not response.data[0]:
+            raise Exception("OpenAI API 未返回有效回應")
+        
         image_url = response.data[0].url
+        
+        # 檢查 image_url 是否有效
+        if not image_url:
+            raise Exception("OpenAI API 未返回圖像 URL")
         
         # 生成文件名
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
