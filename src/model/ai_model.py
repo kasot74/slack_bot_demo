@@ -108,17 +108,21 @@ def register_handlers(app, config, db):
             say(message)
             return
         try:
-            imagefile = os.path.join('images',file_path)
+            if not isinstance(file_path, str):
+                say(f"{message}\n❌ 錯誤：無效的檔案路徑")
+                return
+                
+            imagefile = os.path.join('images', file_path)
             if os.path.isfile(imagefile):                
                 response = app.client.files_upload_v2(
                     channel=channel_id,
-                    file=os.path.join('images',file_path),
+                    file=imagefile,
                     initial_comment=message
                 )                
             else:
-                say(f"{message} \n找不到{file_path}" )                
+                say(f"{message} \n❌ 找不到檔案：{file_path}")                
         except Exception as e:
-            print(f"Error send_image uploading file ")
+            say(f"{message}\n❌ 圖片上傳失敗：{e}")
 
     # 發送影片函數
     def send_video(channel_id, message, say, file_path=None):        

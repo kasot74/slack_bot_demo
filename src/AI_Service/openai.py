@@ -3,8 +3,7 @@ from openai import OpenAI
 from ..utilities import read_config
 from ..database import con_db, get_ai_model_config
 import os
-import urllib.request
-import urllib.error
+import base64
 from datetime import datetime
 
 
@@ -103,27 +102,37 @@ def create_image_dalle(prompt, quality="medium", size="1024x1024"):
         response = OpenAI_clice.images.generate(
             model=image_model,  # 使用最新的 gpt-image-2 模型
             prompt=prompt,
-            size=size,
-            quality=quality,
-            n=1
+            size="1024x1024",
+            quality="high",
+            n=1            
         )
         
-        # 獲取圖像 URL
-        image_url = response.data[0].url
+        # 取得 base64 圖像資料
+        if not response or not response.data or not response.data[0]:
+            raise Exception("OpenAI API 未返回有效回應")
         
-        # 生成文件名
+        image_base64 = response.data[0].b64_json
+        
+        if not image_base64:
+            raise Exception("未取得圖片資料")
+        
+        # 轉成 binary
+        image_bytes = base64.b64decode(image_base64)
+        
+        # 檔名
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         file_name = f"dalle_{timestamp}.png"
         file_path = os.path.join(images_dir, file_name)
         
-        # 下載並保存圖像
-        urllib.request.urlretrieve(image_url, file_path)
+        # 寫入圖片
+        with open(file_path, "wb") as f:
+            f.write(image_bytes)
         
-        message = f"✅ GPT-image-2 圖像生成成功！\n提示詞：{prompt}"
+        message = f"✅ 圖像生成成功！\nPrompt: {prompt}"
         return message, file_name
         
     except Exception as e:
-        error_message = f"❌ GPT-image-2 圖像生成失敗：{str(e)}"
+        error_message = f"❌ GPT-image-2 圖像生成失敗：{str(e)}\nResponse: {response if 'response' in locals() else 'No response'}"
         return error_message, None
 
 
