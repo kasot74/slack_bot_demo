@@ -35,16 +35,17 @@ from ..AI_Service.gemini import model_list as gemini_model_list
 from ..database import update_ai_model_config, list_ai_model_configs
 
 COMMANDS_HELP = [
-    ("!openai 內容", "詢問 GPT "),
-    ("!claude 內容", "詢問 Claude "),    
-    ("!gemini 內容", "詢問 gemini"),    
-    ("!ai 內容", "AI角色扮演"),    
-    ("!畫 內容", "用 Gemini Imagen 產生圖片"),
-    ("!dalle 內容", "用 OpenAI GPT-image-2 產生圖片"),    
-    ("!改圖 內容", "用 Gemini 進行圖片編輯"),
-    ("!clearai", "清除 AI 聊天紀錄"),
-    ("!setmodel <service> <field> <value>", "更新 AI 模型設定"),
-    ("!listmodels", "查看目前 AI 模型設定"),
+        ("!openai 內容", "詢問 GPT "),
+        ("!claude 內容", "詢問 Claude "),    
+        ("!gemini 內容", "詢問 gemini"),    
+        ("!ai 內容", "AI角色扮演"),    
+        ("!畫 內容", "用 Gemini Imagen 產生圖片"),
+        ("!dalle 內容", "用 OpenAI GPT-image-2 產生圖片"),    
+        ("!改圖 內容", "用 Gemini 進行圖片編輯"),
+        ("!clearai", "清除 AI 聊天紀錄"),
+        ("!setmodel <service> <field> <value>", "更新 AI 模型設定"),
+        ("!listmodels", "查看目前 AI 模型設定")
+    ]
     def list_models(message, say):
         try:
             models = gemini_model_list()
