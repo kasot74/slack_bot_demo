@@ -46,6 +46,12 @@ COMMANDS_HELP = [
         ("!setmodel <service> <field> <value>", "更新 AI 模型設定"),
         ("!listmodels", "查看目前 AI 模型設定")
     ]
+
+
+def register_handlers(app, config, db):
+
+    #!models
+    @app.message(re.compile(r"^!models$"))
     def list_models(message, say):
         try:
             models = gemini_model_list()
