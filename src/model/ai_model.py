@@ -182,46 +182,39 @@ def register_handlers(app, config, db):
     # !改圖
     @app.message(re.compile(r"^!改圖\s+(.+)$"))
     def handle_edit_image(message, say):
-        # 檢查是否包含改圖指令和檔案
-        if 'text' in message and message['text'].startswith('!改圖') and 'files' in message:
-            channel = message['channel']
+        channel = message['channel']
 
-            # 提取改圖描述
-            text_prompt = message['text'].replace('!改圖', '').strip()
-            if not text_prompt:
-                say("請提供改圖描述，例如：!改圖 在我旁邊添加一隻可愛的羊駝")
-                return
-            
-            # 先回應用戶，告知改圖進行中
-            say("🎨 開始改圖，請稍候...")
-            image_bytes_list = []
-            try:
+        # 提取改圖描述
+        text_prompt = message['text'].replace('!改圖', '').strip()
+        if not text_prompt:
+            say("請提供改圖描述，例如：!改圖 在我旁邊添加一隻可愛的羊駝")
+            return
+        
+        # 先回應用戶，告知改圖進行中
+        say("🎨 開始改圖，請稍候...")
+        image_bytes_list = []
+        file_name = "uploaded"
+        try:
+            # 若有附加圖片則下載（圖片為可選）
+            if 'files' in message:
                 for file_info in message['files']:
-                    # 處理上傳的圖片
                     file_url = file_info['url_private']
                     file_name = file_info['name']
-                    # 下載圖片
                     headers = {'Authorization': f'Bearer {config["SLACK_BOT_TOKEN"]}'}
-                    response = requests.get(file_url, headers=headers)                
+                    response = requests.get(file_url, headers=headers)
                     if response.status_code == 200:
-                        image_bytes = response.content
-                        image_bytes_list.append(image_bytes)
-                    
-                # 調用 Gemini 改圖功能
-                result_text, file_path = gemini_edit_image(image_bytes_list, text_prompt, file_name)
+                        image_bytes_list.append(response.content)
 
-                if file_path:
-                    send_image(channel, result_text, say, file_path)
-                else:
-                    say(result_text)  # 顯示錯誤訊息
-                    
-            except Exception as e:
-                say(f"❌ 改圖失敗：{e}")
+            # 調用 Gemini 改圖／生圖功能（圖片可選）
+            result_text, file_path = gemini_edit_image(image_bytes_list, text_prompt, file_name)
 
-        
-        # 檢查是否只有改圖指令但沒有檔案
-        elif 'text' in event and event['text'].startswith('!改圖') and 'files' not in event:
-            say("請上傳圖片檔案並加上改圖描述，例如：\n上傳圖片 + `!改圖 在我旁邊添加一隻可愛的羊駝`")
+            if file_path:
+                send_image(channel, result_text, say, file_path)
+            else:
+                say(result_text)
+                
+        except Exception as e:
+            say(f"❌ 改圖失敗：{e}")
 
             
 

@@ -25,7 +25,7 @@ GEMINI_API_KEY = config['GEMINI_API_KEY']
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
 _model_cfg = get_ai_model_config(ai_db, "gemini")
 DEFAULT_MODEL = _model_cfg.get("model", "gemini-2.5-flash")
-IMAGE_MODEL = _model_cfg.get("image_model", "gemini-2.5-flash-image")
+IMAGE_MODEL = _model_cfg.get("image_model", "gemini-3.1-flash-image-preview")
 collection = ai_db.ai_his
 
 
@@ -431,7 +431,7 @@ def download_video_file(file_name, video_dir, prompt):
     except Exception as e:
         return f"❌ 影片下載失敗: {e}", None
 
-def edit_image_from_bytes(image_bytes_list, text_prompt, original_filename="uploaded"):
+def edit_image_from_bytes(image_bytes_list=None, text_prompt="", original_filename="uploaded"):
     """從位元組數據改圖"""
     try:
         # 確保圖片目錄存在
@@ -444,6 +444,8 @@ def edit_image_from_bytes(image_bytes_list, text_prompt, original_filename="uplo
         
         # 處理提示詞
         #processed_prompt = painting(text_prompt)
+        if image_bytes_list is None:
+            image_bytes_list = []
         contents = []
         for image_bytes in image_bytes_list: 
             kind = filetype.guess(image_bytes) 
@@ -481,9 +483,12 @@ def edit_image_from_bytes(image_bytes_list, text_prompt, original_filename="uplo
             
             relative_path = os.path.join("gemini_image", filename)
             
-            result_text = f"✅ Gemini 改圖成功！\n"
-            result_text += f"原始檔案: {original_filename}\n"
-            result_text += f"提示: {text_prompt}\n"            
+            if image_bytes_list:
+                result_text = f"✅ Gemini 改圖成功！\n"
+                result_text += f"原始檔案: {original_filename}\n"
+            else:
+                result_text = f"✅ Gemini 生圖成功！\n"
+            result_text += f"提示: {text_prompt}\n"
             if generated_text:
                 result_text += f"AI 回應: {generated_text}\n"
             

@@ -18,16 +18,16 @@ _DEFAULT_AI_MODEL_CONFIGS = [
     {"service": "openai",  "model": "gpt-5.4",            "image_model": "gpt-image-2"},
     {"service": "xai",     "model": "grok-4.3-latest"},
     {"service": "dzmm",    "model": "nalang-xl-10"},
-    {"service": "gemini",  "model": "gemini-2.5-flash",   "image_model": "gemini-2.5-flash-image"},
+    {"service": "gemini",  "model": "gemini-2.5-flash",   "image_model": "gemini-3.1-flash-image-preview"},
 ]
 
 def init_ai_model_configs(db):
-    """初始化 ai_model_config 集合；若文件已存在則不覆蓋。"""
+    """初始化 ai_model_config 集合；若文件已存在則以預設值覆蓋。"""
     col = db.ai_model_config
     for cfg in _DEFAULT_AI_MODEL_CONFIGS:
         col.update_one(
             {"service": cfg["service"]},
-            {"$setOnInsert": cfg},
+            {"$set": cfg},
             upsert=True
         )
 
