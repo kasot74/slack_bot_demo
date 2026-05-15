@@ -11,7 +11,7 @@ from datetime import datetime
 from google import genai
 from google.genai import types
 from ..utilities import read_config
-from ..database import con_db
+from ..database import con_db, get_ai_model_config
 from ..AI_Service.openai import painting
 from ..AI_Service.ai_tool import read_url_content, get_technical_indicators
 from ..stock import get_stock_info, get_historical_data, get_current_date
@@ -23,8 +23,9 @@ GEMINI_API_KEY = config['GEMINI_API_KEY']
 
 # Gemini API 設定
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-DEFAULT_MODEL = "gemini-2.5-flash"
-IMAGE_MODEL = "gemini-2.5-flash-image"
+_model_cfg = get_ai_model_config(ai_db, "gemini")
+DEFAULT_MODEL = _model_cfg.get("model", "gemini-2.5-flash")
+IMAGE_MODEL = _model_cfg.get("image_model", "gemini-2.5-flash-image")
 collection = ai_db.ai_his
 
 

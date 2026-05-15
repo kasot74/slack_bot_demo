@@ -8,7 +8,7 @@ from PIL import Image
 from io import BytesIO
 from openai import OpenAI
 from ..utilities import read_config
-from ..database import con_db
+from ..database import con_db, get_ai_model_config
 from opencc import OpenCC
 
 cc = OpenCC('s2t')  # 簡體轉繁體
@@ -17,7 +17,8 @@ cc = OpenCC('s2t')  # 簡體轉繁體
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
 ai_db = con_db(config)
-model_target = "nalang-xl-10"
+_model_cfg = get_ai_model_config(ai_db, "dzmm")
+model_target = _model_cfg.get("model", "nalang-xl-10")
 api_key = config['DZMM_API_KEY']
 api_url = config['DZMM_API_URL']
 

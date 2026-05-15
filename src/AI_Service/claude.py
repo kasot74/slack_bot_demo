@@ -1,6 +1,6 @@
 from anthropic import Anthropic
 from ..utilities import read_config 
-from ..database import con_db
+from ..database import con_db, get_ai_model_config
 
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
@@ -8,7 +8,8 @@ ai_db = con_db(config)
 claude = Anthropic(api_key=config['CLAUDE_API_KEY'])
 collection = ai_db.ai_his
 role_collection = ai_db.ai_role_claude_his
-model_target = "claude-haiku-4-5-20251001"
+_model_cfg = get_ai_model_config(ai_db, "claude")
+model_target = _model_cfg.get("model", "claude-haiku-4-5-20251001")
 
 def convert_to_claude_format(collection_name):
     c_collection = ai_db[collection_name]

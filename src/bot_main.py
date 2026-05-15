@@ -16,7 +16,7 @@ from .model.ai_model import COMMANDS_HELP as AI_COMMANDS
 from .model.crypto_model import COMMANDS_HELP as CRYPTO_COMMANDS
 
 from .utilities import read_config
-from .database import con_db
+from .database import con_db, init_ai_model_configs
 from .log_analyzer import AccessLogAnalyzer
 from .log_analyzer import AccessLogEntry
 from .model.resource_monitor import ResourceCleaner, register_resource_commands
@@ -28,6 +28,7 @@ import re
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
 db = con_db(config)
+init_ai_model_configs(db)  # 確保 AI 模型設定已初始化至 MongoDB
 # 初始化 Slack App
 app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_SECRET'])
 

@@ -1,7 +1,7 @@
 import openai
 from openai import OpenAI
 from ..utilities import read_config
-from ..database import con_db
+from ..database import con_db, get_ai_model_config
 import os
 import urllib.request
 import urllib.error
@@ -14,8 +14,9 @@ ai_db = con_db(config)
 OpenAI_clice = OpenAI(    
     api_key=config['OPENAI_API_KEY']
 )
-model_target = "gpt-5.4"  # 更新為最新模型
-image_model = "gpt-image-2"  # 最新圖像生成模型
+_model_cfg = get_ai_model_config(ai_db, "openai")
+model_target = _model_cfg.get("model", "gpt-5.4")
+image_model = _model_cfg.get("image_model", "gpt-image-2")
 collection = ai_db.ai_his
 
 

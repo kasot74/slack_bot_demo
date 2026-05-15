@@ -7,7 +7,7 @@ from PIL import Image
 from io import BytesIO
 from openai import OpenAI
 from ..utilities import read_config
-from ..database import con_db
+from ..database import con_db, get_ai_model_config
 
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
@@ -17,7 +17,8 @@ XAI_clice = OpenAI(
     api_key=config['XAI_API_KEY'],
     base_url="https://api.x.ai/v1",    
 )
-model_target = "grok-4-latest" #grok-2-latest #nalang-turbo-v19
+_model_cfg = get_ai_model_config(ai_db, "xai")
+model_target = _model_cfg.get("model", "grok-4.3-latest")
 
 
 collection = ai_db.ai_his
