@@ -8,8 +8,8 @@ ai_db = con_db(config)
 claude = Anthropic(api_key=config['CLAUDE_API_KEY'])
 collection = ai_db.ai_his
 role_collection = ai_db.ai_role_claude_his
-_model_cfg = get_ai_model_config(ai_db, "claude")
-model_target = _model_cfg.get("model", "claude-haiku-4-5-20251001")
+def _get_model():
+    return get_ai_model_config(ai_db, "claude").get("model", "claude-haiku-4-5-20251001")
 
 def convert_to_claude_format(collection_name):
     c_collection = ai_db[collection_name]
@@ -29,7 +29,7 @@ def generate_summary(user_input):
     conversation_history = convert_to_claude_format("ai_his")
     
     response = claude.messages.create(
-        model=model_target,
+        model=_get_model(),
         max_tokens=1000,
         system="用繁體中文回答",
         messages=conversation_history
@@ -46,7 +46,7 @@ def clear_conversation_history():
 
 def analyze_sentiment(text):
     response = claude.messages.create(
-        model=model_target,
+        model=_get_model(),
         max_tokens=1000,
         system="你是一個情感分析器，判定語錄是正能量還是負能量。",
         messages=[
@@ -57,7 +57,7 @@ def analyze_sentiment(text):
 
 def painting(text):
     response = claude.messages.create(
-        model=model_target,
+        model=_get_model(),
         max_tokens=1000,
         system="你是翻譯官，幫我將文字描述翻譯為英文用來直接提供給StabilityAI繪圖用，不需要其他說明",
         messages=[

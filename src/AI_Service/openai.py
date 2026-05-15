@@ -13,9 +13,11 @@ ai_db = con_db(config)
 OpenAI_clice = OpenAI(    
     api_key=config['OPENAI_API_KEY']
 )
-_model_cfg = get_ai_model_config(ai_db, "openai")
-model_target = _model_cfg.get("model", "gpt-5.4")
-image_model = _model_cfg.get("image_model", "gpt-image-2")
+def _get_model():
+    return get_ai_model_config(ai_db, "openai").get("model", "gpt-5.4")
+
+def _get_image_model():
+    return get_ai_model_config(ai_db, "openai").get("image_model", "gpt-image-2")
 collection = ai_db.ai_his
 
 
@@ -40,7 +42,7 @@ def generate_summary(user_input):
     conversation_history = convert_to_openai_format("ai_his")        
     response = OpenAI_clice.chat.completions.create(
         messages=conversation_history,
-        model=model_target        
+        model=_get_model()        
     )
     assistant_message = response.choices[0].message.content
     collection.insert_one({"role": "assistant", "content": assistant_message})
@@ -100,7 +102,7 @@ def create_image_dalle(prompt, quality="medium", size="1024x1024"):
         
         # 調用最新的 GPT-image-2 API
         response = OpenAI_clice.images.generate(
-            model=image_model,  # 使用最新的 gpt-image-2 模型
+            model=_get_image_model(),  # 使用最新的 gpt-image-2 模型
             prompt=prompt,
             size="1024x1024",
             quality="high",

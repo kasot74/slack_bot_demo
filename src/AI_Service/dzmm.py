@@ -17,8 +17,8 @@ cc = OpenCC('s2t')  # 簡體轉繁體
 # 從配置文件中讀取 tokens
 config = read_config('config/config.txt')
 ai_db = con_db(config)
-_model_cfg = get_ai_model_config(ai_db, "dzmm")
-model_target = _model_cfg.get("model", "nalang-xl-10")
+def _get_model():
+    return get_ai_model_config(ai_db, "dzmm").get("model", "nalang-xl-10")
 api_key = config['DZMM_API_KEY']
 api_url = config['DZMM_API_URL']
 
@@ -37,7 +37,7 @@ def generate_summary(user_input, collection_name="ai_dzmm_his"):
 
     # 建立請求 payload
     payload = {
-        "model": model_target,
+        "model": _get_model(),
         "messages": conversation_history,
         "stream": True,
         "temperature": 0.7,

@@ -23,9 +23,11 @@ GEMINI_API_KEY = config['GEMINI_API_KEY']
 
 # Gemini API 設定
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
-_model_cfg = get_ai_model_config(ai_db, "gemini")
-DEFAULT_MODEL = _model_cfg.get("model", "gemini-2.5-flash")
-IMAGE_MODEL = _model_cfg.get("image_model", "gemini-3.1-flash-image-preview")
+def _get_model():
+    return get_ai_model_config(ai_db, "gemini").get("model", "gemini-2.5-flash")
+
+def _get_image_model():
+    return get_ai_model_config(ai_db, "gemini").get("image_model", "gemini-3.1-flash-image-preview")
 collection = ai_db.ai_his
 
 
@@ -40,7 +42,7 @@ def google_search(query: str) -> str:
     try:
         client = genai.Client(api_key=GEMINI_API_KEY)
         response = client.models.generate_content(
-            model=DEFAULT_MODEL,
+            model=_get_model(),
             contents=query,
             config=types.GenerateContentConfig(
                 tools=[types.Tool(google_search=types.GoogleSearch())]
@@ -107,7 +109,7 @@ def generate_summary(user_input):
         # 使用 SDK 的 Chat Session 並禁用自動呼叫 (disable=True)
         # 排除掉剛才加入的最新訊息，透過 send_message 發送
         chat = client.chats.create(
-            model=DEFAULT_MODEL,
+            model=_get_model(),
             history=conversation_history[:-1],
             config=types.GenerateContentConfig(                
                 tools=all_tools,
@@ -180,7 +182,7 @@ def painting(text):
         
         # 使用 SDK 發送請求
         response = client.models.generate_content(
-            model=DEFAULT_MODEL,
+            model=_get_model(),
             contents=f"你是翻譯官，幫我將文字描述翻譯為英文用來提供給 AI 生成用。請將以下中文描述轉換為英文提示詞給我不需要太多其他建議：'{text}'",
             config=types.GenerateContentConfig(
                 max_output_tokens=300,
@@ -459,7 +461,7 @@ def edit_image_from_bytes(image_bytes_list=None, text_prompt="", original_filena
         # 生成內容
         contents.append(text_prompt)
         response = client.models.generate_content(
-            model=IMAGE_MODEL,            
+            model=_get_image_model(),            
             contents=contents
         )
         

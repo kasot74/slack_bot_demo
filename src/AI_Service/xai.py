@@ -17,8 +17,8 @@ XAI_clice = OpenAI(
     api_key=config['XAI_API_KEY'],
     base_url="https://api.x.ai/v1",    
 )
-_model_cfg = get_ai_model_config(ai_db, "xai")
-model_target = _model_cfg.get("model", "grok-4.3-latest")
+def _get_model():
+    return get_ai_model_config(ai_db, "xai").get("model", "grok-4.3-latest")
 
 
 collection = ai_db.ai_his
@@ -45,7 +45,7 @@ def generate_summary(user_input, collection_name="ai_his"):
     conversation_history = convert_to_openai_format(collection_name)        
     response = XAI_clice.chat.completions.create(
         messages=conversation_history,
-        model=model_target        
+        model=_get_model()        
     )
     assistant_message = response.choices[0].message.content
     collection_his.insert_one({"role": "assistant", "content": assistant_message})
@@ -59,7 +59,7 @@ def clear_conversation_history(collection_name="ai_his",system_message="請用�
 
 def analyze_sentiment(text):
     response = XAI_clice.chat.completions.create(
-        model=model_target,
+        model=_get_model(),
         messages=[
             {"role": "system", "content": "你是一個情感分析器，判定語錄是正能量還是負能量。"},
             {"role": "user", "content": f"這句話：'{text}' 是正能量還是負能量？"}
@@ -75,7 +75,7 @@ def analyze_stock(his_data, now_data):
 
     messages.append({"role": "user", "content": f"這是該股現況 {now_data}"})
     response = XAI_clice.chat.completions.create(
-        model=model_target,
+        model=_get_model(),
         messages=messages
     )       
     return response.choices[0].message.content.strip().lower()    
@@ -88,14 +88,14 @@ def analyze_stock_inoutpoint(his_data, now_data):
 
     messages.append({"role": "user", "content": f"這是該股現況 {now_data}"})
     response = XAI_clice.chat.completions.create(
-        model=model_target,
+        model=_get_model(),
         messages=messages
     )       
     return response.choices[0].message.content.strip().lower()    
 
 def  painting(text):
     response = XAI_clice.chat.completions.create(
-        model=model_target,
+        model=_get_model(),
         messages=[
             {"role": "system", "content": "你是翻譯官，幫我將文字描述翻譯為英文用來提供給StabilityAI繪圖用"},
             {"role": "user", "content": f"幫我轉化：'{text}' "}

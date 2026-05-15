@@ -32,6 +32,7 @@ from ..AI_Service.gemini import create_video_from_bytes as gemini_create_video_f
 
 from ..AI_Service.gemini import edit_image_from_bytes as gemini_edit_image
 from ..AI_Service.gemini import model_list as gemini_model_list
+from ..database import update_ai_model_config, list_ai_model_configs
 
 COMMANDS_HELP = [
     ("!openai 內容", "詢問 GPT "),
@@ -41,15 +42,9 @@ COMMANDS_HELP = [
     ("!畫 內容", "用 Gemini Imagen 產生圖片"),
     ("!dalle 內容", "用 OpenAI GPT-image-2 產生圖片"),    
     ("!改圖 內容", "用 Gemini 進行圖片編輯"),
-    ("!clearai", "清除 AI 聊天紀錄")
-]
-  
-
-
-def register_handlers(app, config, db):
-
-    #!models
-    @app.message(re.compile(r"^!models$"))
+    ("!clearai", "清除 AI 聊天紀錄"),
+    ("!setmodel <service> <field> <value>", "更新 AI 模型設定"),
+    ("!listmodels", "查看目前 AI 模型設定"),
     def list_models(message, say):
         try:
             models = gemini_model_list()
@@ -160,6 +155,42 @@ def register_handlers(app, config, db):
             say("AI 聊天紀錄清除成功！")
         except Exception as e:
             say(f"AI 聊天紀錄清除錯誤！{e}")
+
+    # !setmodel <service> <field> <value>
+    @app.message(re.compile(r"^!setmodel\s+(\S+)\s+(\S+)\s+(\S+)$"))
+    def handle_set_model(message, say):
+        match = re.match(r"^!setmodel\s+(\S+)\s+(\S+)\s+(\S+)$", message['text'])
+        service, field, value = match.group(1), match.group(2), match.group(3)
+        allowed_fields = {"model", "image_model"}
+        if field not in allowed_fields:
+            say(f"❌ 不支援的欄位 `{field}`，可用：{', '.join(f'`{f}`' for f in allowed_fields)}")
+            return
+        ok = update_ai_model_config(db, service, field, value)
+        if ok:
+            say(f"✅ 已更新 `{service}` 的 `{field}` 為 `{value}`，下次呼叫 API 即生效。")
+        else:
+            say(f"❌ 找不到 service `{service}`，請先確認 service 名稱是否正確。")
+
+    # !listmodels
+    @app.message(re.compile(r"^!listmodels$"))
+    def handle_list_models_config(message, say):
+        try:
+            configs = list_ai_model_configs(db)
+            if not configs:
+                say("目前沒有任何 AI 模型設定。")
+                return
+            lines = ["🤖 目前 AI 模型設定："]
+            for cfg in configs:
+                service = cfg.get("service", "?")
+                model = cfg.get("model", "-")
+                image_model = cfg.get("image_model", "")
+                line = f"• `{service}` — model: `{model}`"
+                if image_model:
+                    line += f", image_model: `{image_model}`"
+                lines.append(line)
+            say("\n".join(lines))
+        except Exception as e:
+            say(f"❌ 取得模型設定失敗：{e}")
 
     #!dalle - GPT-image-2 圖像生成
     @app.message(re.compile(r"^!dalle\s+(.+)$"))

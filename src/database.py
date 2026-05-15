@@ -40,3 +40,18 @@ def get_ai_model_config(db, service_name: str) -> dict:
     # fallback：回傳硬編碼預設值
     defaults = {c["service"]: c for c in _DEFAULT_AI_MODEL_CONFIGS}
     return defaults.get(service_name, {})
+
+def update_ai_model_config(db, service_name: str, field: str, value: str) -> bool:
+    """更新指定服務的模型設定欄位，回傳是否成功。"""
+    col = db.ai_model_config
+    result = col.update_one(
+        {"service": service_name},
+        {"$set": {field: value}},
+        upsert=False
+    )
+    return result.matched_count > 0
+
+def list_ai_model_configs(db) -> list:
+    """列出所有服務的模型設定。"""
+    col = db.ai_model_config
+    return list(col.find({}, {"_id": 0}))
