@@ -104,8 +104,8 @@ def create_image_dalle(prompt, quality="medium", size="1024x1024"):
         response = OpenAI_clice.images.generate(
             model=_get_image_model(),  # 使用最新的 gpt-image-2 模型
             prompt=prompt,
-            size="1024x1024",
-            quality="high",
+            #size="1024x1024",
+            #quality="high",
             n=1            
         )
         
