@@ -95,8 +95,8 @@ def create_image_dalle(prompt, quality="medium", size="1024x1024"):
         tuple: (狀態訊息, 圖像檔案路徑)
     """
     try:
-        # 確保 images 目錄存在
-        images_dir = "images"
+        # 確保 images/gpt_image 目錄存在
+        images_dir = os.path.join("images", "gpt_image")
         if not os.path.exists(images_dir):
             os.makedirs(images_dir)
         
