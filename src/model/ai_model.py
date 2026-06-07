@@ -36,7 +36,7 @@ from ..database import update_ai_model_config, list_ai_model_configs
 
 COMMANDS_HELP = [
         ("!openai 內容", "詢問 GPT "),
-        ("!claude 內容", "詢問 Claude "),    
+        #("!claude 內容", "詢問 Claude "),    
         ("!gemini 內容", "詢問 gemini"),    
         ("!ai 內容", "AI角色扮演"),    
         ("!畫 內容", "用 Gemini Imagen 產生圖片"),
@@ -83,15 +83,15 @@ def register_handlers(app, config, db):
             say(f"非預期性問題 {e}")
 
     # Call Claude
-    @app.message(re.compile(r"!claude\s+(.+)"))
-    def handle_summary_command(message, say):
-        user_input = message['text'].replace('!claude', '').strip()    
-        # 調用 Claude API
-        try:        
-            summary = generate_summary_claude(user_input)
-            say(f"{summary}", thread_ts=message['ts'])                        
-        except Exception as e:        
-            say(f"非預期性問題 {e}")        
+    #@app.message(re.compile(r"!claude\s+(.+)"))
+    #def handle_summary_command(message, say):
+    #    user_input = message['text'].replace('!claude', '').strip()    
+    #    # 調用 Claude API
+    #    try:        
+    #        summary = generate_summary_claude(user_input)
+    #        say(f"{summary}", thread_ts=message['ts'])                        
+    #    except Exception as e:        
+    #        say(f"非預期性問題 {e}")        
                        
     # Call gemini
     @app.message(re.compile(r"!gemini\s+(.+)"))
