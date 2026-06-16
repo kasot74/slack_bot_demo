@@ -2,6 +2,14 @@ import requests
 import json
 import concurrent.futures
 from datetime import datetime, timedelta
+from .utilities import read_config
+
+_config = read_config('config/config.txt')
+MAX_API_KEY = _config.get('MAX_API_KEY', '')
+MAX_API_HEADERS = {
+    'accept': 'application/json',
+    'Authorization': f'Bearer {MAX_API_KEY}'
+}
 
 def get_crypto_prices():
     """取得 MAX 交易所的加密貨幣即時價格。"""
@@ -49,12 +57,9 @@ def get_crypto_prices():
 def get_pending_orders(status="wait"):
     """取得交易訂單資料。"""
     url = f"https://herry537.sytes.net/max_api/trading/orders?status={status}"
-    headers = {
-        'accept': 'application/json'
-    }
-    
+
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=MAX_API_HEADERS, timeout=10)
         
         if response.status_code == 200:
             data = response.json()
@@ -99,18 +104,14 @@ def get_pending_orders(status="wait"):
 
 def get_trading_volume_stats():
     """取得交易成交量統計資料，計算目前收益（DONE）和預估收益（DONE+WAIT）。"""
-    headers = {
-        'accept': 'application/json'
-    }
-    
     try:
         # 並發請求 done 和 wait 訂單
         done_url = f"https://herry537.sytes.net/max_api/trading/orders?status=done"
         wait_url = f"https://herry537.sytes.net/max_api/trading/orders?status=wait"
-        
+
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            done_future = executor.submit(requests.get, done_url, headers=headers, timeout=10)
-            wait_future = executor.submit(requests.get, wait_url, headers=headers, timeout=10)
+            done_future = executor.submit(requests.get, done_url, headers=MAX_API_HEADERS, timeout=10)
+            wait_future = executor.submit(requests.get, wait_url, headers=MAX_API_HEADERS, timeout=10)
             
             done_response = done_future.result(timeout=15)
             wait_response = wait_future.result(timeout=15)
@@ -309,12 +310,9 @@ def get_order_depth_analysis(symbol="BTCTWD"):
     """
     symbol = symbol.upper()  # 統一轉為大寫
     url = f"https://herry537.sytes.net/max_api/trading/orderdepth/{symbol}"
-    headers = {
-        'accept': 'application/json'
-    }
-    
+
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=MAX_API_HEADERS, timeout=10)
         
         if response.status_code == 200:
             data = response.json()
@@ -436,12 +434,9 @@ def get_recent_trades(symbol="BTCTWD", limit=15):
     """
     symbol = symbol.upper()  # 統一轉為大寫
     url = f"https://herry537.sytes.net/max_api/trading/ordertrades/{symbol}"
-    headers = {
-        'accept': 'application/json'
-    }
-    
+
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=MAX_API_HEADERS, timeout=10)
         
         if response.status_code == 200:
             data = response.json()
@@ -588,12 +583,11 @@ def get_market_analysis(symbol="BTCTWD"):
         # 同時獲取訂單深度和成交記錄數據
         depth_url = f"https://herry537.sytes.net/max_api/trading/orderdepth/{symbol}"
         trades_url = f"https://herry537.sytes.net/max_api/trading/ordertrades/{symbol}"
-        headers = {'accept': 'application/json'}
-        
+
         # 並發請求兩個API
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            depth_future = executor.submit(requests.get, depth_url, headers=headers, timeout=10)
-            trades_future = executor.submit(requests.get, trades_url, headers=headers, timeout=10)
+            depth_future = executor.submit(requests.get, depth_url, headers=MAX_API_HEADERS, timeout=10)
+            trades_future = executor.submit(requests.get, trades_url, headers=MAX_API_HEADERS, timeout=10)
             
             try:
                 depth_response = depth_future.result(timeout=15)
