@@ -54,519 +54,59 @@ def get_crypto_prices():
     else:
         return f"請求失敗，狀態碼：{response.status_code}"
 
-def get_pending_orders(status="wait"):
-    """取得交易訂單資料。"""
-    url = f"https://herry537.sytes.net/max_api/trading/orders?status={status}"
+def get_trading_volume_stats(symbol="BTCTWD"):
+    """取得交易績效統計（已實現 + 未實現損益），改用後端 /trading/performance API。"""
+    url = f"https://herry537.sytes.net/max_api/trading/performance?symbol={symbol}"
 
     try:
         response = requests.get(url, headers=MAX_API_HEADERS, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            orders = data.get("orders", [])
-            count = data.get("count", 0)
-            
-            if not orders:
-                return f"目前沒有狀態為 {status} 的訂單"
-            
-            # 格式化訂單資訊
-            result = f"📋 **狀態為 {status} 的訂單** (共 {count} 筆)\n\n"
-            
-            for order in orders:
-                order_id = order.get("id", "N/A")
-                symbol = order.get("symbol", "N/A").upper()  # 統一轉為大寫
-                order_type = "買單" if order.get("order_type") == "buy" else "賣單"
-                price = order.get("price", 0)
-                quantity = order.get("quantity", 0)
-                created_at = order.get("created_at", "")
-                
-                # 格式化時間
-                try:
-                    if created_at:
-                        dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))                        
-                        formatted_time = dt.strftime("%m-%d %H:%M")
-                    else:
-                        formatted_time = "N/A"
-                except:
-                    formatted_time = created_at[:16] if created_at else "N/A"
-                
-                result += (f"幣種:{symbol}|{order_type}|價格:{price:,.2f}|數量:{quantity}|時間:{formatted_time}\n")
-            
-            return result
-            
-        else:
+
+        if response.status_code != 200:
             return f"API請求失敗，狀態碼：{response.status_code}"
-            
-    except requests.exceptions.RequestException as e:
-        return f"網路請求錯誤：{e}"
-    except Exception as e:
-        return f"處理訂單資料時發生錯誤：{e}"
 
-def get_trading_volume_stats():
-    """取得交易成交量統計資料，計算目前收益（DONE）和預估收益（DONE+WAIT）。"""
-    try:
-        # 並發請求 done 和 wait 訂單
-        done_url = f"https://herry537.sytes.net/max_api/trading/orders?status=done"
-        wait_url = f"https://herry537.sytes.net/max_api/trading/orders?status=wait"
+        data = response.json()
+        fills = data.get("fills", {})
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            done_future = executor.submit(requests.get, done_url, headers=MAX_API_HEADERS, timeout=10)
-            wait_future = executor.submit(requests.get, wait_url, headers=MAX_API_HEADERS, timeout=10)
-            
-            done_response = done_future.result(timeout=15)
-            wait_response = wait_future.result(timeout=15)
-        
-        if done_response.status_code != 200:
-            return f"API請求失敗，狀態碼：{done_response.status_code}"
-            
-        done_data = done_response.json()
-        done_orders = done_data.get("orders", [])
-        done_count = done_data.get("count", 0)
-        
-        if not done_orders:
-            return f"目前沒有狀態為 done 的訂單"
-        
-        FEE_RATE = 0.0004  # 每次交易手續費 0.04%
-        
-        # 獲取 WAIT 訂單
-        wait_orders = []
-        wait_count = 0
-        if wait_response.status_code == 200:
-            wait_data = wait_response.json()
-            wait_orders = wait_data.get("orders", [])
-            wait_count = wait_data.get("count", 0)
-        
-        # ===== 計算現況（DONE 訂單） =====
-        def calculate_stats(orders_list):
-            trading_pairs = {}
-            total_profit = 0
-            total_volume = 0
-            total_fee = 0
-            
-            for order in orders_list:
-                symbol = order.get("symbol", "N/A").upper()
-                order_type = order.get("order_type")
-                
-                # 區分處理 DONE 和 WAIT 訂單的價格和數量
-                if order.get("executed_price"):  # DONE 訂單
-                    price = float(order.get("executed_price", 0))
-                    quantity = float(order.get("executed_quantity", 0))
-                else:  # WAIT 訂單
-                    price = float(order.get("price", 0))
-                    quantity = float(order.get("quantity", 0))
-                
-                order_value = price * quantity
-                
-                if symbol not in trading_pairs:
-                    trading_pairs[symbol] = {
-                        'buy_orders': [],
-                        'sell_orders': [],
-                        'total_buy_value': 0,
-                        'total_sell_value': 0,
-                        'total_buy_quantity': 0,
-                        'total_sell_quantity': 0,
-                        'profit': 0,
-                        'total_fee': 0
-                    }
-                
-                total_volume += order_value
-                
-                if order_type == "buy":
-                    trading_pairs[symbol]['buy_orders'].append({
-                        'price': price,
-                        'quantity': quantity,
-                        'value': order_value
-                    })
-                    trading_pairs[symbol]['total_buy_value'] += order_value
-                    trading_pairs[symbol]['total_buy_quantity'] += quantity
-                    
-                elif order_type == "sell":
-                    trading_pairs[symbol]['sell_orders'].append({
-                        'price': price,
-                        'quantity': quantity,
-                        'value': order_value
-                    })
-                    trading_pairs[symbol]['total_sell_value'] += order_value
-                    trading_pairs[symbol]['total_sell_quantity'] += quantity
-            
-            # 計算各交易對的利潤
-            for symbol, data in trading_pairs.items():
-                pair_fee = (data['total_buy_value'] + data['total_sell_value']) * FEE_RATE
-                pair_profit = data['total_sell_value'] - data['total_buy_value'] - pair_fee
-                data['profit'] = pair_profit
-                data['total_fee'] = pair_fee
-                total_profit += pair_profit
-                total_fee += pair_fee
-                
-                # 計算損益平衡價
-                net_holding = data['total_buy_quantity'] - data['total_sell_quantity']  # 淨持有量
-                if net_holding > 0:  # 還有持有量
-                    # 已投入淨成本 = 買入總價值 + 所有手續費 - 賣出總價值
-                    net_cost = data['total_buy_value'] + pair_fee - data['total_sell_value']
-                    # 損益平衡價 = (淨成本 + 預期賣出手續費) / 剩餘持有量
-                    # 預期賣出手續費 = 賣出價值 * 費率，但賣出價值 = 損益平衡價 * 持有量
-                    # 所以：損益平衡價 = 淨成本 / (持有量 * (1 - 費率))
-                    breakeven_price = net_cost / (net_holding * (1 - FEE_RATE))
-                    data['breakeven_price'] = breakeven_price
-                    data['net_holding'] = net_holding
-                else:
-                    data['breakeven_price'] = 0  # 沒有持有量，無需計算損益平衡價
-                    data['net_holding'] = 0
-            
-            return trading_pairs, total_profit, total_volume, total_fee
-        
-        # 計算 DONE 訂單統計
-        done_pairs, done_profit, done_volume, done_fee = calculate_stats(done_orders)
-        
-        # 計算 DONE + WAIT 訂單統計
-        all_orders = list(done_orders) + list(wait_orders)
-        all_pairs, all_profit, all_volume, all_fee = calculate_stats(all_orders)
-        
-        # 格式化結果
-        result = f"💰 **交易利潤統計** (已成交:{done_count}筆 | 待成交:{wait_count}筆)\n\n"
-        
-        # 目前收益（DONE）
-        result += f"━━━━ **目前收益** ━━━━\n"
-        result += f"總交易量：{done_volume:,.2f}\n"
-        result += f"總手續費：-{done_fee:,.2f} (0.04%/次)\n"
-        result += f"總利潤：{done_profit:+.2f}\n\n"
-        
-        # 待成交訂單總計
-        if wait_count > 0:
-            result += f"━━━━ **待成交總計** ━━━━\n"
-            wait_volume = all_volume - done_volume
-            wait_fee = all_fee - done_fee
-            wait_profit = all_profit - done_profit
-            result += f"總交易量：{wait_volume:,.2f}\n"
-            result += f"總手續費：-{wait_fee:,.2f} (0.04%/次)\n"
-            result += f"假設利潤：{wait_profit:+.2f}\n\n"
-            
-            # 按交易對統計待成交訂單的買賣單
-            wait_pair_stats = {}
-            for order in wait_orders:
-                symbol = order.get("symbol", "N/A").upper()
-                order_type = order.get("order_type")
-                
-                if symbol not in wait_pair_stats:
-                    wait_pair_stats[symbol] = {'buy_count': 0, 'sell_count': 0}
-                
-                if order_type == "buy":
-                    wait_pair_stats[symbol]['buy_count'] += 1
-                elif order_type == "sell":
-                    wait_pair_stats[symbol]['sell_count'] += 1
-            
-            # 顯示各交易對的待成交單數
-            result += f"待成交訂單分佈：\n"
-            for symbol in sorted(wait_pair_stats.keys()):
-                stats = wait_pair_stats[symbol]
-                result += f"{symbol}: 買{stats['buy_count']}筆 | 賣{stats['sell_count']}筆\n"
-            
-            result += "\n"
-        
-        # 預估收益（DONE + WAIT）
-        if wait_count > 0:
-            result += f"━━━━ **預估收益** ━━━━\n"
-            result += f"總交易量：{all_volume:,.2f}\n"
-            result += f"總手續費：-{all_fee:,.2f} (0.04%/次)\n"
-            result += f"總利潤：{all_profit:+.2f}\n\n"
-        
-        # 各交易對統計（使用預估值，如果有 WAIT 訂單）
-        result += f"━━━━ **各交易對統計** ━━━━\n"
-        display_pairs = all_pairs if wait_count > 0 else done_pairs
-        sorted_pairs = sorted(display_pairs.items(), key=lambda x: x[1]['profit'], reverse=True)
-        
-        for symbol, data in sorted_pairs:
-            profit_percentage = (data['profit'] / data['total_buy_value'] * 100) if data['total_buy_value'] > 0 else 0
-            
-            # 構建基本利潤資訊
-            profit_info = f"🪙 {symbol}: {data['profit']:+.2f} ({profit_percentage:+.1f}%)"
-            
-            # 添加損益平衡價資訊
-            if data['net_holding'] > 0:
-                profit_info += f"\n   📊 持有:{data['net_holding']:.4f} | 平衡價:{data['breakeven_price']:,.2f}"
-            elif data['net_holding'] < 0:
-                profit_info += f"\n   📊 空倉:{abs(data['net_holding']):.4f} (已超額賣出)"
-            else:
-                profit_info += f"\n   📊 無持有 (已全部賣出)"
-                
-            result += profit_info + "\n"
-        
+        if fills.get("buy_count", 0) == 0 and fills.get("sell_count", 0) == 0:
+            return data.get("message", f"{symbol} 目前沒有已成交訂單")
+
+        position = data.get("position", {})
+        pnl = data.get("pnl", {})
+        period = data.get("period", {})
+
+        result = f"💰 **{symbol} 交易績效統計**\n\n"
+        result += f"📅 期間：{(period.get('first_fill') or 'N/A')[:16]} ~ {(period.get('last_fill') or 'N/A')[:16]}\n\n"
+
+        result += f"━━━━ **成交統計** ━━━━\n"
+        result += f"買入：{fills.get('buy_count', 0)}筆 | {fills.get('buy_qty', 0):.6f} BTC | {fills.get('buy_cost_twd', 0):,.2f} TWD\n"
+        result += f"賣出：{fills.get('sell_count', 0)}筆 | {fills.get('sell_qty', 0):.6f} BTC | {fills.get('sell_revenue_twd', 0):,.2f} TWD\n"
+        result += f"總交易額：{fills.get('total_turnover_twd', 0):,.2f}\n"
+        result += f"預估手續費：-{fills.get('estimated_fees_twd', 0):,.2f}\n\n"
+
+        result += f"━━━━ **持倉** ━━━━\n"
+        net_qty = position.get("net_qty_btc", 0)
+        if net_qty > 0:
+            result += f"📊 持有：{net_qty:.6f} BTC | 均成本：{position.get('avg_cost_twd', 0):,.2f}\n"
+        elif net_qty < 0:
+            result += f"📊 空倉：{abs(net_qty):.6f} BTC（已超額賣出）\n"
+        else:
+            result += f"📊 無持有（已全部賣出）\n"
+        if position.get("current_price_twd"):
+            result += f"現價：{position['current_price_twd']:,.2f}\n"
+        result += "\n"
+
+        result += f"━━━━ **損益** ━━━━\n"
+        result += f"已實現：{pnl.get('realized_twd', 0):+,.2f}\n"
+        unrealized = pnl.get("unrealized_twd")
+        result += f"未實現：{unrealized:+,.2f}\n" if unrealized is not None else "未實現：N/A\n"
+        result += f"總損益：{pnl.get('total_twd', 0):+,.2f} ({pnl.get('total_pct', 0):+.2f}%)\n"
+
         return result
-        
+
     except requests.exceptions.RequestException as e:
         return f"網路請求錯誤：{e}"
     except Exception as e:
-        return f"處理訂單資料時發生錯誤：{e}"
-
-
-def get_order_depth_analysis(symbol="BTCTWD"):
-    """分析指定交易對的訂單簿深度圖。
-    
-    Args:
-        symbol (str): 交易對符號，如 BTCTWD
-        
-    Returns:
-        str: 格式化的深度分析報告
-    """
-    symbol = symbol.upper()  # 統一轉為大寫
-    url = f"https://herry537.sytes.net/max_api/trading/orderdepth/{symbol}"
-
-    try:
-        response = requests.get(url, headers=MAX_API_HEADERS, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            
-            if not data.get("success"):
-                return f"API回傳錯誤：無法獲取 {symbol} 的訂單簿數據"
-            
-            order_depth = data.get("order_depth", {})
-            asks = order_depth.get("asks", [])
-            bids = order_depth.get("bids", [])
-            
-            if not asks or not bids:
-                return f"{symbol} 訂單簿數據不完整"
-            
-            # 轉換數據格式
-            asks_data = [[float(price), float(qty)] for price, qty in asks]
-            bids_data = [[float(price), float(qty)] for price, qty in bids]
-            
-            # 基本價格資訊
-            best_ask = asks_data[0][0]  # 最佳賣價
-            best_bid = bids_data[0][0]  # 最佳買價
-            spread = best_ask - best_bid
-            spread_percentage = (spread / best_bid) * 100 if best_bid > 0 else 0
-            
-            # 計算深度統計
-            def calculate_depth_stats(orders, levels=10):
-                total_qty = 0
-                total_value = 0
-                for i, (price, qty) in enumerate(orders[:levels]):
-                    total_qty += qty
-                    total_value += price * qty
-                avg_price = total_value / total_qty if total_qty > 0 else 0
-                return total_qty, total_value, avg_price
-            
-            # 買賣單深度統計
-            ask_qty_10, ask_value_10, ask_avg_10 = calculate_depth_stats(asks_data, 10)
-            bid_qty_10, bid_value_10, bid_avg_10 = calculate_depth_stats(bids_data, 10)
-            
-            ask_qty_20, ask_value_20, ask_avg_20 = calculate_depth_stats(asks_data, 20)
-            bid_qty_20, bid_value_20, bid_avg_20 = calculate_depth_stats(bids_data, 20)
-            
-            # 計算流動性指標
-            total_ask_depth = sum([qty for _, qty in asks_data])
-            total_bid_depth = sum([qty for _, qty in bids_data])
-            
-            # 尋找大單 (數量 > 平均值的 2.5倍)
-            avg_ask_qty = sum([qty for _, qty in asks_data]) / len(asks_data) if len(asks_data) > 0 else 0
-            avg_bid_qty = sum([qty for _, qty in bids_data]) / len(bids_data) if len(bids_data) > 0 else 0
-            
-            large_asks = [(price, qty) for price, qty in asks_data if qty > avg_ask_qty * 2.5]
-            large_bids = [(price, qty) for price, qty in bids_data if qty > avg_bid_qty * 2.5]
-            
-            # 格式化結果
-            result = f"📊 **{symbol} 訂單簿深度分析**\n\n"
-            result += f"💰 **價格資訊：**\n"
-            result += f"最佳買價：{best_bid:,.4f}\n"
-            result += f"最佳賣價：{best_ask:,.4f}\n"
-            result += f"價差：{spread:,.4f} ({spread_percentage:.3f}%)\n\n"
-            
-            result += f"📈 **深度統計 (前10檔)：**\n"
-            result += f"賣單量：{ask_qty_10:,.2f} | 平均:{ask_avg_10:,.4f}\n"
-            result += f"買單量：{bid_qty_10:,.2f} | 平均:{bid_avg_10:,.4f}\n"
-            result += f"買賣比：{(bid_qty_10/ask_qty_10):,.2f}\n\n"
-            
-            result += f"📊 **深度統計 (前20檔)：**\n"
-            result += f"賣單量：{ask_qty_20:,.2f} | 價值:{ask_value_20:,.0f}\n"
-            result += f"買單量：{bid_qty_20:,.2f} | 價值:{bid_value_20:,.0f}\n\n"
-            
-            # 流動性分析
-            liquidity_ratio = bid_value_20 / ask_value_20 if ask_value_20 > 0 else 0
-            result += f"🌊 **流動性分析：**\n"
-            result += f"總深度(全部)：賣{total_ask_depth:,.0f} | 買{total_bid_depth:,.0f}\n"
-            result += f"流動性比率：{liquidity_ratio:.3f}\n\n"
-            
-            # 大單分析
-            if large_asks or large_bids:
-                result += f"🎯 **掛單大單警報** (平均量2.5倍)\n"
-                if large_asks:
-                    result += f"💸 **大賣單** ({len(large_asks)}筆):\n"
-                    for price, qty in large_asks[:5]:  # 顯示前5筆
-                        result += f"  {price:,.4f} @ {qty:,.2f} = {price*qty:,.0f}\n"
-                if large_bids:
-                    result += f"🔥 **大買單** ({len(large_bids)}筆):\n"
-                    for price, qty in large_bids[:5]:  # 顯示前5筆
-                        result += f"  {price:,.4f} @ {qty:,.2f} = {price*qty:,.0f}\n"
-                result += "\n"
-            else:
-                result += f"🟢 **掛單狀況**: 無大單異常\n\n"
-            
-            # 支撐阻力分析
-            price_range = best_ask - best_bid
-            support_level = best_bid - (price_range * 2)
-            resistance_level = best_ask + (price_range * 2)
-            
-            result += f"📍 **技術分析：**\n"
-            result += f"支撐位：{support_level:,.4f}\n"
-            result += f"阻力位：{resistance_level:,.4f}\n"
-            
-            return result
-            
-        else:
-            return f"訂單簿API請求失敗，狀態碼：{response.status_code}"
-            
-    except requests.exceptions.RequestException as e:
-        return f"網路請求錯誤：{e}"
-    except Exception as e:
-        return f"處理訂單簿數據時發生錯誤：{e}"
-
-
-def get_recent_trades(symbol="BTCTWD", limit=15):
-    """取得指定交易對的近期成交記錄。
-    
-    Args:
-        symbol (str): 交易對符號，如 BTCTWD
-        limit (int): 顯示的交易記錄數量，預設15筆
-        
-    Returns:
-        str: 格式化的近期成交報告
-    """
-    symbol = symbol.upper()  # 統一轉為大寫
-    url = f"https://herry537.sytes.net/max_api/trading/ordertrades/{symbol}"
-
-    try:
-        response = requests.get(url, headers=MAX_API_HEADERS, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            
-            if not data.get("success"):
-                return f"API回傳錯誤：無法獲取 {symbol} 的成交數據"
-            
-            trades = data.get("order_trades", [])
-            
-            if not trades:
-                return f"{symbol} 目前沒有近期成交記錄"
-            
-            # 計算統計數據
-            total_volume = 0
-            total_funds = 0
-            buy_trades = []
-            sell_trades = []
-            price_list = []
-            
-            for trade in trades[:limit]:
-                price = float(trade.get("price", 0))
-                volume = float(trade.get("volume", 0))
-                funds = float(trade.get("funds", 0))
-                side = trade.get("side")
-                
-                total_volume += volume
-                total_funds += funds
-                price_list.append(price)
-                
-                if side == "bid":  # 買單
-                    buy_trades.append(trade)
-                else:  # ask - 賣單
-                    sell_trades.append(trade)
-            
-            # 計算價格統計
-            if price_list:
-                avg_price = sum(price_list) / len(price_list)
-                max_price = max(price_list)
-                min_price = min(price_list)
-                price_range = max_price - min_price
-                price_range_percent = (price_range / min_price) * 100 if min_price > 0 else 0
-            else:
-                avg_price = max_price = min_price = 0
-                price_range_percent = 0
-            
-            # 格式化結果
-            result = f"🔄 **{symbol} 近期成交記錄** (最新{limit}筆)\n\n"
-            result += f"📊 **成交統計：**\n"
-            result += f"總成交量：{total_volume:.6f}\n"
-            result += f"總成交額：{total_funds:,.0f}\n"
-            result += f"平均價格：{avg_price:,.2f}\n"
-            result += f"價格區間：{min_price:,.2f} ~ {max_price:,.2f}\n"
-            result += f"波動幅度：{price_range_percent:.2f}%\n\n"
-            
-            result += f"📈 **買賣分析：**\n"
-            result += f"買單數量：{len(buy_trades)}筆\n"
-            result += f"賣單數量：{len(sell_trades)}筆\n"
-            
-            # 買賣力道分析
-            if buy_trades and sell_trades:
-                buy_ratio = len(buy_trades) / len(trades[:limit]) * 100
-                result += f"買氣強度：{buy_ratio:.1f}%\n\n"
-            else:
-                result += "\n"
-            
-            # 趨勢分析 - 比較最近5筆交易的價格趨勢
-            trend_analysis = ""
-            if len(trades) >= 5:
-                recent_prices = [float(trade.get("price", 0)) for trade in trades[:5]]
-                first_price = recent_prices[-1]  # 最早的價格
-                last_price = recent_prices[0]    # 最新的價格
-                
-                price_change = last_price - first_price
-                price_change_percent = (price_change / first_price) * 100 if first_price > 0 else 0
-                
-                # 計算連續上升/下降的數量
-                up_count = 0
-                down_count = 0
-                for i in range(len(recent_prices)-1):
-                    if recent_prices[i] > recent_prices[i+1]:
-                        up_count += 1
-                    elif recent_prices[i] < recent_prices[i+1]:
-                        down_count += 1
-                
-                # 判斷趨勢
-                if price_change_percent > 0.1:
-                    trend = "🔥 上升趨勢"
-                    trend_emoji = "📈"
-                elif price_change_percent < -0.1:
-                    trend = "❄️ 下跌趨勢"
-                    trend_emoji = "📉"
-                else:
-                    trend = "📊 盤整趨勢"
-                    trend_emoji = "🔄"
-                
-                result += f"🎯 **趨勢分析：**\n"
-                result += f"{trend_emoji} {trend}\n"
-                result += f"價格變化：{price_change:+,.1f} ({price_change_percent:+.2f}%)\n"
-                result += f"最新價格：{last_price:,.2f}\n\n"
-            
-            # 顯示簡化的成交記錄 (只顯示最新5筆)
-            display_limit = min(5, len(trades))
-            result += f"📋 **最新{display_limit}筆成交：**\n"
-            
-            for i, trade in enumerate(trades[:display_limit]):
-                try:
-                    # 轉換時間戳
-                    timestamp = int(trade.get("created_at", 0))
-                    dt = datetime.fromtimestamp(timestamp / 1000)  # 毫秒轉秒                    
-                    formatted_time = dt.strftime("%H:%M")
-                except:
-                    formatted_time = "N/A"
-                
-                price = float(trade.get("price", 0))
-                volume = float(trade.get("volume", 0))
-                funds = float(trade.get("funds", 0))
-                side = "買" if trade.get("side") == "bid" else "賣"
-                side_emoji = "🟢" if side == "買" else "🔴"
-                
-                result += f"{formatted_time} {side_emoji}{side} {price:,.1f} @ {volume:.4f} = {funds:,.0f}\n"
-            
-            return result
-            
-        else:
-            return f"近期成交API請求失敗，狀態碼：{response.status_code}"
-            
-    except requests.exceptions.RequestException as e:
-        return f"網路請求錯誤：{e}"
-    except Exception as e:
-        return f"處理成交數據時發生錯誤：{e}"
+        return f"處理績效資料時發生錯誤：{e}"
 
 
 def get_market_analysis(symbol="BTCTWD"):

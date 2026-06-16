@@ -2,7 +2,7 @@ import re
 import random
 import json
 import requests
-from ..crypto import get_crypto_prices, get_pending_orders, get_trading_volume_stats, get_market_analysis
+from ..crypto import get_crypto_prices, get_trading_volume_stats, get_market_analysis
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 
@@ -142,9 +142,7 @@ def register_crypto_handlers(app, config, db):
             if not check_user_permission(user_id):                
                 say("你沒有權限使用此指令")
                 return
-                        
-            #result = get_pending_orders("wait")
-            #result += "\n"            
+                                    
             result = get_trading_volume_stats()            
             result += "\n"
             say(result)
