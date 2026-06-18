@@ -213,48 +213,42 @@ def model_list():
 
 
 def create_image(prompt):
-    """使用 Imagen 4.0 生成圖片"""
+    """使用 Gemini image model 生成圖片"""
     try:
-        # 確保圖片目錄存在
         image_dir = os.path.join("images", "gemini_image")
         if not os.path.exists(image_dir):
             os.makedirs(image_dir)
-        
-        #prompt = painting(prompt)  # 確保 prompt 是經過處理的
-        
-        # 使用 SDK 發送請求到 Imagen API
+
         client = genai.Client(api_key=GEMINI_API_KEY)
-        response = client.models.generate_images(
-            model="imagen-4.0-generate-001",
-            prompt=prompt,
-            config=types.GenerateImagesConfig(
-                number_of_images=1,  # 生成1張圖片，可調整為1-4
+        response = client.models.generate_content(
+            model=_get_image_model(),
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_modalities=["IMAGE", "TEXT"]
             )
         )
-        
-        # 檢查回應中是否有圖片數據
-        if response.generated_images:
-            generated_image = response.generated_images[0]
-            
-            # 儲存圖片
+
+        generated_image = None
+        generated_text = ""
+        for part in response.candidates[0].content.parts:
+            if part.text is not None:
+                generated_text += part.text
+            elif part.inline_data is not None:
+                generated_image = Image.open(BytesIO(part.inline_data.data))
+
+        if generated_image:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"imagen_{timestamp}.png"
+            filename = f"gemini_image_{timestamp}.png"
             filepath = os.path.join(image_dir, filename)
-            # 直接使用 Image 物件的 save 方法
-            generated_image.image.save(filepath)
-            
-            # 方法2: 手動存取 image_bytes（替代方案）
-            # if generated_image.image.image_bytes:
-            #     with open(filepath, 'wb') as f:
-            #         f.write(generated_image.image.image_bytes)
-            
+            generated_image.save(filepath)
+
             relative_path = os.path.join("gemini_image", filename)
-            return f"✅ Imagen 圖片生成成功！\n提示詞: {prompt}", relative_path
+            return f"✅ Gemini 圖片生成成功！\n提示詞: {prompt}", relative_path
         else:
-            return f"❌ Imagen 圖片生成失敗：無有效回應", None
-        
+            return f"❌ Gemini 圖片生成失敗：無有效回應\nAI 回應: {generated_text}", None
+
     except Exception as e:
-        return f"❌ Imagen 圖片生成錯誤: {e}", None
+        return f"❌ Gemini 圖片生成錯誤: {e}", None
 
 def create_video(prompt, negative_prompt="", max_wait_time=300, image_bytes=None):
     """使用 Google Genai 客戶端生成影片，支援圖片輸入"""
