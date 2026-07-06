@@ -17,8 +17,6 @@ from .model.crypto_model import COMMANDS_HELP as CRYPTO_COMMANDS
 
 from .utilities import read_config
 from .database import con_db, init_ai_model_configs
-from .log_analyzer import AccessLogAnalyzer
-from .log_analyzer import AccessLogEntry
 from .model.resource_monitor import ResourceCleaner, register_resource_commands
 from .AI_Service.ai_tool import  read_url_content
 from datetime import datetime, timedelta
@@ -35,7 +33,6 @@ app = App(token=config['SLACK_BOT_TOKEN'], signing_secret=config['SLACK_SIGNING_
 ALL_COMMANDS = [
     ("!help 或 !指令", "顯示所有可用指令"),
     ("!cleanup 或 !清理資料庫", "檢查並清理空的資料庫Collection"),
-    ("!importlog 或 !匯入日誌", "分批匯入整個昨日access.log到資料庫")    
 ]
 
 def get_all_commands_text():
@@ -108,76 +105,6 @@ def check_and_cleanup_empty_collections(db):
     except Exception as e:
         print(f"❌ 檢查Collection失敗: {e}")
         raise
-
-@app.message(re.compile(r"^!importlog$|^!匯入日誌$"))
-def handle_import_access_log(message, say):
-    """處理 access.log-* 檔案匯入並於完成後刪除"""
-    log_dir = "nginx_logs"
-    if not os.path.exists(log_dir):
-        say(f"📁 找不到日誌目錄: {log_dir}")
-        return
-
-    # 取得所有以 access.log- 開頭的檔案
-    log_files = [f for f in os.listdir(log_dir) if f.startswith("access.log-")]
-    
-    if not log_files:
-        say("✅ 沒有發現待處理的 access.log- 檔案")
-        return
-
-    say(f"📥 發現 {len(log_files)} 個檔案，開始分批處理...")
-    
-    try:
-        for filename in log_files:
-            log_file_path = os.path.join(log_dir, filename)
-            say(f"📄 正在處理: {filename}...")
-            
-            # 建立日誌分析器
-            analyzer = AccessLogAnalyzer(log_file_path, use_database=True)
-            if not analyzer.use_database:
-                say(f"❌ {filename}: 資料庫連線失敗，跳過")
-                continue
-            
-            # 分批處理設定
-            batch_size = 5000
-            total_processed = 0
-            total_saved = 0
-            
-            with open(log_file_path, 'r', encoding='utf-8') as file:
-                while True:
-                    lines_batch = []                
-                    for _ in range(batch_size):
-                        line = file.readline()
-                        if not line: break
-                        lines_batch.append(line)
-                    
-                    if not lines_batch: break
-                    
-                    batch_entries = []
-                    for line in lines_batch:                    
-                        entry = AccessLogEntry(line)
-                        if entry.is_valid():
-                            batch_entries.append(entry)
-                    
-                    if batch_entries:
-                        # 使用臨時分析器存入當前批次
-                        batch_analyzer = AccessLogAnalyzer(log_file_path, use_database=True)
-                        batch_analyzer.entries = batch_entries
-                        saved_count = batch_analyzer.save_all_entries_to_db()
-                        total_saved += saved_count
-                    
-                    total_processed += len(lines_batch)
-            
-            # 建立索引
-            analyzer.create_database_indexes()
-            
-            # 處理成功後刪除檔案
-            os.remove(log_file_path)
-            say(f"✅ {filename} 處理完成 (儲存 {total_saved:,} 筆) 且已刪除檔案")
-
-        say("🏁 所有日誌檔案處理完畢！")
-        
-    except Exception as e:
-        say(f"❌ 執行過程中發生錯誤: {str(e)}")
 
 
 # 貨幣模組

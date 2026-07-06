@@ -48,5 +48,5 @@ One module per provider (`claude.py`, `openai.py`, `gemini.py`, `xai.py`, `dzmm.
 
 ### Other
 
-- `src/log_analyzer.py`: parses nginx access logs into Mongo; `!importlog` in `bot_main.py` batch-imports files matching `nginx_logs/access.log-*` and deletes them after import.
+- `src/log_analyzer.py`: nginx access-log parser (目前為孤兒模組)。原 `!importlog` / `!匯入日誌` 指令已移除 —— nginx 日誌匯入改由主機 cron 處理(`~/log-importer/import_nginx_logs.py`,邏輯/unique_key 沿用本檔)。
 - Generated images are written to an `images/` directory before upload to Slack.
