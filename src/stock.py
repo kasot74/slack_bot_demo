@@ -3,6 +3,8 @@ import threading
 import time
 from datetime import datetime
 
+from .stock_extra import build_extra
+
 # ──────────────────────────────────────────────────────────────────────────────
 # 快取設定（避免每次查詢都打 OpenAPI）
 # ──────────────────────────────────────────────────────────────────────────────
@@ -74,17 +76,12 @@ def _format_realtime(s: dict) -> str:
     y = s.get('y', '-')           # 昨收
     arrow, chg = _change_str(z, float(z) - float(y)) if z != '---' and _fmt(y) != '---' else ('', '---')
 
-    bids = _fmt(s.get('b', '-')).replace('_', ' / ')
-    asks = _fmt(s.get('a', '-')).replace('_', ' / ')
-
     lines = [
         f"{arrow} *{name}* ({code}) [{market_label}]",
         f"成交價：*{z}* 元　　漲跌：{chg}",
         f"開盤：{_fmt(s.get('o'))}　最高：{_fmt(s.get('h'))}　最低：{_fmt(s.get('l'))}",
         f"昨收：{_fmt(y)}　漲停：{_fmt(s.get('u'))}　跌停：{_fmt(s.get('w'))}",
         f"成交量：{_fmt(s.get('v'))} 張　　成交時間：{_fmt(s.get('t'))}",
-        f"委買(五檔)：{bids}",
-        f"委賣(五檔)：{asks}",
         f"_（來源：證交所即時報價）_",
     ]
     return '\n'.join(lines)
@@ -168,6 +165,26 @@ def _format_snapshot_otc(code: str, s: dict) -> str:
     return '\n'.join(lines)
 
 
+def _to_float(v):
+    try:
+        return float(str(v).replace(',', ''))
+    except Exception:
+        return None
+
+
+def _realtime_price(s: dict):
+    """即時報價的目前價：優先最新成交價，沒有成交時用昨收"""
+    z = _to_float(s.get('z'))
+    if z:
+        return z
+    # 最新一筆沒有成交價時，用最佳買賣價中間值；都沒有才用昨收
+    bid = _to_float(str(s.get('b', '')).split('_')[0])
+    ask = _to_float(str(s.get('a', '')).split('_')[0])
+    if bid and ask:
+        return (bid + ask) / 2
+    return _to_float(s.get('y'))
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # 對外主函式
 # ──────────────────────────────────────────────────────────────────────────────
@@ -182,16 +199,18 @@ def get_stock_info(stock_code: str) -> str:
     for market in ('tse', 'otc'):
         s = _fetch_realtime(code, market)
         if s:
-            return _format_realtime(s)
+            return _format_realtime(s) + build_extra(code, market, _realtime_price(s))
 
     # 2. 即時資料不可用 → 改用日收盤快照（上市 → 上櫃）
     tse_snap = _load_snapshot('tse')
     if code in tse_snap:
-        return _format_snapshot_tse(code, tse_snap[code])
+        return (_format_snapshot_tse(code, tse_snap[code])
+                + build_extra(code, 'tse', _to_float(tse_snap[code].get('ClosingPrice'))))
 
     otc_snap = _load_snapshot('otc')
     if code in otc_snap:
-        return _format_snapshot_otc(code, otc_snap[code])
+        return (_format_snapshot_otc(code, otc_snap[code])
+                + build_extra(code, 'otc', _to_float(otc_snap[code].get('Close'))))
 
     return f"❌ 找不到股票代碼 `{code}`，請確認代碼正確（上市股或上櫃股）。"
 

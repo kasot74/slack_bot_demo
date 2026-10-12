@@ -1,13 +1,18 @@
 import re
+import threading
 from ..stock import get_stock_info, get_historical_data
+from ..stock_extra import warm_up
 
 COMMANDS_HELP = [
-    ("!查股 股票代碼", "查詢指定股票即時資訊（支援上市/上櫃，盤後自動改用收盤快照）"),
+    ("!查股 股票代碼", "查詢指定股票即時資訊（支援上市/上櫃，盤後自動改用收盤快照），並附今年漲幅、估值、基本面、三大法人買賣超（近5/30日）與基本面判讀"),
     ("!查股歷史 股票代碼 年月", "查詢上市股月歷史資料，年月格式 YYYYMM（例：!查股歷史 2330 202506）"),
 ]
 
 
 def register_stock_handlers(app, config, db):
+
+    # 啟動時背景預載補充資訊資料，避免第一次 !查股 等太久
+    threading.Thread(target=warm_up, daemon=True).start()
 
     # !查股 <代碼>
     @app.message(re.compile(r"^!查股\s+(\S+)$"))
