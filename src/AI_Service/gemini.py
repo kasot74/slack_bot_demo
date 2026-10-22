@@ -27,7 +27,7 @@ def _get_model():
     return get_ai_model_config(ai_db, "gemini").get("model", "gemini-2.5-flash")
 
 def _get_image_model():
-    return get_ai_model_config(ai_db, "gemini").get("image_model", "gemini-3.1-flash-image-preview")
+    return get_ai_model_config(ai_db, "gemini").get("image_model", "gemini-3.1-flash-image")
 collection = ai_db.ai_his
 
 

@@ -18,18 +18,23 @@ _DEFAULT_AI_MODEL_CONFIGS = [
     {"service": "openai",  "model": "gpt-5.4",            "image_model": "gpt-image-2"},
     {"service": "xai",     "model": "grok-4.3-latest"},
     {"service": "dzmm",    "model": "nalang-xl-10"},
-    {"service": "gemini",  "model": "gemini-2.5-flash",   "image_model": "gemini-3.1-flash-image-preview"},
+    {"service": "gemini",  "model": "gemini-2.5-flash",   "image_model": "gemini-3.1-flash-image"},
 ]
 
 def init_ai_model_configs(db):
-    """初始化 ai_model_config 集合；若文件已存在則以預設值覆蓋。"""
+    """初始化 ai_model_config 集合；只補上缺少的 service/欄位，不覆蓋 DB 內已有的值（保留 !setmodel 的設定）。"""
     col = db.ai_model_config
     for cfg in _DEFAULT_AI_MODEL_CONFIGS:
         col.update_one(
             {"service": cfg["service"]},
-            {"$set": cfg},
+            {"$setOnInsert": {"service": cfg["service"]}},
             upsert=True
         )
+        for field, value in cfg.items():
+            col.update_one(
+                {"service": cfg["service"], field: {"$exists": False}},
+                {"$set": {field: value}}
+            )
 
 def get_ai_model_config(db, service_name: str) -> dict:
     """從 MongoDB ai_model_config 取得指定服務的模型設定，找不到時回傳預設值。"""

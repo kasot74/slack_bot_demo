@@ -43,7 +43,7 @@ One module per provider (`claude.py`, `openai.py`, `gemini.py`, `xai.py`, `dzmm.
 
 - Each AI_Service module independently re-reads `config/config.txt` and opens its own MongoDB connection at import time — importing them outside the repo root or without a reachable MongoDB fails.
 - Conversation history is global (stored in shared Mongo collections like `ai_his`, not per-user/per-channel).
-- Model names are runtime-configurable: stored in the `ai_model_config` collection, managed by `src/database.py` (`get_ai_model_config` etc.) and changeable from Slack via `!setmodel <service> <field> <value>` / `!listmodels`. **Note:** `init_ai_model_configs` runs at startup and overwrites the collection with `_DEFAULT_AI_MODEL_CONFIGS`, so runtime changes don't survive restarts unless the defaults are updated too.
+- Model names are runtime-configurable: stored in the `ai_model_config` collection, managed by `src/database.py` (`get_ai_model_config` etc.) and changeable from Slack via `!setmodel <service> <field> <value>` / `!listmodels`. **Note:** `init_ai_model_configs` runs at startup and only fills in missing services/fields from `_DEFAULT_AI_MODEL_CONFIGS`; values already in the DB (e.g. set via `!setmodel`) are kept. Changing a default in code therefore doesn't affect an existing DB value — use `!setmodel` for that.
 - `ai_tool.py` holds shared tooling (e.g. Playwright-based `read_url_content`).
 
 ### Other
