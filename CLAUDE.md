@@ -33,9 +33,9 @@ Every feature module follows the same convention:
 1. Exports `COMMANDS_HELP` — a list of `(command, description)` tuples appended to `ALL_COMMANDS` in `bot_main.py` to build the `!help` output.
 2. Exports a `register_*_handlers(app, config, db)` function that defines `@app.message(re.compile(...))` handlers as closures over `app`, `config`, and `db`.
 
-All bot commands are message-text triggers prefixed with `!` (e.g. `!簽到`, `!openai`, `!畫`), matched by regex. To add a feature: create a module following this pattern and register it in `bot_main.py`.
+All bot commands are message-text triggers prefixed with `!` (e.g. `!簽到`, `!openai`, `!改圖`), matched by regex. To add a feature: create a module following this pattern and register it in `bot_main.py`.
 
-Modules: `handlers_model.py` (misc/base commands), `coin_model.py` (coin economy and gambling — daily transactions are merged per user/type/day with int64 caps), `shop_model.py`, `stock_model.py` (delegates to `src/stock.py`), `crypto_model.py` (delegates to `src/crypto.py`), `ai_model.py` (routes `!openai`/`!gemini`/`!ai`/`!畫`/`!dalle` etc. to AI_Service functions), `resource_monitor.py`, `member_monitor.py`.
+Modules: `handlers_model.py` (misc/base commands), `coin_model.py` (coin economy and gambling — daily transactions are merged per user/type/day with int64 caps), `shop_model.py`, `stock_model.py` (delegates to `src/stock.py`), `crypto_model.py` (delegates to `src/crypto.py`), `ai_model.py` (routes `!openai`/`!gemini`/`!ai`/`!改圖` etc. to AI_Service functions; `!畫`/`!dalle` 圖片生成指令已於 2026-11-05 下架), `resource_monitor.py`, `member_monitor.py`.
 
 ### AI services (src/AI_Service/)
 

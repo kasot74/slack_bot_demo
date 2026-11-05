@@ -14,8 +14,6 @@ from datetime import datetime, timedelta
 # openai imports
 from ..AI_Service.openai import generate_summary as generate_summary_openai
 from ..AI_Service.openai import look_conversation_history as openai_look_conversation_history
-from ..AI_Service.openai import create_image_dalle as openai_create_image_dalle
-from ..AI_Service.openai import create_image_dalle_hd as openai_create_image_dalle_hd
 from ..AI_Service.openai import translate_prompt_to_english as openai_translate_prompt
 
 # claude imports
@@ -26,7 +24,6 @@ from ..AI_Service.xai import clear_conversation_history as ai_clear_conversation
 from ..AI_Service.dzmm import generate_summary as generate_summary_dzmm
 # gemini imports
 from ..AI_Service.gemini import generate_summary as generate_summary_gemini
-from ..AI_Service.gemini import create_image as gemini_create_image
 from ..AI_Service.gemini import create_video as gemini_create_video
 from ..AI_Service.gemini import create_video_from_bytes as gemini_create_video_from_bytes
 
@@ -38,9 +35,7 @@ COMMANDS_HELP = [
         ("!openai 內容", "詢問 GPT "),
         #("!claude 內容", "詢問 Claude "),    
         ("!gemini 內容", "詢問 gemini"),    
-        ("!ai 內容", "AI角色扮演"),    
-        ("!畫 內容", "用 Gemini Imagen 產生圖片"),
-        ("!dalle 內容", "用 OpenAI GPT-image-2 產生圖片"),    
+        ("!ai 內容", "AI角色扮演"),
         ("!改圖 內容", "用 Gemini 進行圖片編輯"),
         ("!clearai", "清除 AI 聊天紀錄"),
         ("!setmodel <service> <field> <value>", "更新 AI 模型設定"),
@@ -145,14 +140,6 @@ def register_handlers(app, config, db):
             print(f"Error send_video uploading file: {e}")
             say(f"影片上傳失敗：{e}")            
 
-    #!畫
-    @app.message(re.compile(r"^!畫\s+(.+)$"))
-    def create_image(message, say):        
-        channel = message['channel']
-        msg_text = re.match(r"^!畫\s+(.+)$", message['text']).group(1).strip()
-        say_text, file_name = gemini_create_image(msg_text)                        
-        send_image(channel, say_text, say, file_name)
-
     #!clearai
     @app.message(re.compile(r"^!clearai$"))
     def clearai(message, say):
@@ -199,24 +186,6 @@ def register_handlers(app, config, db):
         except Exception as e:
             say(f"❌ 取得模型設定失敗：{e}")
 
-    #!dalle - GPT-image-2 圖像生成
-    @app.message(re.compile(r"^!dalle\s+(.+)$"))
-    def create_image_dalle(message, say):
-        channel = message['channel']
-        msg_text = re.match(r"^!dalle\s+(.+)$", message['text']).group(1).strip()
-        
-        try:
-            # 回應用戶
-            say("🎨 GPT-image-2 正在生成圖像，請稍候...")
-            
-            # 創建圖像
-            say_text, file_name = openai_create_image_dalle(msg_text, quality="medium", size="1024x1024")
-            
-            # 發送圖像到 Slack
-            send_image(channel, say_text, say, file_name)
-        except Exception as e:
-            say(f"❌ 圖像生成失敗：{e}")
-   
     # !改圖
     @app.message(re.compile(r"^!改圖\s+(.+)$"))
     def handle_edit_image(message, say):
