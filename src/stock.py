@@ -66,23 +66,48 @@ def _fetch_realtime(code: str, market: str):
         return None
 
 
+def _last_trade(s: dict):
+    """
+    取得最近一筆『真實成交』的 (價格, 成交時間)；沒有則回傳 (None, None)。
+    證交所即時報價的 z 在該次更新沒有成交時會是 '-'，此時最近成交在 trade.z / pz，
+    不可拿它當成沒成交，更不能拿買賣中間價冒充成交價。
+    """
+    z = _to_float(s.get('z'))
+    if z:
+        return z, s.get('t')
+    tr = s.get('trade') or {}
+    z = _to_float(tr.get('z'))
+    if z:
+        return z, tr.get('t')
+    z = _to_float(s.get('pz'))
+    if z:
+        return z, s.get('t')
+    return None, None
+
+
 def _format_realtime(s: dict) -> str:
     """格式化即時報價"""
     market_label = '上市(TSE)' if s.get('ex') == 'tse' else '上櫃(OTC)'
     name = s.get('nf') or s.get('n') or '?'
     code = s.get('ch', '?')
 
-    z = _fmt(s.get('z'))          # 最新成交價
+    price, trade_time = _last_trade(s)
     y = s.get('y', '-')           # 昨收
-    arrow, chg = _change_str(z, float(z) - float(y)) if z != '---' and _fmt(y) != '---' else ('', '---')
+    y_val = _to_float(y)
+    if price is not None and y_val:
+        arrow, chg = _change_str(price, price - y_val)
+        z = f"{price:g}"
+    else:
+        arrow, chg = '', '---'
+        z = '---'
 
     lines = [
         f"{arrow} *{name}* ({code}) [{market_label}]",
         f"成交價：*{z}* 元　　漲跌：{chg}",
         f"開盤：{_fmt(s.get('o'))}　最高：{_fmt(s.get('h'))}　最低：{_fmt(s.get('l'))}",
         f"昨收：{_fmt(y)}　漲停：{_fmt(s.get('u'))}　跌停：{_fmt(s.get('w'))}",
-        f"成交量：{_fmt(s.get('v'))} 張　　成交時間：{_fmt(s.get('t'))}",
-        f"_（來源：證交所即時報價）_",
+        f"累計成交量：{_fmt(s.get('v'))} 張　　最近成交時間：{_fmt(trade_time)}",
+        f"_（來源：證交所即時報價，報價更新 {_fmt(s.get('t'))}）_",
     ]
     return '\n'.join(lines)
 
@@ -173,16 +198,9 @@ def _to_float(v):
 
 
 def _realtime_price(s: dict):
-    """即時報價的目前價：優先最新成交價，沒有成交時用昨收"""
-    z = _to_float(s.get('z'))
-    if z:
-        return z
-    # 最新一筆沒有成交價時，用最佳買賣價中間值；都沒有才用昨收
-    bid = _to_float(str(s.get('b', '')).split('_')[0])
-    ask = _to_float(str(s.get('a', '')).split('_')[0])
-    if bid and ask:
-        return (bid + ask) / 2
-    return _to_float(s.get('y'))
+    """即時報價的目前價：最近一筆真實成交價；完全沒成交（如暫停交易、尚未開盤）才用昨收"""
+    price, _ = _last_trade(s)
+    return price or _to_float(s.get('y'))
 
 
 # ──────────────────────────────────────────────────────────────────────────────
